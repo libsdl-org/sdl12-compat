@@ -1,0 +1,18 @@
+
+To compile and install SDL:
+
+    1.  Point CMake ( http://www.cmake.org/ ) at this directory. Generate
+        a project file of your liking and build.
+
+    2.  Look at the example programs in ./test, and check out the HTML
+        documentation in ./docs to see how to use the SDL library.
+
+    3.  Join the SDL developer mailing list by sending E-mail to
+        sdl-request@libsdl.org
+        and put "subscribe" in the subject of the message.
+
+        Or alternatively you can use the web interface:
+            http://www.libsdl.org/mailing-list.php
+
+That's it!
+Sam Lantinga <slouken@libsdl.org>
