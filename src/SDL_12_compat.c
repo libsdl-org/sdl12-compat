@@ -38,17 +38,6 @@
 // !!! IMPLEMENT_ME SDL_AudioInit
 // !!! IMPLEMENT_ME SDL_AudioQuit
 // !!! IMPLEMENT_ME SDL_BuildAudioCVT
-// !!! IMPLEMENT_ME SDL_CDClose
-// !!! IMPLEMENT_ME SDL_CDEject
-// !!! IMPLEMENT_ME SDL_CDName
-// !!! IMPLEMENT_ME SDL_CDNumDrives
-// !!! IMPLEMENT_ME SDL_CDOpen
-// !!! IMPLEMENT_ME SDL_CDPause
-// !!! IMPLEMENT_ME SDL_CDPlay
-// !!! IMPLEMENT_ME SDL_CDPlayTracks
-// !!! IMPLEMENT_ME SDL_CDResume
-// !!! IMPLEMENT_ME SDL_CDStatus
-// !!! IMPLEMENT_ME SDL_CDStop
 // !!! IMPLEMENT_ME SDL_ClearError
 // !!! IMPLEMENT_ME SDL_CloseAudio
 // !!! IMPLEMENT_ME SDL_CondBroadcast
@@ -2163,5 +2152,33 @@ SDL_putenv(const char *_var)
     SDL_free(var);
     return 0;
 }
+
+
+
+/* CD-ROM support is gone from SDL 2.0, so just have stubs that fail. */
+static int
+CDUnsupported(void)
+{
+    SDL_SetError("CD interface is unsupported");
+    return -1;
+}
+
+int
+SDL_CDNumDrives(void)
+{
+    return 0;  /* !!! FIXME: should return -1 without SDL_INIT_CDROM */
+}
+
+const char *SDL_CDName(int drive) { CDUnsupported(); return NULL; }
+/*SDL_CD*/void * SDL_CDOpen(int drive) { CDUnsupported(); return NULL; }
+/*CDstatus*/int SDL_CDStatus(SDL_CD *cdrom) { return CDUnsupported(); }
+int SDL_CDPlayTracks(/*SDL_CD*/void *cdrom, int start_track, int start_frame, int ntracks, int nframes) { return CDUnsupported(); }
+int SDL_CDPlay(/*SDL_CD*/void *cdrom, int start, int length) { return CDUnsupported(); }
+int SDL_CDPause(/*SDL_CD*/void *cdrom) { return CDUnsupported(); }
+int SDL_CDResume(/*SDL_CD*/void *cdrom) { return CDUnsupported(); }
+int SDL_CDStop(/*SDL_CD*/void *cdrom) { return CDUnsupported(); }
+int SDL_CDEject(/*SDL_CD*/void *cdrom) { return CDUnsupported(); }
+void SDL_CDClose(/*SDL_CD*/void *cdrom) {}
+
 
 /* vi: set ts=4 sw=4 expandtab: */
