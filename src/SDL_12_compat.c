@@ -85,7 +85,6 @@
 // !!! IMPLEMENT_ME SDL_GetAudioStatus
 // !!! IMPLEMENT_ME SDL_GetClipRect
 // !!! IMPLEMENT_ME SDL_GetCursor
-// !!! IMPLEMENT_ME SDL_GetError
 // !!! IMPLEMENT_ME SDL_GetEventFilter
 // !!! IMPLEMENT_ME SDL_GetKeyName
 // !!! IMPLEMENT_ME SDL_GetKeyState
@@ -198,6 +197,92 @@
 // !!! IMPLEMENT_ME SDL_ultoa
 // !!! IMPLEMENT_ME X11_KeyToUnicode
 
+#define SDL20_SYM(rc,fn,params,args,ret) \
+    typedef rc (*SDL20_##fn##_t) params; \
+    static SDL20_##fn##_t SDL20_##fn = NULL;
+#include "SDL20_syms.h"
+#undef SDL20_SYM
+
+
+
+
+#define SDL12_INIT_TIMER       0x00000001
+#define SDL12_INIT_AUDIO       0x00000010
+#define SDL12_INIT_VIDEO       0x00000020
+#define SDL12_INIT_CDROM       0x00000100
+#define SDL12_INIT_JOYSTICK    0x00000200
+#define SDL12_INIT_NOPARACHUTE 0x00100000
+#define SDL12_INIT_EVENTTHREAD 0x01000000
+#define SDL12_INIT_EVERYTHING  0x0000FFFF
+
+typedef struct
+{
+	Uint32 hw_available :1;	/**< Flag: Can you create hardware surfaces? */
+	Uint32 wm_available :1;	/**< Flag: Can you talk to a window manager? */
+	Uint32 UnusedBits1  :6;
+	Uint32 UnusedBits2  :1;
+	Uint32 blit_hw      :1;	/**< Flag: Accelerated blits HW --> HW */
+	Uint32 blit_hw_CC   :1;	/**< Flag: Accelerated blits with Colorkey */
+	Uint32 blit_hw_A    :1;	/**< Flag: Accelerated blits with Alpha */
+	Uint32 blit_sw      :1;	/**< Flag: Accelerated blits SW --> HW */
+	Uint32 blit_sw_CC   :1;	/**< Flag: Accelerated blits with Colorkey */
+	Uint32 blit_sw_A    :1;	/**< Flag: Accelerated blits with Alpha */
+	Uint32 blit_fill    :1;	/**< Flag: Accelerated color fill */
+	Uint32 UnusedBits3  :16;
+	Uint32 video_mem;	/**< The total amount of video memory (in K) */
+	SDL_PixelFormat *vfmt;	/**< Value: The format of the video surface */
+	int    current_w;	/**< Value: The current video mode width */
+	int    current_h;	/**< Value: The current video mode height */
+} SDL12_VideoInfo;
+
+typedef struct SDL12_Palette {
+	int       ncolors;
+	SDL_Color *colors;
+} SDL12_Palette;
+
+/** Everything in the pixel format structure is read-only */
+typedef struct SDL12_PixelFormat {
+	SDL12_Palette *palette;
+	Uint8  BitsPerPixel;
+	Uint8  BytesPerPixel;
+	Uint8  Rloss;
+	Uint8  Gloss;
+	Uint8  Bloss;
+	Uint8  Aloss;
+	Uint8  Rshift;
+	Uint8  Gshift;
+	Uint8  Bshift;
+	Uint8  Ashift;
+	Uint32 Rmask;
+	Uint32 Gmask;
+	Uint32 Bmask;
+	Uint32 Amask;
+
+	/** RGB color key information */
+	Uint32 colorkey;
+	/** Alpha value information (per-surface alpha) */
+	Uint8  alpha;
+} SDL12_PixelFormat;
+
+#define SDL12_SWSURFACE	0x00000000	/**< Surface is in system memory */
+#define SDL12_HWSURFACE	0x00000001	/**< Surface is in video memory */
+#define SDL12_ASYNCBLIT	0x00000004	/**< Use asynchronous blits if possible */
+#define SDL12_ANYFORMAT	0x10000000	/**< Allow any video depth/pixel-format */
+#define SDL12_HWPALETTE	0x20000000	/**< Surface has exclusive palette */
+#define SDL12_DOUBLEBUF	0x40000000	/**< Set up double-buffered video mode */
+#define SDL12_FULLSCREEN	0x80000000	/**< Surface is a full screen display */
+#define SDL12_OPENGL      0x00000002      /**< Create an OpenGL rendering context */
+#define SDL12_OPENGLBLIT	0x0000000A	/**< Create an OpenGL rendering context and use it for blitting */
+#define SDL12_RESIZABLE	0x00000010	/**< This video mode may be resized */
+#define SDL12_NOFRAME	0x00000020	/**< No window caption or edge frame */
+
+#define SDL12_HWACCEL	0x00000100	/**< Blit uses hardware acceleration */
+#define SDL12_SRCCOLORKEY	0x00001000	/**< Blit uses a source color key */
+#define SDL12_RLEACCELOK	0x00002000	/**< Private flag */
+#define SDL12_RLEACCEL	0x00004000	/**< Surface is RLE encoded */
+#define SDL12_SRCALPHA	0x00010000	/**< Blit uses source alpha blending */
+#define SDL12_PREALLOC	0x01000000	/**< Surface uses preallocated memory */
+
 
 static SDL_Window *SDL_VideoWindow = NULL;
 static SDL_Surface *SDL_WindowSurface = NULL;
@@ -208,42 +293,70 @@ static SDL_GLContext *SDL_VideoContext = NULL;
 static Uint32 SDL_VideoFlags = 0;
 static SDL_Rect SDL_VideoViewport;
 static char *wm_title = NULL;
+static char *wm_icon_caption = NULL;
 static SDL_Surface *SDL_VideoIcon;
 static int SDL_enabled_UNICODE = 0;
+static int SDL_VideoDisplayIndex = 0;
 
-const char *
-SDL_AudioDriverName(char *namebuf, int maxlen)
+/* Obviously we can't use SDL_LoadObject() to load SDL2.  :)  */
+#if defined(_WINDOWS)
+    #define SDL20_LIBNAME "SDL2.dll"
+    static HANDLE Loaded_SDL20 = NULL;
+    #define LoadSDL20Library() ((Loaded_SDL20 = LoadLibraryA(SDL20_LIBNAME)) != NULL)
+    #define LookupSDL20Sym(sym) GetProcAddress(Loaded_SDL20, sym)
+    #define CloseSDL20Library() { { if (Loaded_SDL20) { FreeLibrary(Loaded_SDL20); Loaded_SDL20 = NULL; } }
+#elif defined(unix)
+    #ifdef __APPLE__
+    #define SDL20_LIBNAME "libSDL2.dylib"
+    #else
+    #define SDL20_LIBNAME "libSDL2-2.0.so.0"
+    #endif
+    static void *Loaded_SDL20 = NULL;
+    #define LoadSDL20Library() ((Loaded_SDL20 = dlopen(SDL20_LIBNAME, RTLD_LOCAL)) != NULL)
+    #define LookupSDL20Sym(sym) dlsym(Loaded_SDL20, sym)
+    #define CloseSDL20Library() { if (Loaded_SDL20) { dlclose(Loaded_SDL20); Loaded_SDL20 = NULL; } }
+#else
+    #error Please define your platform.
+#endif
+
+static void *
+LoadSDL20Symbol(const char *fn, int *okay)
 {
-    const char *name = SDL_GetCurrentAudioDriver();
-    if (name) {
-        if (namebuf) {
-            SDL_strlcpy(namebuf, name, maxlen);
-            return namebuf;
-        } else {
-            return name;
-        }
-    }
-    return NULL;
+    if (!*okay)
+        return NULL;  /* Already failed, so don't bother trying. */
+    return LookupSDL20Sym(fn);
 }
 
-const char *
-SDL_VideoDriverName(char *namebuf, int maxlen)
+static void
+UnloadSDL20(void)
 {
-    const char *name = SDL_GetCurrentVideoDriver();
-    if (name) {
-        if (namebuf) {
-            SDL_strlcpy(namebuf, name, maxlen);
-            return namebuf;
-        } else {
-            return name;
-        }
-    }
-    return NULL;
+    #define SDL20_SYM(rc,fn,params,args,ret) SDL20_##fn = NULL;
+    #include "SDL20_syms.h"
+    #undef SDL20_SYM
+    CloseSDL20Library();
 }
+
+static int
+LoadSDL20(void)
+{
+    int okay = 1;
+    if (!Loaded_SDL20)
+    {
+        okay = LoadSDL20Library();
+        #define SDL20_SYM(rc,fn,params,args,ret) SDL20_##fn = (SDL20_##fn##_t) LoadSDL20Symbol("SDL_" #fn, &okay);
+        #include "SDL20_syms.h"
+        #undef SDL20_SYM
+        if (!okay)
+            UnloadSDL20();
+    }
+    return okay;
+}
+
 
 static int
 GetVideoDisplay()
 {
+    // !!! FIXME: cache this value during SDL_Init() so it doesn't change.
     const char *variable = SDL_getenv("SDL_VIDEO_FULLSCREEN_DISPLAY");
     if ( !variable ) {
         variable = SDL_getenv("SDL_VIDEO_FULLSCREEN_HEAD");
@@ -255,39 +368,107 @@ GetVideoDisplay()
     }
 }
 
-const SDL_VideoInfo *
+int
+SDL_Init(Uint32 sdl12flags)
+{
+    Uint32 sdl20flags = 0;
+    int rc;
+
+    if (!LoadSDL20())
+        return -1;
+
+    #define SETFLAG(x) if (sdl12flags & SDL12_INIT_##flag) sdl20flags |= SDL_INIT_##flag)
+    SETFLAG(TIMER);
+    SETFLAG(AUDIO);
+    SETFLAG(VIDEO);
+    SETFLAG(JOYSTICK);
+    SETFLAG(NOPARACHUTE);
+    // There's no CDROM in 2.0, but we'll just pretend it succeeded.
+    #undef SETFLAG
+
+    // !!! FIXME: do something about SDL12_INIT_EVENTTHREAD
+
+    rc = SDL20_Init(sdl20flags);
+    if ((rc == 0) && (sdl20flags & SDL_INIT_VIDEO))
+        SDL_VideoDisplayIndex = GetVideoDisplay();
+    return rc;
+}
+
+char *
+SDL_GetError(void)
+{
+    if (!Loaded_SDL20)
+    {
+        static char noload_errstr[] = "Failed to load SDL 2.0 shared library";
+        return noload_errstr;
+    }
+    return SDL20_GetError();
+}
+
+
+static const char *
+GetDriverName(const char *name, char *namebuf, int maxlen)
+{
+    if (name) {
+        if (namebuf) {
+            SDL20_strlcpy(namebuf, name, maxlen);
+            return namebuf;
+        } else {
+            return name;
+        }
+    }
+    return NULL;
+}
+
+const char *
+SDL_AudioDriverName(char *namebuf, int maxlen)
+{
+    return GetDriverName(SDL20_GetCurrentAudioDriver(), namebuf, maxlen);
+}
+
+const char *
+SDL_VideoDriverName(char *namebuf, int maxlen)
+{
+    return GetDriverName(SDL20_GetCurrentVideoDriver(), namebuf, maxlen);
+}
+
+const SDL12_VideoInfo *
 SDL_GetVideoInfo(void)
 {
-    static SDL_VideoInfo info;
+    static SDL12_VideoInfo info;
     SDL_DisplayMode mode;
 
     /* !!! FIXME: Memory leak, compatibility code, who cares? */
-    if (!info.vfmt && SDL_GetDesktopDisplayMode(GetVideoDisplay(), &mode) == 0) {
-        info.vfmt = SDL_AllocFormat(mode.format);
+    if (!info.vfmt && SDL20_GetDesktopDisplayMode(SDL_VideoDisplayIndex, &mode) == 0) {
+        info.vfmt = SDL20_AllocFormat(mode.format);
         info.current_w = mode.w;
         info.current_h = mode.h;
+        // !!! FIXME
+        //info.wm_available = 1;
+        //info.video_mem = 1024 * 256;
     }
     return &info;
 }
 
 int
-SDL_VideoModeOK(int width, int height, int bpp, Uint32 flags)
+SDL_VideoModeOK(int width, int height, int bpp, Uint32 sdl12flags)
 {
-    int i, actual_bpp = 0;
+    int i, nummodes, actual_bpp = 0;
 
-    if (!SDL_GetVideoDevice()) {
+    if (!SDL20_WasInit(SDL_INIT_VIDEO)) {
         return 0;
     }
 
-    if (!(flags & SDL_FULLSCREEN)) {
+    if (!(sdl12flags & SDL12_FULLSCREEN)) {
         SDL_DisplayMode mode;
-        SDL_GetDesktopDisplayMode(GetVideoDisplay(), &mode);
+        SDL20_GetDesktopDisplayMode(SDL_VideoDisplayIndex, &mode);
         return SDL_BITSPERPIXEL(mode.format);
     }
 
-    for (i = 0; i < SDL_GetNumDisplayModes(GetVideoDisplay()); ++i) {
+    nummodes = SDL20_GetNumDisplayModes(SDL_VideoDisplayIndex);
+    for (i = 0; i < nummodes; ++i) {
         SDL_DisplayMode mode;
-        SDL_GetDisplayMode(GetVideoDisplay(), i, &mode);
+        SDL20_GetDisplayMode(SDL_VideoDisplayIndex, i, &mode);
         if (!mode.w || !mode.h || (width == mode.w && height == mode.h)) {
             if (!mode.format) {
                 return bpp;
@@ -301,16 +482,16 @@ SDL_VideoModeOK(int width, int height, int bpp, Uint32 flags)
 }
 
 SDL_Rect **
-SDL_ListModes(const SDL_PixelFormat * format, Uint32 flags)
+SDL_ListModes(const SDL12_PixelFormat * format, Uint32 flags)
 {
     int i, nmodes;
     SDL_Rect **modes;
 
-    if (!SDL_GetVideoDevice()) {
+    if (!SDL20_WasInit(SDL_INIT_VIDEO)) {
         return NULL;
     }
 
-    if (!(flags & SDL_FULLSCREEN)) {
+    if (!(flags & SDL12_FULLSCREEN)) {
         return (SDL_Rect **) (-1);
     }
 
@@ -321,11 +502,11 @@ SDL_ListModes(const SDL_PixelFormat * format, Uint32 flags)
     /* Memory leak, but this is a compatibility function, who cares? */
     nmodes = 0;
     modes = NULL;
-    for (i = 0; i < SDL_GetNumDisplayModes(GetVideoDisplay()); ++i) {
+    for (i = 0; i < SDL20_GetNumDisplayModes(SDL_VideoDisplayIndex); ++i) {
         SDL_DisplayMode mode;
         int bpp;
 
-        SDL_GetDisplayMode(GetVideoDisplay(), i, &mode);
+        SDL20_GetDisplayMode(SDL_VideoDisplayIndex, i, &mode);
         if (!mode.w || !mode.h) {
             return (SDL_Rect **) (-1);
         }
@@ -509,7 +690,7 @@ SDL_CompatEventFilter(void *userdata, SDL_Event * event)
 static void
 GetEnvironmentWindowPosition(int w, int h, int *x, int *y)
 {
-    int display = GetVideoDisplay();
+    int display = SDL_VideoDisplayIndex;
     const char *window = SDL_getenv("SDL_VIDEO_WINDOW_POS");
     const char *center = SDL_getenv("SDL_VIDEO_CENTERED");
     if (window) {
@@ -630,7 +811,7 @@ SDL_Surface *
 SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags)
 {
     SDL_DisplayMode desktop_mode;
-    int display = GetVideoDisplay();
+    int display = SDL_VideoDisplayIndex;
     int window_x = SDL_WINDOWPOS_UNDEFINED_DISPLAY(display);
     int window_y = SDL_WINDOWPOS_UNDEFINED_DISPLAY(display);
     int window_w;
@@ -967,11 +1148,11 @@ SDL_WM_SetCaption(const char *title, const char *icon)
     if (wm_title) {
         SDL_free(wm_title);
     }
-    if (title) {
-        wm_title = SDL_strdup(title);
-    } else {
-        wm_title = NULL;
+    if (wm_icon_caption) {
+        SDL_free(wm_icon_caption);
     }
+    wm_title = title ? SDL_strdup(title) : NULL;
+    wm_icon_caption = icon ? SDL_strdup(icon) : NULL;
     SDL_SetWindowTitle(SDL_VideoWindow, wm_title);
 }
 
@@ -982,13 +1163,14 @@ SDL_WM_GetCaption(const char **title, const char **icon)
         *title = wm_title;
     }
     if (icon) {
-        *icon = "";
+        *icon = wm_icon_caption;
     }
 }
 
 void
 SDL_WM_SetIcon(SDL_Surface * icon, Uint8 * mask)
 {
+    // !!! FIXME: free previous icon?
     SDL_VideoIcon = icon;
     ++SDL_VideoIcon->refcount;
 }
