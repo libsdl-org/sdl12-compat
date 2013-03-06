@@ -37,33 +37,17 @@
 // !!! IMPLEMENT_ME SDL_AllocRW
 // !!! IMPLEMENT_ME SDL_AudioInit
 // !!! IMPLEMENT_ME SDL_AudioQuit
-// !!! IMPLEMENT_ME SDL_BuildAudioCVT
-// !!! IMPLEMENT_ME SDL_ClearError
-// !!! IMPLEMENT_ME SDL_CloseAudio
-// !!! IMPLEMENT_ME SDL_CondBroadcast
-// !!! IMPLEMENT_ME SDL_CondSignal
-// !!! IMPLEMENT_ME SDL_CondWait
-// !!! IMPLEMENT_ME SDL_CondWaitTimeout
-// !!! IMPLEMENT_ME SDL_ConvertAudio
 // !!! IMPLEMENT_ME SDL_ConvertSurface
-// !!! IMPLEMENT_ME SDL_CreateCond
 // !!! IMPLEMENT_ME SDL_CreateCursor
-// !!! IMPLEMENT_ME SDL_CreateMutex
 // !!! IMPLEMENT_ME SDL_CreateRGBSurface
 // !!! IMPLEMENT_ME SDL_CreateRGBSurfaceFrom
-// !!! IMPLEMENT_ME SDL_CreateSemaphore
 // !!! IMPLEMENT_ME SDL_CreateThread
-// !!! IMPLEMENT_ME SDL_Delay
-// !!! IMPLEMENT_ME SDL_DestroyCond
-// !!! IMPLEMENT_ME SDL_DestroyMutex
-// !!! IMPLEMENT_ME SDL_DestroySemaphore
 // !!! IMPLEMENT_ME SDL_Error
 // !!! IMPLEMENT_ME SDL_EventState
 // !!! IMPLEMENT_ME SDL_FillRect
 // !!! IMPLEMENT_ME SDL_FreeCursor
 // !!! IMPLEMENT_ME SDL_FreeRW
 // !!! IMPLEMENT_ME SDL_FreeSurface
-// !!! IMPLEMENT_ME SDL_FreeWAV
 // !!! IMPLEMENT_ME SDL_GL_GetAttribute
 // !!! IMPLEMENT_ME SDL_GL_GetProcAddress
 // !!! IMPLEMENT_ME SDL_GL_LoadLibrary
@@ -71,7 +55,6 @@
 // !!! IMPLEMENT_ME SDL_GL_SetAttribute
 // !!! IMPLEMENT_ME SDL_GL_Unlock
 // !!! IMPLEMENT_ME SDL_GL_UpdateRects
-// !!! IMPLEMENT_ME SDL_GetAudioStatus
 // !!! IMPLEMENT_ME SDL_GetClipRect
 // !!! IMPLEMENT_ME SDL_GetCursor
 // !!! IMPLEMENT_ME SDL_GetEventFilter
@@ -83,51 +66,18 @@
 // !!! IMPLEMENT_ME SDL_GetRGBA
 // !!! IMPLEMENT_ME SDL_GetRelativeMouseState
 // !!! IMPLEMENT_ME SDL_GetThreadID
-// !!! IMPLEMENT_ME SDL_GetTicks
-// !!! IMPLEMENT_ME SDL_Has3DNow
-// !!! IMPLEMENT_ME SDL_Has3DNowExt
-// !!! IMPLEMENT_ME SDL_HasAltiVec
-// !!! IMPLEMENT_ME SDL_HasMMX
-// !!! IMPLEMENT_ME SDL_HasMMXExt
-// !!! IMPLEMENT_ME SDL_HasRDTSC
-// !!! IMPLEMENT_ME SDL_HasSSE
-// !!! IMPLEMENT_ME SDL_HasSSE2
 // !!! IMPLEMENT_ME SDL_Init
 // !!! IMPLEMENT_ME SDL_InitSubSystem
-// !!! IMPLEMENT_ME SDL_JoystickClose
-// !!! IMPLEMENT_ME SDL_JoystickEventState
-// !!! IMPLEMENT_ME SDL_JoystickGetAxis
-// !!! IMPLEMENT_ME SDL_JoystickGetBall
-// !!! IMPLEMENT_ME SDL_JoystickGetButton
-// !!! IMPLEMENT_ME SDL_JoystickGetHat
-// !!! IMPLEMENT_ME SDL_JoystickIndex
-// !!! IMPLEMENT_ME SDL_JoystickName
-// !!! IMPLEMENT_ME SDL_JoystickNumAxes
-// !!! IMPLEMENT_ME SDL_JoystickNumBalls
-// !!! IMPLEMENT_ME SDL_JoystickNumButtons
-// !!! IMPLEMENT_ME SDL_JoystickNumHats
-// !!! IMPLEMENT_ME SDL_JoystickOpen
-// !!! IMPLEMENT_ME SDL_JoystickOpened
-// !!! IMPLEMENT_ME SDL_JoystickUpdate
-// !!! IMPLEMENT_ME SDL_KillThread
 // !!! IMPLEMENT_ME SDL_LoadBMP_RW
-// !!! IMPLEMENT_ME SDL_LoadFunction
-// !!! IMPLEMENT_ME SDL_LoadObject
 // !!! IMPLEMENT_ME SDL_LoadWAV_RW
-// !!! IMPLEMENT_ME SDL_LockAudio
 // !!! IMPLEMENT_ME SDL_LockSurface
 // !!! IMPLEMENT_ME SDL_LowerBlit
 // !!! IMPLEMENT_ME SDL_MapRGB
 // !!! IMPLEMENT_ME SDL_MapRGBA
-// !!! IMPLEMENT_ME SDL_MixAudio
-// !!! IMPLEMENT_ME SDL_NumJoysticks
-// !!! IMPLEMENT_ME SDL_OpenAudio
-// !!! IMPLEMENT_ME SDL_PauseAudio
 // !!! IMPLEMENT_ME SDL_PeepEvents
 // !!! IMPLEMENT_ME SDL_PollEvent
 // !!! IMPLEMENT_ME SDL_PumpEvents
 // !!! IMPLEMENT_ME SDL_PushEvent
-// !!! IMPLEMENT_ME SDL_Quit
 // !!! IMPLEMENT_ME SDL_QuitSubSystem
 // !!! IMPLEMENT_ME SDL_RWFromConstMem
 // !!! IMPLEMENT_ME SDL_RWFromFP
@@ -141,11 +91,6 @@
 // !!! IMPLEMENT_ME SDL_ReadLE64
 // !!! IMPLEMENT_ME SDL_RemoveTimer
 // !!! IMPLEMENT_ME SDL_SaveBMP_RW
-// !!! IMPLEMENT_ME SDL_SemPost
-// !!! IMPLEMENT_ME SDL_SemTryWait
-// !!! IMPLEMENT_ME SDL_SemValue
-// !!! IMPLEMENT_ME SDL_SemWait
-// !!! IMPLEMENT_ME SDL_SemWaitTimeout
 // !!! IMPLEMENT_ME SDL_SetClipRect
 // !!! IMPLEMENT_ME SDL_SetColorKey
 // !!! IMPLEMENT_ME SDL_SetCursor
@@ -154,15 +99,11 @@
 // !!! IMPLEMENT_ME SDL_SetModState
 // !!! IMPLEMENT_ME SDL_ShowCursor
 // !!! IMPLEMENT_ME SDL_SoftStretch
-// !!! IMPLEMENT_ME SDL_ThreadID
-// !!! IMPLEMENT_ME SDL_UnloadObject
-// !!! IMPLEMENT_ME SDL_UnlockAudio
 // !!! IMPLEMENT_ME SDL_UnlockSurface
 // !!! IMPLEMENT_ME SDL_UpperBlit
 // !!! IMPLEMENT_ME SDL_VideoInit
 // !!! IMPLEMENT_ME SDL_VideoQuit
 // !!! IMPLEMENT_ME SDL_WaitEvent
-// !!! IMPLEMENT_ME SDL_WaitThread
 // !!! IMPLEMENT_ME SDL_WasInit
 // !!! IMPLEMENT_ME SDL_WriteBE16
 // !!! IMPLEMENT_ME SDL_WriteBE32
@@ -174,8 +115,6 @@
 // !!! IMPLEMENT_ME SDL_iconv_string
 // !!! IMPLEMENT_ME SDL_lltoa
 // !!! IMPLEMENT_ME SDL_ltoa
-// !!! IMPLEMENT_ME SDL_mutexP
-// !!! IMPLEMENT_ME SDL_mutexV
 // !!! IMPLEMENT_ME SDL_revcpy
 // !!! IMPLEMENT_ME SDL_strlcat
 // !!! IMPLEMENT_ME SDL_strlcpy
@@ -186,10 +125,14 @@
 // !!! IMPLEMENT_ME SDL_ultoa
 // !!! IMPLEMENT_ME X11_KeyToUnicode
 
+
 #define SDL20_SYM(rc,fn,params,args,ret) \
     typedef rc (*SDL20_##fn##_t) params; \
     static SDL20_##fn##_t SDL20_##fn = NULL;
+#define SDL20_SYM_PASSTHROUGH(rc,fn,params,args,ret) \
+    SDL20_SYM(rc,fn,params,args,ret)
 #include "SDL20_syms.h"
+#undef SDL20_SYM_PASSTHROUGH
 #undef SDL20_SYM
 
 
@@ -320,7 +263,9 @@ static void
 UnloadSDL20(void)
 {
     #define SDL20_SYM(rc,fn,params,args,ret) SDL20_##fn = NULL;
+    #define SDL20_SYM_PASSTHROUGH(rc,fn,params,args,ret) SDL20_##fn = NULL;
     #include "SDL20_syms.h"
+    #undef SDL20_SYM_PASSTHROUGH
     #undef SDL20_SYM
     CloseSDL20Library();
 }
@@ -333,7 +278,9 @@ LoadSDL20(void)
     {
         okay = LoadSDL20Library();
         #define SDL20_SYM(rc,fn,params,args,ret) SDL20_##fn = (SDL20_##fn##_t) LoadSDL20Symbol("SDL_" #fn, &okay);
+        #define SDL20_SYM_PASSTHROUGH(rc,fn,params,args,ret) SDL20_SYM(rc,fn,params,args,ret)
         #include "SDL20_syms.h"
+        #undef SDL20_SYM_PASSTHROUGH
         #undef SDL20_SYM
         if (!okay)
             UnloadSDL20();
@@ -382,6 +329,14 @@ SDL_Init(Uint32 sdl12flags)
         SDL_VideoDisplayIndex = GetVideoDisplay();
     return rc;
 }
+
+void
+SDL_Quit(void)
+{
+    SDL20_Quit();
+    UnloadSDL20();
+}
+
 
 char *
 SDL_GetError(void)
@@ -2156,6 +2111,10 @@ SDL_putenv(const char *_var)
 
 
 /* CD-ROM support is gone from SDL 2.0, so just have stubs that fail. */
+
+typedef void *SDL12_CD;  /* close enough.  :) */
+typedef int SDL12_CDstatus;  /* close enough.  :) */
+
 static int
 CDUnsupported(void)
 {
@@ -2170,15 +2129,26 @@ SDL_CDNumDrives(void)
 }
 
 const char *SDL_CDName(int drive) { CDUnsupported(); return NULL; }
-/*SDL_CD*/void * SDL_CDOpen(int drive) { CDUnsupported(); return NULL; }
-/*CDstatus*/int SDL_CDStatus(SDL_CD *cdrom) { return CDUnsupported(); }
-int SDL_CDPlayTracks(/*SDL_CD*/void *cdrom, int start_track, int start_frame, int ntracks, int nframes) { return CDUnsupported(); }
-int SDL_CDPlay(/*SDL_CD*/void *cdrom, int start, int length) { return CDUnsupported(); }
-int SDL_CDPause(/*SDL_CD*/void *cdrom) { return CDUnsupported(); }
-int SDL_CDResume(/*SDL_CD*/void *cdrom) { return CDUnsupported(); }
-int SDL_CDStop(/*SDL_CD*/void *cdrom) { return CDUnsupported(); }
-int SDL_CDEject(/*SDL_CD*/void *cdrom) { return CDUnsupported(); }
-void SDL_CDClose(/*SDL_CD*/void *cdrom) {}
+SDL12_CD * SDL_CDOpen(int drive) { CDUnsupported(); return NULL; }
+SDL12_CDstatus SDL_CDStatus(SDL_CD *cdrom) { return CDUnsupported(); }
+int SDL_CDPlayTracks(SDL12_CD *cdrom, int start_track, int start_frame, int ntracks, int nframes) { return CDUnsupported(); }
+int SDL_CDPlay(SDL12_CD *cdrom, int start, int length) { return CDUnsupported(); }
+int SDL_CDPause(SDL12_CD *cdrom) { return CDUnsupported(); }
+int SDL_CDResume(SDL12_CD *cdrom) { return CDUnsupported(); }
+int SDL_CDStop(SDL12_CD *cdrom) { return CDUnsupported(); }
+int SDL_CDEject(SDL12_CD *cdrom) { return CDUnsupported(); }
+void SDL_CDClose(SDL12_CD *cdrom) {}
+
+/* !!! FIXME: Removed from 2.0; do nothing. We can't even report failure. */
+void SDL_KillThread(SDL_Thread *thread) {}
+
+/* Things that _should_ be binary compatible pass right through... */
+#define SDL20_SYM(rc,fn,params,args,ret)
+#define SDL20_SYM_PASSTHROUGH(rc,fn,params,args,ret) \
+    rc SDL_##fn params { ret SDL20_##fn args; }
+#include "SDL20_syms.h"
+#undef SDL20_SYM_PASSTHROUGH
+#undef SDL20_SYM
 
 
 /* vi: set ts=4 sw=4 expandtab: */
