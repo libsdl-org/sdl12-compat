@@ -254,9 +254,14 @@ static int SDL_VideoDisplayIndex = 0;
 static void *
 LoadSDL20Symbol(const char *fn, int *okay)
 {
-    if (!*okay)
-        return NULL;  /* Already failed, so don't bother trying. */
-    return LookupSDL20Sym(fn);
+    void *retval = NULL;
+    if (*okay)  /* only bother trying if we haven't previously failed. */
+    {
+        retval = LookupSDL20Sym(fn);
+        if (retval == NULL)
+            *okay = 0;
+    }
+    return retval;
 }
 
 static void
