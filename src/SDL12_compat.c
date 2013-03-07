@@ -61,8 +61,6 @@
 // !!! IMPLEMENT_ME SDL_GetRGB
 // !!! IMPLEMENT_ME SDL_GetRGBA
 // !!! IMPLEMENT_ME SDL_GetRelativeMouseState
-// !!! IMPLEMENT_ME SDL_LoadBMP_RW
-// !!! IMPLEMENT_ME SDL_LoadWAV_RW
 // !!! IMPLEMENT_ME SDL_LockSurface
 // !!! IMPLEMENT_ME SDL_LowerBlit
 // !!! IMPLEMENT_ME SDL_MapRGB
@@ -368,9 +366,18 @@ SDL_Quit(void)
 void
 SDL_SetError(const char *fmt, ...)
 {
-    if (!Loaded_SDL20)
-        return;
-
+    char *str = NULL;
+    va_list ap;
+    va_start(ap, fmt);
+    vasprintf(&str, fmt, ap);
+    va_end(ap);
+    if (!str)
+        SDL20_OutOfMemory();
+    else
+    {
+        SDL20_SetError("%s", str);
+        free(str);
+    }
 }
 
 char *
@@ -2221,25 +2228,25 @@ SDL_FreeRW(SDL12_RWops *rwops12)
 }
 
 static int SDLCALL
-WrapRWops_seek(struct SDL12_RWops *rwops12, int offset, int whence)
+RWops12to20_seek(struct SDL12_RWops *rwops12, int offset, int whence)
 {
     return rwops12->rwops20->seek(rwops12->rwops20, offset, whence);
 }
 
 static int SDLCALL
-WrapRWops_read(struct SDL12_RWops *rwops12, void *ptr, int size, int maxnum)
+RWops12to20_read(struct SDL12_RWops *rwops12, void *ptr, int size, int maxnum)
 {
     return rwops12->rwops20->read(rwops12->rwops20, ptr, size, maxnum);
 }
 
 static int SDLCALL
-WrapRWops_write(struct SDL12_RWops *rwops12, const void *ptr, int size, int num)
+RWops12to20_write(struct SDL12_RWops *rwops12, const void *ptr, int size, int num)
 {
     return rwops12->rwops20->write(rwops12->rwops20, ptr, size, num);
 }
 
 static int SDLCALL
-WrapRWops_close(struct SDL12_RWops *rwops12)
+RWops12to20_close(struct SDL12_RWops *rwops12)
 {
     int rc = 0;
     if (rwops12)
@@ -2252,7 +2259,7 @@ WrapRWops_close(struct SDL12_RWops *rwops12)
 }
 
 static SDL12_RWops *
-WrapRWops(SDL12_RWops *rwops12, SDL_RWops *rwops20)
+RWops12to20(SDL12_RWops *rwops12, SDL_RWops *rwops20)
 {
     if (!rwops20)
     {
@@ -2262,38 +2269,39 @@ WrapRWops(SDL12_RWops *rwops12, SDL_RWops *rwops20)
     SDL_zerop(rwops12);
     rwops12->type = rwops20->type;
     rwops12->rwops20 = rwops20;
-    rwops12->seek = WrapRWops_seek;
-    rwops12->read = WrapRWops_read;
-    rwops12->write = WrapRWops_write;
-    rwops12->close = WrapRWops_close;
+    rwops12->seek = RWops12to20_seek;
+    rwops12->read = RWops12to20_read;
+    rwops12->write = RWops12to20_write;
+    rwops12->close = RWops12to20_close;
+    return rwops12;
 }
 
 SDL12_RWops *
 SDL_RWFromFile(const char *file, const char *mode)
 {
     SDL12_RWops *rwops12 = SDL_AllocRW();
-    return rwops12 ? WrapRWops(rwops12, SDL20_RWFromFile(file, mode)) : NULL;
+    return rwops12 ? RWops12to20(rwops12, SDL20_RWFromFile(file, mode)) : NULL;
 }
 
 SDL12_RWops *
 SDL_RWFromFP(FILE *io, int autoclose)
 {
     SDL12_RWops *rwops12 = SDL_AllocRW();
-    return rwops12 ? WrapRWops(rwops12, SDL20_RWFromFP(io, autoclose)) : NULL;
+    return rwops12 ? RWops12to20(rwops12, SDL20_RWFromFP(io, autoclose)) : NULL;
 }
 
 SDL12_RWops *
 SDL_RWFromMem(void *mem, int size)
 {
     SDL12_RWops *rwops12 = SDL_AllocRW();
-    return rwops12 ? WrapRWops(rwops12, SDL20_RWFromMem(mem, size)) : NULL;
+    return rwops12 ? RWops12to20(rwops12, SDL20_RWFromMem(mem, size)) : NULL;
 }
 
 SDL12_RWops *
 SDL_RWFromConstMem(const void *mem, int size)
 {
     SDL12_RWops *rwops12 = SDL_AllocRW();
-    return rwops12 ? WrapRWops(rwops12, SDL20_RWFromConstMem(mem, size)) : NULL;
+    return rwops12 ? RWops12to20(rwops12, SDL20_RWFromConstMem(mem, size)) : NULL;
 }
 
 #define READ_AND_BYTESWAP(endian, bits) \
@@ -2331,21 +2339,109 @@ BYTESWAP_AND_WRITE(BE,64)
 #undef SDL20_SYM_PASSTHROUGH
 #undef SDL20_SYM
 
-void
-SDL_SetError(const char *fmt, ...)
+
+static Sint64 SDLCALL
+RWops20to12_size(struct SDL_RWops *rwops20)
 {
-    char *str = NULL;
-    va_list ap;
-    va_start(ap, fmt);
-    vasprintf(&str, fmt, ap);
-    va_end(ap);
-    if (!str)
-        SDL20_OutOfMemory();
-    else
+    SDL12_RWops *rwops12 = (SDL12_RWops *) rwops20->hidden.unknown.data1;
+    int size = rwops20->hidden.unknown.data2;
+    int pos;
+
+    if (size != -1)
+        return size;
+
+    pos = rwops12->seek(rwops12, 0, SEEK_CUR);
+    if (pos == -1)
+        return -1;
+
+    size = (Sint64) rwops->seek(rwops12, 0, SEEK_END);
+    if (size == -1)
+        return -1;
+
+    rwops->seek(rwops12, pos, SEEK_SET);  /* !!! FIXME: and if this fails? */
+    rwops20->hidden.unknown.data2 = size;
+    return size;
+}
+
+static Sint64
+RWops20to12_seek(struct SDL_RWops *rwops20, Sint64 offset, int whence)
+{
+    /* !!! FIXME: fail if (offset) is too big */
+    SDL12_RWops *rwops12 = (SDL12_RWops *) rwops20->hidden.unknown.data1;
+    return (Sint64) rwops12->seek(rwops12, (int) offset, whence);
+}
+
+static size_t SDLCALL
+RWops20to12_read(struct SDL_RWops *rwops20, void *ptr, size_t size, size_t maxnum)
+{
+    /* !!! FIXME: fail if (size) or (maxnum) is too big */
+    SDL12_RWops *rwops12 = (SDL12_RWops *) rwops20->hidden.unknown.data1;
+    return (size_t) rwops12->read(rwops12, ptr, (int) size, (int) maxnum);
+}
+
+static size_t SDLCALL
+RWops20to12_write(struct SDL_RWops *rwops20, const void *ptr, size_t size, size_t num)
+{
+    /* !!! FIXME: fail if (size) or (maxnum) is too big */
+    SDL12_RWops *rwops12 = (SDL12_RWops *) rwops20->hidden.unknown.data1;
+    return (size_t) rwops12->write(rwops12, ptr, (int) size, (int) num);
+}
+
+static int SDLCALL
+RWops20to12_close(struct SDL_RWops *rwops20)
+{
+    int rc = 0;
+    if (rwops20)
     {
-        SDL20_SetError("%s", str);
-        free(str);
+        SDL12_RWops *rwops12 = (SDL12_RWops *) rwops20->hidden.unknown.data1;
+        rc = rwops12->close(rwops12);
+        if (rc == 0)
+            SDL20_FreeRW(rwops20);
     }
+    return rc;
+}
+
+static SDL12_RWops *
+RWops20to12(SDL12_RWops *rwops12)
+{
+    SDL20_RWops *rwops20;
+
+    if (!rwops12)
+        return NULL;
+
+    rwops20 = SDL20_AllocRW();
+    if (!rwops20)
+        return NULL;
+
+    SDL_zerop(rwops20);
+    rwops20->type = rwops12->type;
+    rwops20->hidden.unknown.data1 = rwops12;
+    rwops20->hidden.unknown.data2 = -1;  /* cached size of stream */
+    rwops20->size = RWops20to12_size;
+    rwops20->seek = RWops20to12_seek;
+    rwops20->read = RWops20to12_read;
+    rwops20->write = RWops20to12_write;
+    rwops20->close = RWops20to12_close;
+    return rwops20;
+}
+
+SDL_Surface *
+SDL_LoadBMP_RW(SDL12_RWops *rwops12, int freerwops12)
+{
+    SDL_RWops *rwops20 = RWops20to12(rwops12);
+    SDL_Surface *retval = SDL20_LoadBMP_RW(rwops20, freerwops12);
+    if (!freerwops12)  /* free our wrapper if SDL2 didn't close it. */
+        SDL20_FreeRW(rwops20);
+}
+
+SDL_AudioSpec *
+SDL_LoadWAV_RW(SDL12_RWops *rwops12, int freerwops12,
+               SDL_AudioSpec *spec, Uint8 **buf, Uint32 *len)
+{
+    SDL_RWops *rwops20 = RWops20to12(rwops12);
+    SDL_Surface *retval = SDL20_LoadWAV_RW(rwops20, freerwops12, spec, buf, len);
+    if (!freerwops12)  /* free our wrapper if SDL2 didn't close it. */
+        SDL20_FreeRW(rwops20);
 }
 
 /* vi: set ts=4 sw=4 expandtab: */
