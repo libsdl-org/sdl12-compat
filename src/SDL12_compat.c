@@ -29,18 +29,17 @@
 
 #include "SDL_syswm.h"
 
+#include <stdarg.h>
+
 //#include "video/SDL_sysvideo.h"
 //#include "video/SDL_pixels_c.h"
 //#include "render/SDL_yuv_sw_c.h"
 
-// !!! IMPLEMENT_ME SDL_AudioInit
-// !!! IMPLEMENT_ME SDL_AudioQuit
 // !!! IMPLEMENT_ME SDL_ConvertSurface
 // !!! IMPLEMENT_ME SDL_CreateCursor
 // !!! IMPLEMENT_ME SDL_CreateRGBSurface
 // !!! IMPLEMENT_ME SDL_CreateRGBSurfaceFrom
 // !!! IMPLEMENT_ME SDL_CreateThread
-// !!! IMPLEMENT_ME SDL_Error
 // !!! IMPLEMENT_ME SDL_EventState
 // !!! IMPLEMENT_ME SDL_FillRect
 // !!! IMPLEMENT_ME SDL_FreeCursor
@@ -62,7 +61,6 @@
 // !!! IMPLEMENT_ME SDL_GetRGB
 // !!! IMPLEMENT_ME SDL_GetRGBA
 // !!! IMPLEMENT_ME SDL_GetRelativeMouseState
-// !!! IMPLEMENT_ME SDL_InitSubSystem
 // !!! IMPLEMENT_ME SDL_LoadBMP_RW
 // !!! IMPLEMENT_ME SDL_LoadWAV_RW
 // !!! IMPLEMENT_ME SDL_LockSurface
@@ -73,34 +71,17 @@
 // !!! IMPLEMENT_ME SDL_PollEvent
 // !!! IMPLEMENT_ME SDL_PumpEvents
 // !!! IMPLEMENT_ME SDL_PushEvent
-// !!! IMPLEMENT_ME SDL_QuitSubSystem
 // !!! IMPLEMENT_ME SDL_SaveBMP_RW
 // !!! IMPLEMENT_ME SDL_SetClipRect
 // !!! IMPLEMENT_ME SDL_SetColorKey
 // !!! IMPLEMENT_ME SDL_SetCursor
-// !!! IMPLEMENT_ME SDL_SetError
 // !!! IMPLEMENT_ME SDL_SetEventFilter
 // !!! IMPLEMENT_ME SDL_SetModState
 // !!! IMPLEMENT_ME SDL_ShowCursor
 // !!! IMPLEMENT_ME SDL_SoftStretch
 // !!! IMPLEMENT_ME SDL_UnlockSurface
 // !!! IMPLEMENT_ME SDL_UpperBlit
-// !!! IMPLEMENT_ME SDL_VideoInit
-// !!! IMPLEMENT_ME SDL_VideoQuit
 // !!! IMPLEMENT_ME SDL_WaitEvent
-// !!! IMPLEMENT_ME SDL_WasInit
-// !!! IMPLEMENT_ME SDL_iconv
-// !!! IMPLEMENT_ME SDL_iconv_string
-// !!! IMPLEMENT_ME SDL_lltoa
-// !!! IMPLEMENT_ME SDL_ltoa
-// !!! IMPLEMENT_ME SDL_revcpy
-// !!! IMPLEMENT_ME SDL_strlcat
-// !!! IMPLEMENT_ME SDL_strlcpy
-// !!! IMPLEMENT_ME SDL_strlwr
-// !!! IMPLEMENT_ME SDL_strrev
-// !!! IMPLEMENT_ME SDL_strupr
-// !!! IMPLEMENT_ME SDL_ulltoa
-// !!! IMPLEMENT_ME SDL_ultoa
 // !!! IMPLEMENT_ME X11_KeyToUnicode
 
 
@@ -113,6 +94,8 @@
 #undef SDL20_SYM_PASSTHROUGH
 #undef SDL20_SYM
 
+typedef void (*SDL20_SetError_t)(const char *fmt, ...);
+static SDL20_SetError_t SDL20_SetError = NULL;
 
 
 
@@ -207,6 +190,7 @@ static char *wm_icon_caption = NULL;
 static SDL_Surface *SDL_VideoIcon;
 static int SDL_enabled_UNICODE = 0;
 static int SDL_VideoDisplayIndex = 0;
+static int SDL_CDRomInit = 0;
 
 /* Obviously we can't use SDL_LoadObject() to load SDL2.  :)  */
 #if defined(_WINDOWS)
@@ -250,6 +234,7 @@ UnloadSDL20(void)
     #include "SDL20_syms.h"
     #undef SDL20_SYM_PASSTHROUGH
     #undef SDL20_SYM
+    SDL20_SetError = NULL;
     CloseSDL20Library();
 }
 
@@ -265,6 +250,7 @@ LoadSDL20(void)
         #include "SDL20_syms.h"
         #undef SDL20_SYM_PASSTHROUGH
         #undef SDL20_SYM
+        SDL20_SetError = (SDL20_SetError_t) LoadSDL20Symbol("SDL_SetError", &okay);
         if (!okay)
             UnloadSDL20();
     }
@@ -287,8 +273,8 @@ GetVideoDisplay()
     }
 }
 
-int
-SDL_Init(Uint32 sdl12flags)
+static int
+DoSDLInit(const int justsubs, Uint32 sdl12flags)
 {
     Uint32 sdl20flags = 0;
     int rc;
@@ -302,15 +288,74 @@ SDL_Init(Uint32 sdl12flags)
     SETFLAG(VIDEO);
     SETFLAG(JOYSTICK);
     SETFLAG(NOPARACHUTE);
+    #undef SETFLAG
+
+    // There's no CDROM in 2.0, but we'll just pretend it succeeded.
+    if (sdl12flags & SDL12_INIT_CDROM)
+        SDL_CDRomInit = 1;
+
+    // !!! FIXME: do something about SDL12_INIT_EVENTTHREAD
+
+    rc = justsubs ? SDL20_InitSubSystem(sdl20flags) : SDL20_Init(sdl20flags);
+    if ((rc == 0) && (sdl20flags & SDL_INIT_VIDEO))
+        SDL_VideoDisplayIndex = GetVideoDisplay();
+    return rc;
+}
+
+int
+SDL_InitSubSystem(Uint32 sdl12flags)
+{
+    return DoSDLInit(1, sdl12flags);
+}
+
+int
+SDL_Init(Uint32 sdl12flags)
+{
+    return DoSDLInit(0, sdl12flags);
+}
+
+Uint32
+SDL_WasInit(Uint32 sdl12flags)
+{
+    // !!! FIXME: this is cut and pasted several places.
+    Uint32 sdl20flags = 0;
+    Uint32 extraflags = 0;
+
+    #define SETFLAG(x) if (sdl12flags & SDL12_INIT_##flag) sdl20flags |= SDL_INIT_##flag)
+    SETFLAG(TIMER);
+    SETFLAG(AUDIO);
+    SETFLAG(VIDEO);
+    SETFLAG(JOYSTICK);
+    SETFLAG(NOPARACHUTE);
+    #undef SETFLAG
+
+    if ((sdl12flags & SDL12_INIT_CDROM) && (SDL_CDRomInit))
+        extraflags |= SDL12_INIT_CDROM;
+
+    // !!! FIXME: do something about SDL12_INIT_EVENTTHREAD
+
+    // !!! FIXME: convert back to 1.2
+    return SDL20_WasInit(sdl20flags) | extraflags;
+}
+
+void
+SDL_QuitSubSystem(Uint32 sdl12flags)
+{
+    Uint32 sdl20flags = 0;
+
+    #define SETFLAG(x) if (sdl12flags & SDL12_INIT_##flag) sdl20flags |= SDL_INIT_##flag)
+    SETFLAG(TIMER);
+    SETFLAG(AUDIO);
+    SETFLAG(VIDEO);
+    SETFLAG(JOYSTICK);
+    SETFLAG(NOPARACHUTE);
     // There's no CDROM in 2.0, but we'll just pretend it succeeded.
     #undef SETFLAG
 
     // !!! FIXME: do something about SDL12_INIT_EVENTTHREAD
+    SDL20_QuitSubSystem(sdl20flags);
 
-    rc = SDL20_Init(sdl20flags);
-    if ((rc == 0) && (sdl20flags & SDL_INIT_VIDEO))
-        SDL_VideoDisplayIndex = GetVideoDisplay();
-    return rc;
+    // !!! FIXME: UnloadSDL20() ?
 }
 
 void
@@ -320,6 +365,13 @@ SDL_Quit(void)
     UnloadSDL20();
 }
 
+void
+SDL_SetError(const char *fmt, ...)
+{
+    if (!Loaded_SDL20)
+        return;
+
+}
 
 char *
 SDL_GetError(void)
@@ -2278,5 +2330,22 @@ BYTESWAP_AND_WRITE(BE,64)
 #include "SDL20_syms.h"
 #undef SDL20_SYM_PASSTHROUGH
 #undef SDL20_SYM
+
+void
+SDL_SetError(const char *fmt, ...)
+{
+    char *str = NULL;
+    va_list ap;
+    va_start(ap, fmt);
+    vasprintf(&str, fmt, ap);
+    va_end(ap);
+    if (!str)
+        SDL20_OutOfMemory();
+    else
+    {
+        SDL20_SetError("%s", str);
+        free(str);
+    }
+}
 
 /* vi: set ts=4 sw=4 expandtab: */
