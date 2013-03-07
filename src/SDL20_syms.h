@@ -73,6 +73,8 @@ SDL20_SYM_PASSTHROUGH(SDL_bool,HasSSE,(void),(),return)
 SDL20_SYM_PASSTHROUGH(SDL_bool,HasSSE2,(void),(),return)
 SDL20_SYM_PASSTHROUGH(SDL_bool,HasAltiVec,(void),(),return)
 
+SDL20_SYM(SDL_TimerID,SDL_AddTimer,(Uint32 a, SDL_NewTimerCallback b, void *c),(a,b,c),return)
+SDL20_SYM(SDL_bool,SDL_RemoveTimer,(SDL_TimerID a),(a),return)
 SDL20_SYM_PASSTHROUGH(Uint32,GetTicks,(void),(),return)
 SDL20_SYM_PASSTHROUGH(void,Delay,(Uint32 a),(a),)
 
@@ -93,6 +95,11 @@ SDL20_SYM_PASSTHROUGH(int,JoystickGetBall,(SDL_Joystick *a, int b, int *c, int *
 SDL20_SYM_PASSTHROUGH(Uint8,JoystickGetButton,(SDL_Joystick *a, int b),(a,b),return)
 SDL20_SYM_PASSTHROUGH(void,JoystickClose,(SDL_Joystick *a),(a),return)
 
+/* We don't call most things that use 2.0 RWops, so most aren't listed here. */
+SDL20_SYM(SDL_RWops *,SDL_RWFromFile,(const char *a, const char *b),(a,b),return)
+SDL20_SYM(SDL_RWops *,SDL_RWFromFP,(FILE *a, int b),(a,b),return)
+SDL20_SYM(SDL_RWops *,SDL_RWFromMem,(void *a, int b),(a,b),return)
+SDL20_SYM(SDL_RWops *,SDL_RWFromConstMem,(const void *a, int b),(a,b),return)
 
 /* vi: set ts=4 sw=4 expandtab: */
 

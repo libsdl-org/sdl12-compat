@@ -33,8 +33,6 @@
 //#include "video/SDL_pixels_c.h"
 //#include "render/SDL_yuv_sw_c.h"
 
-// !!! IMPLEMENT_ME SDL_AddTimer
-// !!! IMPLEMENT_ME SDL_AllocRW
 // !!! IMPLEMENT_ME SDL_AudioInit
 // !!! IMPLEMENT_ME SDL_AudioQuit
 // !!! IMPLEMENT_ME SDL_ConvertSurface
@@ -46,7 +44,6 @@
 // !!! IMPLEMENT_ME SDL_EventState
 // !!! IMPLEMENT_ME SDL_FillRect
 // !!! IMPLEMENT_ME SDL_FreeCursor
-// !!! IMPLEMENT_ME SDL_FreeRW
 // !!! IMPLEMENT_ME SDL_FreeSurface
 // !!! IMPLEMENT_ME SDL_GL_GetAttribute
 // !!! IMPLEMENT_ME SDL_GL_GetProcAddress
@@ -65,8 +62,6 @@
 // !!! IMPLEMENT_ME SDL_GetRGB
 // !!! IMPLEMENT_ME SDL_GetRGBA
 // !!! IMPLEMENT_ME SDL_GetRelativeMouseState
-// !!! IMPLEMENT_ME SDL_GetThreadID
-// !!! IMPLEMENT_ME SDL_Init
 // !!! IMPLEMENT_ME SDL_InitSubSystem
 // !!! IMPLEMENT_ME SDL_LoadBMP_RW
 // !!! IMPLEMENT_ME SDL_LoadWAV_RW
@@ -79,17 +74,6 @@
 // !!! IMPLEMENT_ME SDL_PumpEvents
 // !!! IMPLEMENT_ME SDL_PushEvent
 // !!! IMPLEMENT_ME SDL_QuitSubSystem
-// !!! IMPLEMENT_ME SDL_RWFromConstMem
-// !!! IMPLEMENT_ME SDL_RWFromFP
-// !!! IMPLEMENT_ME SDL_RWFromFile
-// !!! IMPLEMENT_ME SDL_RWFromMem
-// !!! IMPLEMENT_ME SDL_ReadBE16
-// !!! IMPLEMENT_ME SDL_ReadBE32
-// !!! IMPLEMENT_ME SDL_ReadBE64
-// !!! IMPLEMENT_ME SDL_ReadLE16
-// !!! IMPLEMENT_ME SDL_ReadLE32
-// !!! IMPLEMENT_ME SDL_ReadLE64
-// !!! IMPLEMENT_ME SDL_RemoveTimer
 // !!! IMPLEMENT_ME SDL_SaveBMP_RW
 // !!! IMPLEMENT_ME SDL_SetClipRect
 // !!! IMPLEMENT_ME SDL_SetColorKey
@@ -105,12 +89,6 @@
 // !!! IMPLEMENT_ME SDL_VideoQuit
 // !!! IMPLEMENT_ME SDL_WaitEvent
 // !!! IMPLEMENT_ME SDL_WasInit
-// !!! IMPLEMENT_ME SDL_WriteBE16
-// !!! IMPLEMENT_ME SDL_WriteBE32
-// !!! IMPLEMENT_ME SDL_WriteBE64
-// !!! IMPLEMENT_ME SDL_WriteLE16
-// !!! IMPLEMENT_ME SDL_WriteLE32
-// !!! IMPLEMENT_ME SDL_WriteLE64
 // !!! IMPLEMENT_ME SDL_iconv
 // !!! IMPLEMENT_ME SDL_iconv_string
 // !!! IMPLEMENT_ME SDL_lltoa
@@ -2079,12 +2057,12 @@ SDL_SetTimer(Uint32 interval, SDL_OldTimerCallback callback)
     static SDL_TimerID compat_timer;
 
     if (compat_timer) {
-        SDL_RemoveTimer(compat_timer);
+        SDL20_RemoveTimer(compat_timer);
         compat_timer = 0;
     }
 
     if (interval && callback) {
-        compat_timer = SDL_AddTimer(interval, SDL_SetTimerCallback, callback);
+        compat_timer = SDL20_AddTimer(interval, SDL_SetTimerCallback, callback);
         if (!compat_timer) {
             return -1;
         }
@@ -2147,6 +2125,152 @@ void SDL_CDClose(SDL12_CD *cdrom) {}
 /* !!! FIXME: Removed from 2.0; do nothing. We can't even report failure. */
 void SDL_KillThread(SDL_Thread *thread) {}
 
+/* This changed from an opaque pointer to an int in 2.0. */
+typedef struct _SDL12_TimerID *SDL12_TimerID;
+SDL_COMPILE_TIME_ASSERT(timer, sizeof(SDL12_TimerID) >= sizeof(SDL_TimerID));
+
+SDL12_TimerID
+SDL_AddTimer(Uint32 interval, SDL_NewTimerCallback callback, void *param)
+{
+    return (SDL12_TimerID) ((size_t) SDL20_AddTimer(interval, callback, param));
+}
+
+SDL_bool
+SDL_RemoveTimer(SDL12_TimerID id)
+{
+    return SDL20_RemoveTimer((SDL_TimerID) ((size_t)id));
+}
+
+
+typedef struct SDL12_RWops {
+    int (SDLCALL *seek)(struct SDL_RWops *context, int offset, int whence);
+    int (SDLCALL *read)(struct SDL_RWops *context, void *ptr, int size, int maxnum);
+    int (SDLCALL *write)(struct SDL_RWops *context, const void *ptr, int size, int num);
+    int (SDLCALL *close)(struct SDL_RWops *context);
+    Uint32 type;
+    void *padding[8];
+    SDL_RWops *rwops20;
+} SDL12_RWops;
+
+
+SDL12_RWops *
+SDL_AllocRW(void)
+{
+    SDL12_RWops *rwops = (SDL12_RWops *) SDL_malloc(sizeof (SDL12_RWops));
+    if (!rwops)
+        SDL20_OutOfMemory();
+    return rwops;
+}
+
+void
+SDL_FreeRW(SDL12_RWops *rwops12)
+{
+    SDL_free(rwops12);
+}
+
+static int SDLCALL
+WrapRWops_seek(struct SDL12_RWops *rwops12, int offset, int whence)
+{
+    return rwops12->rwops20->seek(rwops12->rwops20, offset, whence);
+}
+
+static int SDLCALL
+WrapRWops_read(struct SDL12_RWops *rwops12, void *ptr, int size, int maxnum)
+{
+    return rwops12->rwops20->read(rwops12->rwops20, ptr, size, maxnum);
+}
+
+static int SDLCALL
+WrapRWops_write(struct SDL12_RWops *rwops12, const void *ptr, int size, int num)
+{
+    return rwops12->rwops20->write(rwops12->rwops20, ptr, size, num);
+}
+
+static int SDLCALL
+WrapRWops_close(struct SDL12_RWops *rwops12)
+{
+    int rc = 0;
+    if (rwops12)
+    {
+        rc = rwops12->rwops20->close(rwops12->rwops20);
+        if (rc == 0)
+            SDL_FreeRW(rwops12);
+    }
+    return rc;
+}
+
+static SDL12_RWops *
+WrapRWops(SDL12_RWops *rwops12, SDL_RWops *rwops20)
+{
+    if (!rwops20)
+    {
+        SDL_FreeRW(rwops12);
+        return NULL;
+    }
+    SDL_zerop(rwops12);
+    rwops12->type = rwops20->type;
+    rwops12->rwops20 = rwops20;
+    rwops12->seek = WrapRWops_seek;
+    rwops12->read = WrapRWops_read;
+    rwops12->write = WrapRWops_write;
+    rwops12->close = WrapRWops_close;
+}
+
+SDL12_RWops *
+SDL_RWFromFile(const char *file, const char *mode)
+{
+    SDL12_RWops *rwops12 = SDL_AllocRW();
+    return rwops12 ? WrapRWops(rwops12, SDL20_RWFromFile(file, mode)) : NULL;
+}
+
+SDL12_RWops *
+SDL_RWFromFP(FILE *io, int autoclose)
+{
+    SDL12_RWops *rwops12 = SDL_AllocRW();
+    return rwops12 ? WrapRWops(rwops12, SDL20_RWFromFP(io, autoclose)) : NULL;
+}
+
+SDL12_RWops *
+SDL_RWFromMem(void *mem, int size)
+{
+    SDL12_RWops *rwops12 = SDL_AllocRW();
+    return rwops12 ? WrapRWops(rwops12, SDL20_RWFromMem(mem, size)) : NULL;
+}
+
+SDL12_RWops *
+SDL_RWFromConstMem(const void *mem, int size)
+{
+    SDL12_RWops *rwops12 = SDL_AllocRW();
+    return rwops12 ? WrapRWops(rwops12, SDL20_RWFromConstMem(mem, size)) : NULL;
+}
+
+#define READ_AND_BYTESWAP(endian, bits) \
+    Uint##bits SDL_Read##endian##bits(SDL12_RWops *rwops12) { \
+        Uint##bits val; rwops12->read(rwops12, &val, sizeof (val), 1); \
+        return SDL_Swap##endian##bits(val); \
+    }
+
+READ_AND_BYTESWAP(LE,16)
+READ_AND_BYTESWAP(BE,16)
+READ_AND_BYTESWAP(LE,32)
+READ_AND_BYTESWAP(BE,32)
+READ_AND_BYTESWAP(LE,64)
+READ_AND_BYTESWAP(BE,64)
+#undef READ_AND_BYTESWAP
+
+#define BYTESWAP_AND_WRITE(endian, bits) \
+    int SDL_Write##endian##bits(SDL12_RWops *rwops12, Uint##endian##bits val) { \
+        val = SDL_Swap##endian##bits(val); \
+        return rwops12->write(rwops12, &val, sizeof (val), 1); \
+    }
+BYTESWAP_AND_WRITE(LE,16)
+BYTESWAP_AND_WRITE(BE,16)
+BYTESWAP_AND_WRITE(LE,32)
+BYTESWAP_AND_WRITE(BE,32)
+BYTESWAP_AND_WRITE(LE,64)
+BYTESWAP_AND_WRITE(BE,64)
+#undef BYTESWAP_AND_WRITE
+
 /* Things that _should_ be binary compatible pass right through... */
 #define SDL20_SYM(rc,fn,params,args,ret)
 #define SDL20_SYM_PASSTHROUGH(rc,fn,params,args,ret) \
@@ -2154,6 +2278,5 @@ void SDL_KillThread(SDL_Thread *thread) {}
 #include "SDL20_syms.h"
 #undef SDL20_SYM_PASSTHROUGH
 #undef SDL20_SYM
-
 
 /* vi: set ts=4 sw=4 expandtab: */
