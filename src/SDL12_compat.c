@@ -37,8 +37,6 @@
 
 // !!! IMPLEMENT_ME SDL_ConvertSurface
 // !!! IMPLEMENT_ME SDL_CreateCursor
-// !!! IMPLEMENT_ME SDL_CreateRGBSurface
-// !!! IMPLEMENT_ME SDL_CreateRGBSurfaceFrom
 // !!! IMPLEMENT_ME SDL_CreateThread
 // !!! IMPLEMENT_ME SDL_EventState
 // !!! IMPLEMENT_ME SDL_FillRect
@@ -69,7 +67,6 @@
 // !!! IMPLEMENT_ME SDL_PollEvent
 // !!! IMPLEMENT_ME SDL_PumpEvents
 // !!! IMPLEMENT_ME SDL_PushEvent
-// !!! IMPLEMENT_ME SDL_SaveBMP_RW
 // !!! IMPLEMENT_ME SDL_SetClipRect
 // !!! IMPLEMENT_ME SDL_SetColorKey
 // !!! IMPLEMENT_ME SDL_SetCursor
@@ -106,77 +103,74 @@ static SDL20_SetError_t SDL20_SetError = NULL;
 #define SDL12_INIT_EVENTTHREAD 0x01000000
 #define SDL12_INIT_EVERYTHING  0x0000FFFF
 
-typedef struct
+typedef struct SDL12_Palette
 {
-	Uint32 hw_available :1;	/**< Flag: Can you create hardware surfaces? */
-	Uint32 wm_available :1;	/**< Flag: Can you talk to a window manager? */
-	Uint32 UnusedBits1  :6;
-	Uint32 UnusedBits2  :1;
-	Uint32 blit_hw      :1;	/**< Flag: Accelerated blits HW --> HW */
-	Uint32 blit_hw_CC   :1;	/**< Flag: Accelerated blits with Colorkey */
-	Uint32 blit_hw_A    :1;	/**< Flag: Accelerated blits with Alpha */
-	Uint32 blit_sw      :1;	/**< Flag: Accelerated blits SW --> HW */
-	Uint32 blit_sw_CC   :1;	/**< Flag: Accelerated blits with Colorkey */
-	Uint32 blit_sw_A    :1;	/**< Flag: Accelerated blits with Alpha */
-	Uint32 blit_fill    :1;	/**< Flag: Accelerated color fill */
-	Uint32 UnusedBits3  :16;
-	Uint32 video_mem;	/**< The total amount of video memory (in K) */
-	SDL_PixelFormat *vfmt;	/**< Value: The format of the video surface */
-	int    current_w;	/**< Value: The current video mode width */
-	int    current_h;	/**< Value: The current video mode height */
-} SDL12_VideoInfo;
-
-typedef struct SDL12_Palette {
-	int       ncolors;
-	SDL_Color *colors;
+    int       ncolors;
+    SDL_Color *colors;
 } SDL12_Palette;
 
-/** Everything in the pixel format structure is read-only */
-typedef struct SDL12_PixelFormat {
-	SDL12_Palette *palette;
-	Uint8  BitsPerPixel;
-	Uint8  BytesPerPixel;
-	Uint8  Rloss;
-	Uint8  Gloss;
-	Uint8  Bloss;
-	Uint8  Aloss;
-	Uint8  Rshift;
-	Uint8  Gshift;
-	Uint8  Bshift;
-	Uint8  Ashift;
-	Uint32 Rmask;
-	Uint32 Gmask;
-	Uint32 Bmask;
-	Uint32 Amask;
-
-	/** RGB color key information */
-	Uint32 colorkey;
-	/** Alpha value information (per-surface alpha) */
-	Uint8  alpha;
+typedef struct SDL12_PixelFormat
+{
+    SDL12_Palette *palette;
+    Uint8 BitsPerPixel;
+    Uint8 BytesPerPixel;
+    Uint8 Rloss;
+    Uint8 Gloss;
+    Uint8 Bloss;
+    Uint8 Aloss;
+    Uint8 Rshift;
+    Uint8 Gshift;
+    Uint8 Bshift;
+    Uint8 Ashift;
+    Uint32 Rmask;
+    Uint32 Gmask;
+    Uint32 Bmask;
+    Uint32 Amask;
+    Uint32 colorkey;
+    Uint8 alpha;
 } SDL12_PixelFormat;
 
-#define SDL12_SWSURFACE	0x00000000	/**< Surface is in system memory */
-#define SDL12_HWSURFACE	0x00000001	/**< Surface is in video memory */
-#define SDL12_ASYNCBLIT	0x00000004	/**< Use asynchronous blits if possible */
-#define SDL12_ANYFORMAT	0x10000000	/**< Allow any video depth/pixel-format */
-#define SDL12_HWPALETTE	0x20000000	/**< Surface has exclusive palette */
-#define SDL12_DOUBLEBUF	0x40000000	/**< Set up double-buffered video mode */
-#define SDL12_FULLSCREEN	0x80000000	/**< Surface is a full screen display */
-#define SDL12_OPENGL      0x00000002      /**< Create an OpenGL rendering context */
-#define SDL12_OPENGLBLIT	0x0000000A	/**< Create an OpenGL rendering context and use it for blitting */
-#define SDL12_RESIZABLE	0x00000010	/**< This video mode may be resized */
-#define SDL12_NOFRAME	0x00000020	/**< No window caption or edge frame */
+typedef struct
+{
+    Uint32 hw_available :1;
+    Uint32 wm_available :1;
+    Uint32 UnusedBits1  :6;
+    Uint32 UnusedBits2  :1;
+    Uint32 blit_hw      :1;
+    Uint32 blit_hw_CC   :1;
+    Uint32 blit_hw_A    :1;
+    Uint32 blit_sw      :1;
+    Uint32 blit_sw_CC   :1;
+    Uint32 blit_sw_A    :1;
+    Uint32 blit_fill    :1;
+    Uint32 UnusedBits3  :16;
+    Uint32 video_mem;
+    SDL_PixelFormat *vfmt;
+    int current_w;
+    int current_h;
+} SDL12_VideoInfo;
 
-#define SDL12_HWACCEL	0x00000100	/**< Blit uses hardware acceleration */
-#define SDL12_SRCCOLORKEY	0x00001000	/**< Blit uses a source color key */
-#define SDL12_RLEACCELOK	0x00002000	/**< Private flag */
-#define SDL12_RLEACCEL	0x00004000	/**< Surface is RLE encoded */
-#define SDL12_SRCALPHA	0x00010000	/**< Blit uses source alpha blending */
-#define SDL12_PREALLOC	0x01000000	/**< Surface uses preallocated memory */
+
+#define SDL12_HWSURFACE 0x00000001
+#define SDL12_ASYNCBLIT 0x00000004
+#define SDL12_ANYFORMAT 0x10000000
+#define SDL12_HWPALETTE 0x20000000
+#define SDL12_DOUBLEBUF 0x40000000
+#define SDL12_FULLSCREEN 0x80000000
+#define SDL12_OPENGL 0x00000002
+#define SDL12_OPENGLBLIT 0x0000000A
+#define SDL12_RESIZABLE 0x00000010
+#define SDL12_NOFRAME 0x00000020
+#define SDL12_HWACCEL 0x00000100
+#define SDL12_SRCCOLORKEY 0x00001000
+#define SDL12_RLEACCELOK 0x00002000
+#define SDL12_RLEACCEL 0x00004000
+#define SDL12_SRCALPHA 0x00010000
+#define SDL12_PREALLOC 0x01000000
 
 
-static SDL_Window *SDL_VideoWindow = NULL;
-static SDL_Surface *SDL_WindowSurface = NULL;
+static SDL_Window *VideoWindow = NULL;
+static SDL_Surface *WindowSurface = NULL;
 static SDL_Surface *SDL_VideoSurface = NULL;
 static SDL_Surface *SDL_ShadowSurface = NULL;
 static SDL_Surface *SDL_PublicSurface = NULL;
@@ -417,6 +411,139 @@ SDL_VideoDriverName(char *namebuf, int maxlen)
 {
     return GetDriverName(SDL20_GetCurrentVideoDriver(), namebuf, maxlen);
 }
+
+typedef struct SDL12_Surface
+{
+    Uint32 flags;
+    SDL12_PixelFormat *format;
+    int w;
+    int h;
+    Uint16 pitch;
+    void *pixels;
+    int offset;
+    void *hwdata;
+    SDL_Rect clip_rect;
+    Uint32 unused1;
+    Uint32 locked;
+    void *blitmap;
+    unsigned int format_version;
+    int refcount;
+} SDL12_Surface;
+
+SDL12_Surface *
+Surface20to12(SDL_Surface *surface20)
+{
+    SDL12_Surface *surface12 = NULL;
+    SDL12_Palette *palette12 = NULL;
+    SDL12_PixelFormat *format12 = NULL;
+    UInt32 flags = 0;
+
+    if (!surface20)
+        return NULL;
+
+    surface12 = (SDL12_Surface *) SDL20_malloc(sizeof (SDL12_Surface));
+    if (!surface12)
+        goto failed;
+
+    palette12 = (SDL12_Palette *) SDL20_malloc(sizeof (SDL12_Palette));
+    if (!palette12)
+        goto failed;
+
+    format12 = (SDL12_PixelFormat *) SDL20_malloc(sizeof (SDL12_PixelFormat));
+    if (!format12)
+        goto failed;
+
+    SDL_zerop(palette12);
+    palette12->ncolors = surface20->palette->ncolors;
+    palette12->colors = surface20->palette->colors;
+
+    SDL_zerop(format12);
+    format12->palette = palette12;
+    format12->BitsPerPixel = surface20->format->BitsPerPixel;
+    format12->BytesPerPixel = surface20->format->BytesPerPixel;
+    format12->Rloss = surface20->format->Rloss;
+    format12->Gloss = surface20->format->Gloss;
+    format12->Bloss = surface20->format->Bloss;
+    format12->Aloss = surface20->format->Aloss;
+    format12->Rshift = surface20->format->Rshift;
+    format12->Gshift = surface20->format->Gshift;
+    format12->Bshift = surface20->format->Bshift;
+    format12->Ashift = surface20->format->Ashift;
+    format12->Rmask = surface20->format->Rmask;
+    format12->Gmask = surface20->format->Gmask;
+    format12->Bmask = surface20->format->Bmask;
+    format12->Amask = surface20->format->Amask;
+    /* !!! FIXME: format12->colorkey; */
+    /* !!! FIXME: format12->alpha; */
+
+    SDL_zerop(surface12);
+    flags = surface20->flags;
+    #define MAPSURFACEFLAGS(fl) { if (surface20->flags & SDL_##fl) { surface12->flags |= SDL12_##fl; flags &= ~SDL_##fl; } }
+    MAPSURFACEFLAGS(PREALLOC);
+    MAPSURFACEFLAGS(RLEACCEL);
+    MAPSURFACEFLAGS(DONTFREE);
+    #undef MAPSURFACEFLAGS
+    SDL_assert(flags == 0);  /* non-zero if there's a flag we didn't map. */
+
+    surface12->format = format12;
+    surface12->w = surface20->w;
+    surface12->h = surface20->h;
+    surface12->pitch = (Uint16) surface20->pitch;  /* !!! FIXME: make sure this fits in a Uint16 */
+    surface12->pixels = surface20->pixels;
+    surface12->offset = 0;
+    surface12->hwdata = surface20;
+    SDL20_memcpy(&surface12->clip_rect, &surface20->clip_rect, sizeof (SDL_Rect));
+    surface12->refcount = surface20->refcount;
+
+    return surface12;
+
+failed:
+    SDL20_free(surface12);
+    SDL20_free(palette12);
+    SDL20_free(format12);
+    return NULL;
+}
+
+SDL12_Surface *
+SDL_CreateRGBSurface(Uint32 sdl12flags, int width, int height, int depth, Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask)
+{
+    SDL_Surface *surface20 = SDL20_CreateRGBSurface(0, width, height, depth, Rmask, Gmask, Bmask, Amask);
+    SDL12_Surface *surface12 = Surface20to12(surface20);
+    if (!surface12) {
+        SDL20_FreeSurface(surface20);
+        return NULL;
+    }
+
+    SDL_assert(surface12->flags == 0);  // shouldn't have prealloc, rleaccel, or dontfree.
+    return surface12;
+}
+
+SDL12_Surface *
+SDL_CreateRGBSurfaceFrom(void *pixels, int width, int height, int depth, int pitch, Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask)
+{
+    SDL_Surface *surface20 = SDL20_CreateRGBSurfaceFrom(pixels, width, height, depth, Rmask, Gmask, Bmask, Amask);
+    SDL12_Surface *surface12 = Surface20to12(surface20);
+    if (!surface12) {
+        SDL20_FreeSurface(surface20);
+        return NULL;
+    }
+
+    SDL_assert(surface12->flags == SDL12_PREALLOC);  // should _only_ have prealloc.
+    return surface12;
+}
+
+void SDL_FreeSurface(SDL12_Surface *surface12)
+{
+    if (surface12) {
+        SDL20_FreeSurface((SDL_Surface *) surface12->hwdata);
+        if (surface12->format) {
+            SDL20_free(surface12->format->palette);
+            SDL20_free(surface12->format);
+        }
+        SDL20_free(surface12);
+    }
+}
+
 
 const SDL12_VideoInfo *
 SDL_GetVideoInfo(void)
@@ -2425,13 +2552,26 @@ RWops20to12(SDL12_RWops *rwops12)
     return rwops20;
 }
 
-SDL_Surface *
+SDL12_Surface *
 SDL_LoadBMP_RW(SDL12_RWops *rwops12, int freerwops12)
 {
     SDL_RWops *rwops20 = RWops20to12(rwops12);
     SDL_Surface *retval = SDL20_LoadBMP_RW(rwops20, freerwops12);
     if (!freerwops12)  /* free our wrapper if SDL2 didn't close it. */
         SDL20_FreeRW(rwops20);
+    // !!! FIXME: wrap surface.
+    return retval;
+}
+
+int
+SDL_SaveBMP_RW(SDL12_Surface *surface, SDL12_RWops *rwops12, int freerwops12)
+{
+    // !!! FIXME: wrap surface.
+    SDL_RWops *rwops20 = RWops20to12(rwops12);
+    const int retval = SDL20_SaveBMP_RW(surface, rwops20, freerwops12);
+    if (!freerwops12)  /* free our wrapper if SDL2 didn't close it. */
+        SDL20_FreeRW(rwops20);
+    return retval;
 }
 
 SDL_AudioSpec *
@@ -2439,9 +2579,10 @@ SDL_LoadWAV_RW(SDL12_RWops *rwops12, int freerwops12,
                SDL_AudioSpec *spec, Uint8 **buf, Uint32 *len)
 {
     SDL_RWops *rwops20 = RWops20to12(rwops12);
-    SDL_Surface *retval = SDL20_LoadWAV_RW(rwops20, freerwops12, spec, buf, len);
+    SDL_AudioSpec *retval = SDL20_LoadWAV_RW(rwops20, freerwops12, spec, buf, len);
     if (!freerwops12)  /* free our wrapper if SDL2 didn't close it. */
         SDL20_FreeRW(rwops20);
+    return retval;
 }
 
 /* vi: set ts=4 sw=4 expandtab: */
