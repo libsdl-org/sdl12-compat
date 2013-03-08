@@ -41,10 +41,7 @@
 // !!! IMPLEMENT_ME SDL_EventState
 // !!! IMPLEMENT_ME SDL_FillRect
 // !!! IMPLEMENT_ME SDL_FreeCursor
-// !!! IMPLEMENT_ME SDL_FreeSurface
 // !!! IMPLEMENT_ME SDL_GL_GetAttribute
-// !!! IMPLEMENT_ME SDL_GL_GetProcAddress
-// !!! IMPLEMENT_ME SDL_GL_LoadLibrary
 // !!! IMPLEMENT_ME SDL_GL_Lock
 // !!! IMPLEMENT_ME SDL_GL_SetAttribute
 // !!! IMPLEMENT_ME SDL_GL_Unlock
@@ -56,13 +53,9 @@
 // !!! IMPLEMENT_ME SDL_GetKeyState
 // !!! IMPLEMENT_ME SDL_GetModState
 // !!! IMPLEMENT_ME SDL_GetMouseState
-// !!! IMPLEMENT_ME SDL_GetRGB
-// !!! IMPLEMENT_ME SDL_GetRGBA
 // !!! IMPLEMENT_ME SDL_GetRelativeMouseState
 // !!! IMPLEMENT_ME SDL_LockSurface
 // !!! IMPLEMENT_ME SDL_LowerBlit
-// !!! IMPLEMENT_ME SDL_MapRGB
-// !!! IMPLEMENT_ME SDL_MapRGBA
 // !!! IMPLEMENT_ME SDL_PeepEvents
 // !!! IMPLEMENT_ME SDL_PollEvent
 // !!! IMPLEMENT_ME SDL_PumpEvents
@@ -169,6 +162,7 @@ typedef struct
 #define SDL12_PREALLOC 0x01000000
 
 
+static SDL12_VideoInfo VideoInfo;
 static SDL_Window *VideoWindow = NULL;
 static SDL_Surface *WindowSurface = NULL;
 static SDL_Surface *VideoSurface = NULL;
@@ -347,6 +341,12 @@ SDL_QuitSubSystem(Uint32 sdl12flags)
     if (sdl12flags & SDL12_INIT_CDROM)
         CDRomInit = 0;
 
+    // !!! FIXME: reset a bunch of other global variables too.
+    if (sdl12flags & SDL12_INIT_VIDEO) {
+        SDL20_FreeFormat(VideoInfo.vfmt);
+        SDL_zero(VideoInfo);
+    }
+
     // !!! FIXME: do something about SDL12_INIT_EVENTTHREAD
     SDL20_QuitSubSystem(sdl20flags);
 
@@ -356,6 +356,9 @@ SDL_QuitSubSystem(Uint32 sdl12flags)
 void
 SDL_Quit(void)
 {
+    // !!! FIXME: reset a bunch of other global variables too.
+    SDL20_FreeFormat(VideoInfo.vfmt);
+    SDL_zero(VideoInfo);
     CDRomInit = 0;
     SDL20_Quit();
     UnloadSDL20();
@@ -487,7 +490,7 @@ Surface20to12(SDL_Surface *surface20)
     MAPSURFACEFLAGS(RLEACCEL);
     MAPSURFACEFLAGS(DONTFREE);
     #undef MAPSURFACEFLAGS
-    SDL_assert(flags == 0);  /* non-zero if there's a flag we didn't map. */
+    assert(flags == 0);  /* non-zero if there's a flag we didn't map. */
 
     surface12->format = format12;
     surface12->w = surface20->w;
@@ -518,7 +521,7 @@ SDL_CreateRGBSurface(Uint32 sdl12flags, int width, int height, int depth, Uint32
         return NULL;
     }
 
-    SDL_assert(surface12->flags == 0);  // shouldn't have prealloc, rleaccel, or dontfree.
+    assert(surface12->flags == 0);  // shouldn't have prealloc, rleaccel, or dontfree.
     return surface12;
 }
 
@@ -532,7 +535,7 @@ SDL_CreateRGBSurfaceFrom(void *pixels, int width, int height, int depth, int pit
         return NULL;
     }
 
-    SDL_assert(surface12->flags == SDL12_PREALLOC);  // should _only_ have prealloc.
+    assert(surface12->flags == SDL12_PREALLOC);  // should _only_ have prealloc.
     return surface12;
 }
 
@@ -548,23 +551,84 @@ void SDL_FreeSurface(SDL12_Surface *surface12)
     }
 }
 
+static SDL_PixelFormat *
+PixelFormat12to20(SDL_PixelFormat *format20, SDL_Palette *palette20, SDL12_PixelFormat *format12)
+{
+    palette20->ncolors = format12->palette->ncolors;
+    palette20->colors = format12->palette->colors;
+    palette20->version = 1;
+    palette20->refcount = 1;
+    format20->format = SDL_MasksToPixelFormatEnum(format12->BitsPerPixel, format12->Rmask, format12->Gmask, format12->Bmask, format12->Amask);
+    format20->palette = palette20;
+    format20->BitsPerPixel = format12->BitsPerPixel;
+    format20->BytesPerPixel = format12->BytesPerPixel;
+    format20->Rmask = format12->Rmask;
+    format20->Gmask = format12->Gmask;
+    format20->Bmask = format12->Bmask;
+    format20->Amask = format12->Amask;
+    format20->Rloss = format12->Rloss;
+    format20->Gloss = format12->Gloss;
+    format20->Bloss = format12->Bloss;
+    format20->Aloss = format12->Aloss;
+    format20->Rshift = format12->Rshift;
+    format20->Gshift = format12->Gshift;
+    format20->Bshift = format12->Bshift;
+    format20->Ashift = format12->Ashift;
+    format20->refcount = 1;
+    format20->next = NULL;
+    return format20;
+}
+
+Uint32
+SDL_MapRGB(const SDL12_PixelFormat *format12, Uint8 r, Uint8 g, Uint8 b)
+{
+    /* This is probably way slower than apps expect. */
+    SDL_PixelFormat format20;
+    SDL_Palette palette20;
+    return SDL20_MapRGB(PixelFormat12to20(&format20, &palette20, format12), r, g, b);
+}
+
+Uint32
+SDL_MapRGBA(const SDL12_PixelFormat *format12, Uint8 r, Uint8 g, Uint8 b, Uint8 a)
+{
+    /* This is probably way slower than apps expect. */
+    SDL_PixelFormat format20;
+    SDL_Palette palette20;
+    return SDL20_MapRGBA(PixelFormat12to20(&format20, &palette20, format12), r, g, b, a);
+}
+
+void
+SDL_GetRGB(Uint32 pixel, const SDL12_PixelFormat *format12, Uint8 *r, Uint8 *g, Uint8 *b)
+{
+    /* This is probably way slower than apps expect. */
+    SDL_PixelFormat format20;
+    SDL_Palette palette20;
+    return SDL20_GetRGB(pixel, PixelFormat12to20(&format20, &palette20, format12), r, g, b);
+}
+
+void
+SDL_GetRGBA(Uint32 pixel, const SDL12_PixelFormat *format12, Uint8 *r, Uint8 *g, Uint8 *b, Uint8 *a)
+{
+    /* This is probably way slower than apps expect. */
+    SDL_PixelFormat format20;
+    SDL_Palette palette20;
+    return SDL20_GetRGB(pixel, PixelFormat12to20(&format20, &palette20, format12), r, g, b, a);
+}
 
 const SDL12_VideoInfo *
 SDL_GetVideoInfo(void)
 {
-    static SDL12_VideoInfo info;
     SDL_DisplayMode mode;
 
-    /* !!! FIXME: Memory leak, compatibility code, who cares? */
-    if (!info.vfmt && SDL20_GetDesktopDisplayMode(VideoDisplayIndex, &mode) == 0) {
-        info.vfmt = SDL20_AllocFormat(mode.format);
-        info.current_w = mode.w;
-        info.current_h = mode.h;
+    if (!VideoInfo.vfmt && SDL20_GetDesktopDisplayMode(VideoDisplayIndex, &mode) == 0) {
+        VideoInfo.vfmt = SDL20_AllocFormat(mode.format);
+        VideoInfo.current_w = mode.w;
+        VideoInfo.current_h = mode.h;
         // !!! FIXME
-        //info.wm_available = 1;
-        //info.video_mem = 1024 * 256;
+        //VideoInfo.wm_available = 1;
+        //VideoInfo.video_mem = 1024 * 256;
     }
-    return &info;
+    return &VideoInfo;
 }
 
 int
@@ -599,7 +663,7 @@ SDL_VideoModeOK(int width, int height, int bpp, Uint32 sdl12flags)
 }
 
 SDL_Rect **
-SDL_ListModes(const SDL12_PixelFormat * format, Uint32 flags)
+SDL_ListModes(const SDL12_PixelFormat *format, Uint32 flags)
 {
     int i, nmodes;
     SDL_Rect **modes;
@@ -613,10 +677,10 @@ SDL_ListModes(const SDL12_PixelFormat * format, Uint32 flags)
     }
 
     if (!format) {
-        format = SDL_GetVideoInfo()->vfmt;
+        format = VideoInfo.vfmt;
     }
 
-    /* Memory leak, but this is a compatibility function, who cares? */
+    /* !!! FIXME: Memory leak */
     nmodes = 0;
     modes = NULL;
     for (i = 0; i < SDL20_GetNumDisplayModes(VideoDisplayIndex); ++i) {
@@ -643,11 +707,11 @@ SDL_ListModes(const SDL12_PixelFormat * format, Uint32 flags)
             continue;
         }
 
-        modes = SDL_realloc(modes, (nmodes + 2) * sizeof(*modes));
+        modes = SDL20_realloc(modes, (nmodes + 2) * sizeof(*modes));
         if (!modes) {
             return NULL;
         }
-        modes[nmodes] = (SDL_Rect *) SDL_malloc(sizeof(SDL_Rect));
+        modes[nmodes] = (SDL_Rect *) SDL20_malloc(sizeof(SDL_Rect));
         if (!modes[nmodes]) {
             return NULL;
         }
@@ -663,6 +727,7 @@ SDL_ListModes(const SDL12_PixelFormat * format, Uint32 flags)
     return modes;
 }
 
+/* !!! FIXME: don't need a filter, just do this in the SDL_PumpEvents() implementation. */
 static int
 SDL_CompatEventFilter(void *userdata, SDL_Event * event)
 {
@@ -672,9 +737,9 @@ SDL_CompatEventFilter(void *userdata, SDL_Event * event)
     case SDL_WINDOWEVENT:
         switch (event->window.event) {
         case SDL_WINDOWEVENT_EXPOSED:
-            if (!SDL_HasEvent(SDL_VIDEOEXPOSE)) {
+            if (!SDL20_HasEvent(SDL_VIDEOEXPOSE)) {
                 fake.type = SDL_VIDEOEXPOSE;
-                SDL_PushEvent(&fake);
+                SDL20_PushEvent(&fake);
             }
             break;
         case SDL_WINDOWEVENT_RESIZED:
@@ -828,11 +893,11 @@ static void
 ClearVideoSurface()
 {
     if (ShadowSurface) {
-        SDL_FillRect(ShadowSurface, NULL,
-            SDL_MapRGB(ShadowSurface->format, 0, 0, 0));
+        SDL20_FillRect(ShadowSurface, NULL,
+            SDL20_MapRGB(ShadowSurface->format, 0, 0, 0));
     }
-    SDL_FillRect(WindowSurface, NULL, 0);
-    SDL_UpdateWindowSurface(VideoWindow);
+    SDL20_FillRect(WindowSurface, NULL, 0);
+    SDL20_UpdateWindowSurface(VideoWindow);
 }
 
 static void
@@ -851,14 +916,14 @@ SetupScreenSaver(int flags)
         allow_screensaver = SDL_TRUE;
     }
     if (allow_screensaver) {
-        SDL_EnableScreenSaver();
+        SDL20_EnableScreenSaver();
     } else {
-        SDL_DisableScreenSaver();
+        SDL20_DisableScreenSaver();
     }
 }
 
 static int
-SDL_ResizeVideoMode(int width, int height, int bpp, Uint32 flags)
+ResizeVideoMode(int width, int height, int bpp, Uint32 flags)
 {
     int w, h;
 
@@ -955,7 +1020,7 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags)
     }
 
     /* See if we can simply resize the existing window and surface */
-    if (SDL_ResizeVideoMode(width, height, bpp, flags) == 0) {
+    if (ResizeVideoMode(width, height, bpp, flags) == 0) {
         return PublicSurface;
     }
 
