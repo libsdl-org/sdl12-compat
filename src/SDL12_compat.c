@@ -317,11 +317,11 @@ typedef union
 } SDL12_Event;
 
 static SDL12_VideoInfo VideoInfo;
-static SDL_Window *VideoWindow = NULL;
-static SDL_Surface *WindowSurface = NULL;
-static SDL_Surface *VideoSurface = NULL;
-static SDL_Surface *ShadowSurface = NULL;
-static SDL_Surface *PublicSurface = NULL;
+static SDL_Window *VideoWindow20 = NULL;
+static SDL12_Surface *WindowSurface = NULL;
+static SDL12_Surface *VideoSurface = NULL;
+static SDL12_Surface *ShadowSurface = NULL;
+static SDL12_Surface *PublicSurface = NULL;
 static SDL_GLContext *VideoContext = NULL;
 static Uint32 VideoFlags = 0;
 static SDL_Rect VideoViewport;
@@ -342,12 +342,15 @@ static int EventQueueWrite = 0;
 
 /* Obviously we can't use SDL_LoadObject() to load SDL2.  :)  */
 #if defined(_WINDOWS)
+    #define WIN32_LEAN_AND_MEAN 1
+    #include <windows.h>
     #define SDL20_LIBNAME "SDL2.dll"
     static HANDLE Loaded_SDL20 = NULL;
     #define LoadSDL20Library() ((Loaded_SDL20 = LoadLibraryA(SDL20_LIBNAME)) != NULL)
     #define LookupSDL20Sym(sym) GetProcAddress(Loaded_SDL20, sym)
     #define CloseSDL20Library() { { if (Loaded_SDL20) { FreeLibrary(Loaded_SDL20); Loaded_SDL20 = NULL; } }
-#elif defined(unix)
+#elif defined(unix) || defined(__APPLE__)
+    #include <dlfcn.h>
     #ifdef __APPLE__
     #define SDL20_LIBNAME "libSDL2.dylib"
     #else
@@ -430,7 +433,7 @@ DoSDLInit(const int justsubs, Uint32 sdl12flags)
     if (!LoadSDL20())
         return -1;
 
-    #define SETFLAG(x) if (sdl12flags & SDL12_INIT_##flag) sdl20flags |= SDL_INIT_##flag)
+    #define SETFLAG(flag) if (sdl12flags & SDL12_INIT_##flag) sdl20flags |= SDL_INIT_##flag
     SETFLAG(TIMER);
     SETFLAG(AUDIO);
     SETFLAG(VIDEO);
@@ -475,7 +478,7 @@ SDL_WasInit(Uint32 sdl12flags)
     Uint32 sdl20flags = 0;
     Uint32 extraflags = 0;
 
-    #define SETFLAG(x) if (sdl12flags & SDL12_INIT_##flag) sdl20flags |= SDL_INIT_##flag)
+    #define SETFLAG(flag) if (sdl12flags & SDL12_INIT_##flag) sdl20flags |= SDL_INIT_##flag
     SETFLAG(TIMER);
     SETFLAG(AUDIO);
     SETFLAG(VIDEO);
@@ -497,7 +500,7 @@ SDL_QuitSubSystem(Uint32 sdl12flags)
 {
     Uint32 sdl20flags = 0;
 
-    #define SETFLAG(x) if (sdl12flags & SDL12_INIT_##flag) sdl20flags |= SDL_INIT_##flag)
+    #define SETFLAG(flag) if (sdl12flags & SDL12_INIT_##flag) sdl20flags |= SDL_INIT_##flag
     SETFLAG(TIMER);
     SETFLAG(AUDIO);
     SETFLAG(VIDEO);
@@ -555,12 +558,12 @@ SDL_SetError(const char *fmt, ...)
     }
 }
 
-char *
+const char *
 SDL_GetError(void)
 {
     if (!Loaded_SDL20)
     {
-        static char noload_errstr[] = "Failed to load SDL 2.0 shared library";
+        static const char noload_errstr[] = "Failed to load SDL 2.0 shared library";
         return noload_errstr;
     }
     return SDL20_GetError();
@@ -1184,11 +1187,11 @@ ClearVideoSurface()
             SDL20_MapRGB(ShadowSurface->format, 0, 0, 0));
     }
     SDL20_FillRect(WindowSurface, NULL, 0);
-    SDL20_UpdateWindowSurface(VideoWindow);
+    SDL20_UpdateWindowSurface(VideoWindow20);
 }
 
 static void
-SetupScreenSaver(int flags)
+SetupScreenSaver(int flags12)
 {
     const char *env;
     SDL_bool allow_screensaver;
@@ -1197,7 +1200,7 @@ SetupScreenSaver(int flags)
     env = SDL_getenv("SDL_VIDEO_ALLOW_SCREENSAVER");
     if (env) {
         allow_screensaver = SDL_atoi(env) ? SDL_TRUE : SDL_FALSE;
-    } else if (flags & SDL_FULLSCREEN) {
+    } else if (flags12 & SDL12_FULLSCREEN) {
         allow_screensaver = SDL_FALSE;
     } else {
         allow_screensaver = SDL_TRUE;
@@ -1210,7 +1213,7 @@ SetupScreenSaver(int flags)
 }
 
 static int
-ResizeVideoMode(int width, int height, int bpp, Uint32 flags)
+ResizeVideoMode(int width, int height, int bpp, Uint32 flags12)
 {
     int w, h;
 
@@ -1220,12 +1223,12 @@ ResizeVideoMode(int width, int height, int bpp, Uint32 flags)
     }
 
     /* We probably have to recreate the window in fullscreen mode */
-    if (flags & SDL_FULLSCREEN) {
+    if (flags12 & SDL12_FULLSCREEN) {
         return -1;
     }
 
     /* I don't think there's any change we can gracefully make in flags */
-    if (flags != VideoFlags) {
+    if (flags12 != VideoFlags) {
         return -1;
     }
     if (bpp != VideoSurface->format->BitsPerPixel) {
@@ -1233,19 +1236,19 @@ ResizeVideoMode(int width, int height, int bpp, Uint32 flags)
     }
 
     /* Resize the window */
-    SDL_GetWindowSize(VideoWindow, &w, &h);
+    SDL20_GetWindowSize(VideoWindow20, &w, &h);
     if (w != width || h != height) {
-        SDL_SetWindowSize(VideoWindow, width, height);
+        SDL20_SetWindowSize(VideoWindow20, width, height);
     }
 
     /* If we're in OpenGL mode, just resize the stub surface and we're done! */
-    if (flags & SDL_OPENGL) {
+    if (flags12 & SDL12_OPENGL) {
         VideoSurface->w = width;
         VideoSurface->h = height;
         return 0;
     }
 
-    WindowSurface = SDL_GetWindowSurface(VideoWindow);
+    WindowSurface = SDL20_GetWindowSurface(VideoWindow20);
     if (!WindowSurface) {
         return -1;
     }
@@ -1256,17 +1259,17 @@ ResizeVideoMode(int width, int height, int bpp, Uint32 flags)
     VideoSurface->h = height;
     VideoSurface->pixels = WindowSurface->pixels;
     VideoSurface->pitch = WindowSurface->pitch;
-    SDL_SetClipRect(VideoSurface, NULL);
+    SDL20_SetClipRect(VideoSurface, NULL);
 
     if (ShadowSurface) {
         ShadowSurface->w = width;
         ShadowSurface->h = height;
-        ShadowSurface->pitch = SDL_CalculatePitch(ShadowSurface);
+        ShadowSurface->pitch = SDL20_CalculatePitch(ShadowSurface);
         ShadowSurface->pixels =
-            SDL_realloc(ShadowSurface->pixels,
+            SDL20_realloc(ShadowSurface->pixels,
                         ShadowSurface->h * ShadowSurface->pitch);
-        SDL_SetClipRect(ShadowSurface, NULL);
-        SDL_InvalidateMap(ShadowSurface->map);
+        SDL20_SetClipRect(ShadowSurface, NULL);
+        SDL20_InvalidateMap(ShadowSurface->map);
     } else {
         PublicSurface = VideoSurface;
     }
@@ -1277,7 +1280,7 @@ ResizeVideoMode(int width, int height, int bpp, Uint32 flags)
 }
 
 SDL_Surface *
-SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags)
+SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
 {
     SDL_DisplayMode desktop_mode;
     int display = VideoDisplayIndex;
@@ -1285,16 +1288,16 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags)
     int window_y = SDL_WINDOWPOS_UNDEFINED_DISPLAY(display);
     int window_w;
     int window_h;
-    Uint32 window_flags;
-    Uint32 surface_flags;
+    Uint32 window_flags20;
+    Uint32 surface_flags12;
 
-    if (!SDL_GetVideoDevice()) {
-        if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_NOPARACHUTE) < 0) {
+    if (!SDL20_WasInit(SDL_INIT_VIDEO)) {
+        if (SDL_Init(SDL12_INIT_VIDEO | SDL12_INIT_NOPARACHUTE) < 0) {
             return NULL;
         }
     }
 
-    SDL_GetDesktopDisplayMode(display, &desktop_mode);
+    SDL20_GetDesktopDisplayMode(display, &desktop_mode);
 
     if (width == 0) {
         width = desktop_mode.w;
@@ -1307,7 +1310,7 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags)
     }
 
     /* See if we can simply resize the existing window and surface */
-    if (ResizeVideoMode(width, height, bpp, flags) == 0) {
+    if (ResizeVideoMode(width, height, bpp, flags12) == 0) {
         return PublicSurface;
     }
 
@@ -1315,78 +1318,73 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags)
     PublicSurface = NULL;
     if (ShadowSurface) {
         ShadowSurface->flags &= ~SDL_DONTFREE;
-        SDL_FreeSurface(ShadowSurface);
+        SDL20_FreeSurface(ShadowSurface);
         ShadowSurface = NULL;
     }
     if (VideoSurface) {
         VideoSurface->flags &= ~SDL_DONTFREE;
-        SDL_FreeSurface(VideoSurface);
+        SDL20_FreeSurface(VideoSurface);
         VideoSurface = NULL;
     }
     if (VideoContext) {
         /* SDL_GL_MakeCurrent(0, NULL); *//* Doesn't do anything */
-        SDL_GL_DeleteContext(VideoContext);
+        SDL20_GL_DeleteContext(VideoContext);
         VideoContext = NULL;
     }
-    if (VideoWindow) {
-        SDL_GetWindowPosition(VideoWindow, &window_x, &window_y);
-        SDL_DestroyWindow(VideoWindow);
-    }
-
-    /* Set up the event filter */
-    if (!SDL_GetEventFilter(NULL, NULL)) {
-        SDL_SetEventFilter(SDL_CompatEventFilter, NULL);
+    if (VideoWindow20) {
+        SDL20_GetWindowPosition(VideoWindow20, &window_x, &window_y);
+        SDL20_DestroyWindow(VideoWindow20);
     }
 
     /* Create a new window */
-    window_flags = SDL_WINDOW_SHOWN;
-    if (flags & SDL_FULLSCREEN) {
-        window_flags |= SDL_WINDOW_FULLSCREEN;
+    window_flags20 = SDL_WINDOW_SHOWN;
+    if (flags12 & SDL12_FULLSCREEN) {
+        window_flags20 |= SDL_WINDOW_FULLSCREEN;
     }
-    if (flags & SDL_OPENGL) {
-        window_flags |= SDL_WINDOW_OPENGL;
+    if (flags12 & SDL12_OPENGL) {
+        window_flags20 |= SDL_WINDOW_OPENGL;
     }
-    if (flags & SDL_RESIZABLE) {
-        window_flags |= SDL_WINDOW_RESIZABLE;
+    if (flags12 & SDL12_RESIZABLE) {
+        window_flags20 |= SDL_WINDOW_RESIZABLE;
     }
-    if (flags & SDL_NOFRAME) {
-        window_flags |= SDL_WINDOW_BORDERLESS;
+    if (flags12 & SDL12_NOFRAME) {
+        window_flags20 |= SDL_WINDOW_BORDERLESS;
     }
     GetEnvironmentWindowPosition(width, height, &window_x, &window_y);
-    VideoWindow =
-        SDL_CreateWindow(WindowTitle, window_x, window_y, width, height,
-                         window_flags);
-    if (!VideoWindow) {
+    VideoWindow20 =
+        SDL20_CreateWindow(WindowTitle, window_x, window_y, width, height,
+                         window_flags20);
+    if (!VideoWindow20) {
         return NULL;
     }
-    SDL_SetWindowIcon(VideoWindow, VideoIcon);
+    SDL20_SetWindowIcon(VideoWindow20, VideoIcon);
 
-    SetupScreenSaver(flags);
+    SetupScreenSaver(flags12);
 
-    window_flags = SDL_GetWindowFlags(VideoWindow);
-    surface_flags = 0;
-    if (window_flags & SDL_WINDOW_FULLSCREEN) {
-        surface_flags |= SDL_FULLSCREEN;
+    window_flags20 = SDL_GetWindowFlags(VideoWindow20);
+    surface_flags12 = 0;
+    if (window_flags20 & SDL_WINDOW_FULLSCREEN) {
+        surface_flags12 |= SDL_FULLSCREEN;
     }
-    if ((window_flags & SDL_WINDOW_OPENGL) && (flags & SDL_OPENGL)) {
-        surface_flags |= SDL_OPENGL;
+    if ((window_flags & SDL_WINDOW_OPENGL) && (flags12 & SDL_OPENGL)) {
+        surface_flags12 |= SDL_OPENGL;
     }
     if (window_flags & SDL_WINDOW_RESIZABLE) {
-        surface_flags |= SDL_RESIZABLE;
+        surface_flags12 |= SDL_RESIZABLE;
     }
     if (window_flags & SDL_WINDOW_BORDERLESS) {
-        surface_flags |= SDL_NOFRAME;
+        surface_flags12 |= SDL_NOFRAME;
     }
 
-    VideoFlags = flags;
+    VideoFlags = flags12;
 
     /* If we're in OpenGL mode, just create a stub surface and we're done! */
-    if (flags & SDL_OPENGL) {
-        VideoContext = SDL_GL_CreateContext(VideoWindow);
+    if (flags12 & SDL_OPENGL) {
+        VideoContext = SDL_GL_CreateContext(VideoWindow20);
         if (!VideoContext) {
             return NULL;
         }
-        if (SDL_GL_MakeCurrent(VideoWindow, VideoContext) < 0) {
+        if (SDL_GL_MakeCurrent(VideoWindow20, VideoContext) < 0) {
             return NULL;
         }
         VideoSurface =
@@ -1394,27 +1392,27 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags)
         if (!VideoSurface) {
             return NULL;
         }
-        VideoSurface->flags |= surface_flags;
+        VideoSurface->flags |= surface_flags12;
         PublicSurface = VideoSurface;
         return PublicSurface;
     }
 
     /* Create the screen surface */
-    WindowSurface = SDL_GetWindowSurface(VideoWindow);
+    WindowSurface = SDL_GetWindowSurface(VideoWindow20);
     if (!WindowSurface) {
         return NULL;
     }
 
     /* Center the public surface in the window surface */
-    SDL_GetWindowSize(VideoWindow, &window_w, &window_h);
+    SDL_GetWindowSize(VideoWindow20, &window_w, &window_h);
     VideoViewport.x = (window_w - width)/2;
     VideoViewport.y = (window_h - height)/2;
     VideoViewport.w = width;
     VideoViewport.h = height;
 
     VideoSurface = SDL_CreateRGBSurfaceFrom(NULL, 0, 0, 32, 0, 0, 0, 0, 0);
-    VideoSurface->flags |= surface_flags;
-    VideoSurface->flags |= SDL_DONTFREE;
+    VideoSurface->flags |= surface_flags12;
+    VideoSurface->flags |= SDL12_DONTFREE;
     SDL_FreeFormat(VideoSurface->format);
     VideoSurface->format = WindowSurface->format;
     VideoSurface->format->refcount++;
@@ -1428,18 +1426,18 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags)
 
     /* Create a shadow surface if necessary */
     if ((bpp != VideoSurface->format->BitsPerPixel)
-        && !(flags & SDL_ANYFORMAT)) {
+        && !(flags12 & SDL12_ANYFORMAT)) {
         ShadowSurface =
             SDL_CreateRGBSurface(0, width, height, bpp, 0, 0, 0, 0);
         if (!ShadowSurface) {
             return NULL;
         }
-        ShadowSurface->flags |= surface_flags;
-        ShadowSurface->flags |= SDL_DONTFREE;
+        ShadowSurface->flags |= surface_flags12;
+        ShadowSurface->flags |= SDL12_DONTFREE;
 
         /* 8-bit ShadowSurface surfaces report that they have exclusive palette */
         if (ShadowSurface->format->palette) {
-            ShadowSurface->flags |= SDL_HWPALETTE;
+            ShadowSurface->flags |= SDL12_HWPALETTE;
             SDL_DitherColors(ShadowSurface->format->palette->colors,
                              ShadowSurface->format->BitsPerPixel);
         }
@@ -1480,23 +1478,23 @@ SDL_SetAlpha(SDL_Surface * surface, Uint32 flag, Uint8 value)
     return 0;
 }
 
-SDL_Surface *
-SDL_DisplayFormat(SDL_Surface * surface)
+SDL12_Surface *
+SDL_DisplayFormat(SDL12_Surface *surface12)
 {
-    SDL_PixelFormat *format;
+    SDL12_PixelFormat *format;
 
     if (!PublicSurface) {
-        SDL_SetError("No video mode has been set");
+        SDL20_SetError("No video mode has been set");
         return NULL;
     }
     format = PublicSurface->format;
 
     /* Set the flags appropriate for copying to display surface */
-    return SDL_ConvertSurface(surface, format, SDL_RLEACCEL);
+    return SDL_ConvertSurface(surface, format, SDL12_RLEACCEL);
 }
 
-SDL_Surface *
-SDL_DisplayFormatAlpha(SDL_Surface * surface)
+SDL12_Surface *
+SDL_DisplayFormatAlpha(SDL12_Surface *surface)
 {
     SDL_PixelFormat *vf;
     SDL_PixelFormat *format;
@@ -1603,10 +1601,10 @@ SDL_UpdateRects(SDL_Surface * screen, int numrects, SDL_Rect * rects)
                 stackrect->w = rect->w;
                 stackrect->h = rect->h;
             }
-            SDL_UpdateWindowSurfaceRects(VideoWindow, stackrects, numrects);
+            SDL_UpdateWindowSurfaceRects(VideoWindow20, stackrects, numrects);
             SDL_stack_free(stackrects);
         } else {
-            SDL_UpdateWindowSurfaceRects(VideoWindow, rects, numrects);
+            SDL_UpdateWindowSurfaceRects(VideoWindow20, rects, numrects);
         }
     }
 }
@@ -1622,7 +1620,7 @@ SDL_WM_SetCaption(const char *title, const char *icon)
     }
     WindowTitle = title ? SDL_strdup(title) : NULL;
     WindowIconTitle = icon ? SDL_strdup(icon) : NULL;
-    SDL_SetWindowTitle(VideoWindow, WindowTitle);
+    SDL_SetWindowTitle(VideoWindow20, WindowTitle);
 }
 
 void
@@ -1647,7 +1645,7 @@ SDL_WM_SetIcon(SDL_Surface * icon, Uint8 * mask)
 int
 SDL_WM_IconifyWindow(void)
 {
-    SDL_MinimizeWindow(VideoWindow);
+    SDL_MinimizeWindow(VideoWindow20);
     return 0;
 }
 
@@ -1680,27 +1678,27 @@ SDL_WM_ToggleFullScreen(SDL_Surface * surface)
     }
 
     /* Do the physical mode switch */
-    if (SDL_GetWindowFlags(VideoWindow) & SDL_WINDOW_FULLSCREEN) {
-        if (SDL_SetWindowFullscreen(VideoWindow, 0) < 0) {
+    if (SDL_GetWindowFlags(VideoWindow20) & SDL_WINDOW_FULLSCREEN) {
+        if (SDL_SetWindowFullscreen(VideoWindow20, 0) < 0) {
             return 0;
         }
         PublicSurface->flags &= ~SDL_FULLSCREEN;
     } else {
-        if (SDL_SetWindowFullscreen(VideoWindow, 1) < 0) {
+        if (SDL_SetWindowFullscreen(VideoWindow20, 1) < 0) {
             return 0;
         }
         PublicSurface->flags |= SDL_FULLSCREEN;
     }
 
     /* Recreate the screen surface */
-    WindowSurface = SDL_GetWindowSurface(VideoWindow);
+    WindowSurface = SDL_GetWindowSurface(VideoWindow20);
     if (!WindowSurface) {
         /* We're totally hosed... */
         return 0;
     }
 
     /* Center the public surface in the window surface */
-    SDL_GetWindowSize(VideoWindow, &window_w, &window_h);
+    SDL_GetWindowSize(VideoWindow20, &window_w, &window_h);
     VideoViewport.x = (window_w - VideoSurface->w)/2;
     VideoViewport.y = (window_h - VideoSurface->h)/2;
     VideoViewport.w = VideoSurface->w;
@@ -1775,15 +1773,15 @@ SDL_GrabMode
 SDL_WM_GrabInput(SDL_GrabMode mode)
 {
     if (mode != SDL_GRAB_QUERY) {
-        SDL_SetWindowGrab(VideoWindow, mode);
+        SDL_SetWindowGrab(VideoWindow20, mode);
     }
-    return (SDL_GrabMode) SDL_GetWindowGrab(VideoWindow);
+    return (SDL_GrabMode) SDL_GetWindowGrab(VideoWindow20);
 }
 
 void
 SDL_WarpMouse(Uint16 x, Uint16 y)
 {
-    SDL_WarpMouseInWindow(VideoWindow, x, y);
+    SDL_WarpMouseInWindow(VideoWindow20, x, y);
 }
 
 Uint8
@@ -1792,7 +1790,7 @@ SDL_GetAppState(void)
     Uint8 state = 0;
     Uint32 flags = 0;
 
-    flags = SDL_GetWindowFlags(VideoWindow);
+    flags = SDL_GetWindowFlags(VideoWindow20);
     if ((flags & SDL_WINDOW_SHOWN) && !(flags & SDL_WINDOW_MINIMIZED)) {
         state |= SDL_APPACTIVE;
     }
@@ -1835,7 +1833,7 @@ SDL_SetColors(SDL_Surface * surface, const SDL_Color * colors, int firstcolor,
 int
 SDL_GetWMInfo(SDL_SysWMinfo * info)
 {
-    return SDL_GetWindowWMInfo(VideoWindow, info);
+    return SDL_GetWindowWMInfo(VideoWindow20, info);
 }
 
 #if 0
@@ -2494,7 +2492,7 @@ SDL_DisplayYUVOverlay(SDL_Overlay * overlay, SDL_Rect * dstrect)
                             pixels, display->pitch) < 0) {
         return -1;
     }
-    SDL_UpdateWindowSurface(VideoWindow);
+    SDL_UpdateWindowSurface(VideoWindow20);
     return 0;
 }
 
@@ -2516,7 +2514,7 @@ SDL_FreeYUVOverlay(SDL_Overlay * overlay)
 void
 SDL_GL_SwapBuffers(void)
 {
-    SDL_GL_SwapWindow(VideoWindow);
+    SDL_GL_SwapWindow(VideoWindow20);
 }
 
 int
@@ -2537,19 +2535,19 @@ SDL_SetGamma(float red, float green, float blue)
     } else {
         SDL_CalculateGammaRamp(blue, blue_ramp);
     }
-    return SDL_SetWindowGammaRamp(VideoWindow, red_ramp, green_ramp, blue_ramp);
+    return SDL_SetWindowGammaRamp(VideoWindow20, red_ramp, green_ramp, blue_ramp);
 }
 
 int
 SDL_SetGammaRamp(const Uint16 * red, const Uint16 * green, const Uint16 * blue)
 {
-    return SDL_SetWindowGammaRamp(VideoWindow, red, green, blue);
+    return SDL_SetWindowGammaRamp(VideoWindow20, red, green, blue);
 }
 
 int
 SDL_GetGammaRamp(Uint16 * red, Uint16 * green, Uint16 * blue)
 {
-    return SDL_GetWindowGammaRamp(VideoWindow, red, green, blue);
+    return SDL_GetWindowGammaRamp(VideoWindow20, red, green, blue);
 }
 
 int
@@ -2568,6 +2566,9 @@ SDL_GetKeyRepeat(int *delay, int *interval)
         *interval = SDL_DEFAULT_REPEAT_INTERVAL;
     }
 }
+
+
+
 
 int
 SDL_EnableUNICODE(int enable)
