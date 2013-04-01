@@ -34,6 +34,8 @@ SDL20_SYM_PASSTHROUGH(void,VideoQuit,(void),(),)
 SDL20_SYM_PASSTHROUGH(int,AudioInit,(const char *a),(a),return)
 SDL20_SYM_PASSTHROUGH(void,AudioQuit,(void),(),)
 
+SDL20_SYM_PASSTHROUGH(void,PumpEvents,(void),(),)
+
 SDL20_SYM(SDL_PixelFormat *,AllocFormat,(Uint32 a),(a),return)
 SDL20_SYM(void,FreeFormat,(SDL_PixelFormat *a),(a),)
 SDL20_SYM(SDL_Surface *,CreateRGBSurface,(Uint32 a, int b, int c, int d, Uint32 e, Uint32 f, Uint32 g, Uint32 h),(a,b,c,d,e,f,g,h),return)
