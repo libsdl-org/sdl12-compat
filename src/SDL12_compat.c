@@ -336,9 +336,16 @@ static SDL12_EventFilter EventFilter12 = NULL;
 
 // !!! FIXME: need a mutex for the event queue.
 #define SDL12_MAXEVENTS 128
-static SDL12_Event EventQueue[SDL12_MAXEVENTS];
-static int EventQueueRead = 0;
-static int EventQueueWrite = 0;
+typedef struct EventQueueType
+{
+    SDL12_Event event12;
+    struct EventQueueType *next;
+} EventQueueType;
+
+static EventQueueType EventQueuePool[SDL12_MAXEVENTS];
+static EventQueueType *EventQueueHead = NULL;
+static EventQueueType *EventQueueTail = NULL;
+static EventQueueType *EventQueueAvailable = NULL;
 
 /* Obviously we can't use SDL_LoadObject() to load SDL2.  :)  */
 #if defined(_WINDOWS)
@@ -450,8 +457,13 @@ DoSDLInit(const int justsubs, Uint32 sdl12flags)
     rc = justsubs ? SDL20_InitSubSystem(sdl20flags) : SDL20_Init(sdl20flags);
     if ((rc == 0) && (sdl20flags & SDL_INIT_VIDEO))
     {
-        EventQueueRead = EventQueueWrite = 0;
-        SDL_zero(EventQueue);
+        int i;
+        for (i = 0; i < SDL12_MAXEVENTS-1; i++)
+            EventQueuePool[i].next = &EventQueuePool[i+1];
+        EventQueuePool[SDL12_MAXEVENTS-1].next = NULL;
+        EventQueueHead = EventQueueTail = NULL;
+        EventQueueAvailable = EventQueuePool;
+
         SDL20_SetEventFilter(EventFilter20to12, NULL);
         VideoDisplayIndex = GetVideoDisplay();
     }
@@ -515,8 +527,7 @@ SDL_QuitSubSystem(Uint32 sdl12flags)
     // !!! FIXME: reset a bunch of other global variables too.
     if (sdl12flags & SDL12_INIT_VIDEO) {
         EventFilter12 = NULL;
-        EventQueueRead = EventQueueWrite = 0;
-        SDL_zero(EventQueue);
+        EventQueueAvailable = EventQueueHead = EventQueueTail = NULL;
         SDL20_FreeFormat(VideoInfo.vfmt);
         SDL_zero(VideoInfo);
     }
@@ -532,8 +543,7 @@ SDL_Quit(void)
 {
     // !!! FIXME: reset a bunch of other global variables too.
     EventFilter12 = NULL;
-    EventQueueRead = EventQueueWrite = 0;
-    SDL_zero(EventQueue);
+    EventQueueAvailable = EventQueueHead = EventQueueTail = NULL;
     SDL20_FreeFormat(VideoInfo.vfmt);
     SDL_zero(VideoInfo);
     CDRomInit = 0;
@@ -783,24 +793,36 @@ EventFilter20to12(void *data, SDL_Event *event20)
 int
 SDL_PollEvent(SDL12_Event *event12)
 {
+    EventQueueType *next;
+
     SDL20_PumpEvents();  /* this will run our filter and build our 1.2 queue. */
 
-    if (EventQueueRead >= EventQueueWrite)
+    if (EventQueueHead == NULL)
         return 0;  /* no events at the moment. */
 
-    SDL_memcpy(event12, &EventQueue[EventQueueRead % SDL12_MAXEVENTS], sizeof (SDL12_Event));
-    EventQueueRead++;
+    SDL_memcpy(event12, &EventQueueHead->event12, sizeof (SDL12_Event));
+    next = EventQueueHead->next;
+    EventQueueHead->next = EventQueueAvailable;
+    EventQueueAvailable = EventQueueHead;
+    EventQueueHead = next;
     return 1;
 }
 
 int
 SDL_PushEvent(SDL12_Event *event12)
 {
-    if ((EventQueueWrite - EventQueueRead) >= SDL12_MAXEVENTS)
+    EventQueueType *item = EventQueueAvailable;
+    if (item == NULL)
         return -1;  /* no space available at the moment. */
 
-    SDL_memcpy(&EventQueue[EventQueueWrite % SDL12_MAXEVENTS], event12, sizeof (SDL12_Event));
-    EventQueueWrite++;
+    EventQueueAvailable = item->next;
+    if (EventQueueTail)
+        EventQueueTail->next = item;
+    else
+        EventQueueHead = EventQueueTail = item;
+    item->next = NULL;
+
+    SDL_memcpy(&item->event12, event12, sizeof (SDL12_Event));
     return 0;
 }
 
@@ -813,42 +835,48 @@ SDL_PeepEvents(SDL12_Event *events12, int numevents, SDL_eventaction action, Uin
     {
         for (i = 0; i < numevents; i++)
         {
-            if ((EventQueueWrite - EventQueueRead) >= SDL12_MAXEVENTS)
+            if (SDL_PushEvent(&events12[i]) == -1)
                 break;  /* out of space for more events. */
-            SDL_memcpy(&EventQueue[EventQueueWrite % SDL12_MAXEVENTS], &events12[i], sizeof (SDL12_Event));
-            EventQueueWrite++;
         }
         return i;
     }
     else if ((action == SDL_PEEKEVENT) || (action == SDL_GETEVENT))
     {
-        const SDL_bool isGet = (action == SDL_GETEVENT);
-        int seen = 0;
+        const int isGet = (action == SDL_GETEVENT);
+        EventQueueType *prev = NULL;
+        EventQueueType *item = EventQueueHead;
+        EventQueueType *next = NULL;
         int chosen = 0;
         while (chosen < numevents)
         {
-            const SDL12_Event *event12;
-
-            if ((EventQueueRead + seen) >= EventQueueWrite)
+            EventQueueType *nextPrev = item;
+            if (!item)
                 break;  /* no more events at the moment. */
 
-            event12 = &EventQueue[(EventQueueRead+seen) % SDL12_MAXEVENTS];
-            seen++;
+            next = item->next;  /* copy, since we might overwrite item->next */
 
             if (mask & (1<<event12->type))
             {
-                SDL_memcpy(&events12[chosen++], event12, sizeof (SDL12_Event));
-                if (isGet) {
-                    event12->type = 0xFF;  /* mark it used. */
+                SDL_memcpy(&events12[chosen++], &item->event12, sizeof (SDL12_Event));
+                if (isGet)  /* remove from list? */
+                {
+                    if (prev != NULL)
+                        prev->next = next;
+                    if (item == EventQueueHead)
+                        EventQueueHead = next;
+                    if (item == EventQueueTail)
+                        EventQueueTail = prev;
+
+                    /* put it back in the free pool. */
+                    item->next = EventQueueAvailable;
+                    EventQueueAvailable = item;
+                    nextPrev = prev;  /* previous item doesn't change. */
                 }
             }
-        }
 
-        if (isGet)
-        {
-            // !!! FIXME: remove events we ate.
+            item = next;
+            prev = nextPrev;
         }
-
         return chosen;
     }
 
