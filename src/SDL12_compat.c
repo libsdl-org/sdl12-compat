@@ -59,7 +59,6 @@
 // !!! IMPLEMENT_ME SDL_SetColorKey
 // !!! IMPLEMENT_ME SDL_SetCursor
 // !!! IMPLEMENT_ME SDL_SetModState
-// !!! IMPLEMENT_ME SDL_ShowCursor
 // !!! IMPLEMENT_ME SDL_SoftStretch
 // !!! IMPLEMENT_ME SDL_UnlockSurface
 // !!! IMPLEMENT_ME SDL_UpperBlit

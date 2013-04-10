@@ -45,6 +45,7 @@ SDL20_SYM(SDL_Surface*,LoadBMP_RW,(SDL_RWops *a, int b),(a,b),return)
 SDL20_SYM(int,SaveBMP_RW,(SDL_Surface *a, SDL_RWops *b, int c),(a,b,c),return)
 SDL20_SYM_PASSTHROUGH(int,SDL_GL_LoadLibrary,(const char *a),(a),return)
 SDL20_SYM_PASSTHROUGH(void *,SDL_GL_GetProcAddress,(const char *a),(a),return)
+SDL20_SYM_PASSTHROUGH(int,ShowCursor,(int a),(a),return)
 
 SDL20_SYM_PASSTHROUGH(Uint32,GetThreadID,(SDL_Thread *a),(a),return)
 SDL20_SYM_PASSTHROUGH(Uint32,ThreadID,(void),(),return)
