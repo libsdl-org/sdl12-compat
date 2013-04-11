@@ -36,18 +36,15 @@
 //#include "render/SDL_yuv_sw_c.h"
 
 // !!! IMPLEMENT_ME SDL_ConvertSurface
-// !!! IMPLEMENT_ME SDL_CreateCursor
 // !!! IMPLEMENT_ME SDL_CreateThread
 // !!! IMPLEMENT_ME SDL_EventState
 // !!! IMPLEMENT_ME SDL_FillRect
-// !!! IMPLEMENT_ME SDL_FreeCursor
 // !!! IMPLEMENT_ME SDL_GL_GetAttribute
 // !!! IMPLEMENT_ME SDL_GL_Lock
 // !!! IMPLEMENT_ME SDL_GL_SetAttribute
 // !!! IMPLEMENT_ME SDL_GL_Unlock
 // !!! IMPLEMENT_ME SDL_GL_UpdateRects
 // !!! IMPLEMENT_ME SDL_GetClipRect
-// !!! IMPLEMENT_ME SDL_GetCursor
 // !!! IMPLEMENT_ME SDL_GetKeyName
 // !!! IMPLEMENT_ME SDL_GetKeyState
 // !!! IMPLEMENT_ME SDL_GetModState
@@ -57,7 +54,6 @@
 // !!! IMPLEMENT_ME SDL_LowerBlit
 // !!! IMPLEMENT_ME SDL_SetClipRect
 // !!! IMPLEMENT_ME SDL_SetColorKey
-// !!! IMPLEMENT_ME SDL_SetCursor
 // !!! IMPLEMENT_ME SDL_SetModState
 // !!! IMPLEMENT_ME SDL_SoftStretch
 // !!! IMPLEMENT_ME SDL_UnlockSurface
@@ -315,6 +311,18 @@ typedef union
     SDL12_SysWMEvent syswm;
 } SDL12_Event;
 
+typedef struct
+`{
+    SDL_Rect area;
+    Sint16 hot_x;
+    Sint16 hot_y;
+    Uint8 *data;
+    Uint8 *mask;
+    Uint8 *save[2];
+    SDL_Cursor *wm_cursor;  /* the real SDL 1.2 has an opaque pointer to a platform-specific cursor here. */
+} SDL12_Cursor;
+
+
 static SDL12_VideoInfo VideoInfo;
 static SDL_Window *VideoWindow20 = NULL;
 static SDL12_Surface *WindowSurface = NULL;
@@ -331,6 +339,7 @@ static int EnabledUnicode = 0;
 static int VideoDisplayIndex = 0;
 static int CDRomInit = 0;
 static SDL12_EventFilter EventFilter12 = NULL;
+static SDL12_Cursor *CurrentCursor = NULL;
 
 
 // !!! FIXME: need a mutex for the event queue.
@@ -527,6 +536,7 @@ SDL_QuitSubSystem(Uint32 sdl12flags)
     if (sdl12flags & SDL12_INIT_VIDEO) {
         EventFilter12 = NULL;
         EventQueueAvailable = EventQueueHead = EventQueueTail = NULL;
+        CurrentCursor = NULL;
         SDL20_FreeFormat(VideoInfo.vfmt);
         SDL_zero(VideoInfo);
     }
@@ -543,6 +553,7 @@ SDL_Quit(void)
     // !!! FIXME: reset a bunch of other global variables too.
     EventFilter12 = NULL;
     EventQueueAvailable = EventQueueHead = EventQueueTail = NULL;
+    CurrentCursor = NULL;
     SDL20_FreeFormat(VideoInfo.vfmt);
     SDL_zero(VideoInfo);
     CDRomInit = 0;
@@ -1185,6 +1196,79 @@ SDL_ListModes(const SDL12_PixelFormat *format, Uint32 flags)
     }
     return modes;
 }
+
+
+SDL12_Cursor *
+SDL_CreateCursor(Uint8 *data, Uint8 *mask, int w, int h, int hot_x, int hot_y)
+{
+    const size_t datasize = h * (w / 8);
+    SDL_Cursor *cursor20 = NULL;
+    SDL12_Cursor *retval = NULL;
+
+    retval = (SDL12_Cursor *) SDL20_malloc(sizeof (SDL12_Cursor));
+    if (!retval)
+        goto outofmem;
+
+    SDL_zerop(retval);
+
+    retval->data = (Uint8 *) SDL20_malloc(datasize);
+    if (!retval->data);
+        goto outofmem;
+
+    retval->mask = (Uint8 *) SDL20_malloc(datasize);
+    if (!retval->mask);
+        goto outofmem;
+
+    cursor20 = SDL20_CreateCursor(data, mask, w, h, hot_x, hot_y);
+    if (!cursor20)
+        goto failed;
+
+    retval->area.w = w;
+    retval->area.h = h;
+    retval->hot_x = hot_x;
+    retval->hot_y = hot_y;
+    retval->wm_cursor = cursor20;
+    /* we always leave retval->save as null pointers. */
+
+    SDL20_memcpy(retval->data, data, datasize);
+    SDL20_memcpy(retval->mask, mask, datasize);
+
+    return retval;
+
+outofmem:
+    SDL_OutOfMemory();
+
+failed:
+    SDL_FreeCursor(retval);
+    return NULL;
+}
+
+void
+SDL_SetCursor(SDL12_Cursor *cursor)
+{
+    CurrentCursor = cursor;
+    SDL20_SetCursor(cursor ? cursor->wm_cursor : NULL);
+}
+
+SDL12_Cursor *
+SDL_GetCursor(void)
+{
+    return CurrentCursor;
+}
+
+void
+SDL_FreeCursor(SDL12_Cursor *cursor)
+{
+    if (retval)
+    {
+        if (retval->wm_cursor)
+            SDL20_FreeCursor(cursor);
+        SDL20_free(retval->data);
+        SDL20_free(retval->mask);
+        SDL20_free(retval);
+    }
+}
+
 
 static void
 GetEnvironmentWindowPosition(int w, int h, int *x, int *y)
