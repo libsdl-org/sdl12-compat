@@ -45,6 +45,8 @@ SDL20_SYM(SDL_Surface*,LoadBMP_RW,(SDL_RWops *a, int b),(a,b),return)
 SDL20_SYM(int,SaveBMP_RW,(SDL_Surface *a, SDL_RWops *b, int c),(a,b,c),return)
 SDL20_SYM_PASSTHROUGH(int,GL_LoadLibrary,(const char *a),(a),return)
 SDL20_SYM_PASSTHROUGH(void *,GL_GetProcAddress,(const char *a),(a),return)
+SDL20_SYM(void,GetClipRect,(SDL_Surface *a, SDL_Rect *b),(a,b),)
+SDL20_SYM(SDL_bool,SetClipRect,(SDL_Surface *a, const SDL_Rect *b),(a,b),return)
 
 SDL20_SYM_PASSTHROUGH(int,ShowCursor,(int a),(a),return)
 SDL20_SYM(SDL_Cursor *,CreateCursor,(const Uint8 *a,const Uint8 *b,int c,int d,int e,int f),(a,b,c,d,e,f),return)

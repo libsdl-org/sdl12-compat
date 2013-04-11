@@ -44,7 +44,6 @@
 // !!! IMPLEMENT_ME SDL_GL_SetAttribute
 // !!! IMPLEMENT_ME SDL_GL_Unlock
 // !!! IMPLEMENT_ME SDL_GL_UpdateRects
-// !!! IMPLEMENT_ME SDL_GetClipRect
 // !!! IMPLEMENT_ME SDL_GetKeyName
 // !!! IMPLEMENT_ME SDL_GetKeyState
 // !!! IMPLEMENT_ME SDL_GetModState
@@ -52,7 +51,6 @@
 // !!! IMPLEMENT_ME SDL_GetRelativeMouseState
 // !!! IMPLEMENT_ME SDL_LockSurface
 // !!! IMPLEMENT_ME SDL_LowerBlit
-// !!! IMPLEMENT_ME SDL_SetClipRect
 // !!! IMPLEMENT_ME SDL_SetColorKey
 // !!! IMPLEMENT_ME SDL_SetModState
 // !!! IMPLEMENT_ME SDL_SoftStretch
@@ -121,7 +119,7 @@ typedef struct SDL12_Surface
     Uint16 pitch;
     void *pixels;
     int offset;
-    void *hwdata;
+    SDL_Surface *hwdata; /* the real SDL 1.2 has an opaque pointer to a platform-specific thing here. */
     SDL_Rect clip_rect;
     Uint32 unused1;
     Uint32 locked;
@@ -1012,13 +1010,32 @@ SDL_CreateRGBSurfaceFrom(void *pixels, int width, int height, int depth, int pit
 void SDL_FreeSurface(SDL12_Surface *surface12)
 {
     if (surface12) {
-        SDL20_FreeSurface((SDL_Surface *) surface12->hwdata);
+        SDL20_FreeSurface(surface12->hwdata);
         if (surface12->format) {
             SDL20_free(surface12->format->palette);
             SDL20_free(surface12->format);
         }
         SDL20_free(surface12);
     }
+}
+
+void
+SDL_GetClipRect(SDL12_Surface *surface12, SDL_Rect *rect)
+{
+    if (surface12 && rect)
+	    SDL_memcpy(rect, &surface12->clip_rect, sizeof (SDL_Rect));
+}
+
+SDL_bool
+SDL_SetClipRect(SDL12_Surface *surface12, const SDL_Rect *rect)
+{
+    SDL_bool retval = SDL_FALSE;
+    if (surface12)
+    {
+        retval = SDL20_SetClipRect(surface12->hwdata, rect);
+        SDL20_GetClipRect(surface12->hwdata, &surface12->clip_rect);
+    }
+    return retval;
 }
 
 static SDL_PixelFormat *
