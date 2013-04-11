@@ -38,7 +38,6 @@
 // !!! IMPLEMENT_ME SDL_ConvertSurface
 // !!! IMPLEMENT_ME SDL_CreateThread
 // !!! IMPLEMENT_ME SDL_EventState
-// !!! IMPLEMENT_ME SDL_FillRect
 // !!! IMPLEMENT_ME SDL_GL_GetAttribute
 // !!! IMPLEMENT_ME SDL_GL_Lock
 // !!! IMPLEMENT_ME SDL_GL_SetAttribute
@@ -1037,6 +1036,20 @@ SDL_SetClipRect(SDL12_Surface *surface12, const SDL_Rect *rect)
     }
     return retval;
 }
+
+int
+SDL_FillRect(SDL12_Surface *dst, SDL_Rect *dstrect, Uint32 color)
+{
+    const SDL_Rect orig_dstrect = *dstrect;
+    const int retval = SDL20_FillRect(dst->hwdata, orig_dstrect, color);
+    if (retval != -1)
+    {
+        if (dstrect)  /* 1.2 stores the clip intersection in dstrect */
+            SDL20_IntersectRect(orig_dstrect, &dst->clip_rect, dstrect);
+    }
+    return retval;
+}
+
 
 static SDL_PixelFormat *
 PixelFormat12to20(SDL_PixelFormat *format20, SDL_Palette *palette20, SDL12_PixelFormat *format12)
