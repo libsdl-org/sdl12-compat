@@ -36,7 +36,6 @@
 //#include "render/SDL_yuv_sw_c.h"
 
 // !!! IMPLEMENT_ME SDL_ConvertSurface
-// !!! IMPLEMENT_ME SDL_CreateThread
 // !!! IMPLEMENT_ME SDL_EventState
 // !!! IMPLEMENT_ME SDL_GL_GetAttribute
 // !!! IMPLEMENT_ME SDL_GL_Lock
@@ -2805,6 +2804,22 @@ int SDL_CDResume(SDL12_CD *cdrom) { return CDUnsupported(); }
 int SDL_CDStop(SDL12_CD *cdrom) { return CDUnsupported(); }
 int SDL_CDEject(SDL12_CD *cdrom) { return CDUnsupported(); }
 void SDL_CDClose(SDL12_CD *cdrom) {}
+
+
+#ifdef SDL_PASSED_BEGINTHREAD_ENDTHREAD
+SDL_Thread *
+SDL_CreateThread(int (SDLCALL *fn)(void *), void *data, pfnSDL_CurrentBeginThread pfnBeginThread, pfnSDL_CurrentEndThread pfnEndThread)
+{
+    return SDL20_CreateThread(fn, NULL, data, pfnBeginThread, pfnEndThread);
+}
+#else
+SDL_Thread *
+SDL_CreateThread(int (SDLCALL *fn)(void *), void *data)
+{
+    return SDL20_CreateThread(fn, NULL, data);
+}
+#endif
+
 
 /* !!! FIXME: Removed from 2.0; do nothing. We can't even report failure. */
 void SDL_KillThread(SDL_Thread *thread) {}

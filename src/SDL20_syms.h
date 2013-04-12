@@ -56,6 +56,12 @@ SDL20_SYM(void,SetCursor,(SDL_Cursor *a),(a),)
 SDL20_SYM(SDL_Cursor *,GetCursor,(void),(),return)
 SDL20_SYM(void,FreeCursor,(SDL_Cursor *a),(a),)
 
+#ifdef SDL_PASSED_BEGINTHREAD_ENDTHREAD
+SDL20_SYM(SDL_Thread *,CreateThread,(SDL_ThreadFunction a, const char *b, void *c, pfnSDL_CurrentBeginThread d, pfnSDL_CurrentEndThread e),(a,b,c,d,e),return)
+#else
+SDL20_SYM(SDL_Thread *,CreateThread,(SDL_ThreadFunction a, const char *b, void *c),(a,b,c),return)
+#endif
+
 SDL20_SYM_PASSTHROUGH(Uint32,GetThreadID,(SDL_Thread *a),(a),return)
 SDL20_SYM_PASSTHROUGH(Uint32,ThreadID,(void),(),return)
 SDL20_SYM_PASSTHROUGH(void,WaitThread,(SDL_Thread *a, int *b),(a,b),)
