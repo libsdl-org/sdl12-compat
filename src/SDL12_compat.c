@@ -36,7 +36,6 @@
 //#include "render/SDL_yuv_sw_c.h"
 
 // !!! IMPLEMENT_ME SDL_ConvertSurface
-// !!! IMPLEMENT_ME SDL_EventState
 // !!! IMPLEMENT_ME SDL_GL_GetAttribute
 // !!! IMPLEMENT_ME SDL_GL_Lock
 // !!! IMPLEMENT_ME SDL_GL_SetAttribute
@@ -54,7 +53,6 @@
 // !!! IMPLEMENT_ME SDL_SoftStretch
 // !!! IMPLEMENT_ME SDL_UnlockSurface
 // !!! IMPLEMENT_ME SDL_UpperBlit
-// !!! IMPLEMENT_ME SDL_WaitEvent
 // !!! IMPLEMENT_ME X11_KeyToUnicode
 
 
@@ -336,6 +334,7 @@ static int VideoDisplayIndex = 0;
 static int CDRomInit = 0;
 static SDL12_EventFilter EventFilter12 = NULL;
 static SDL12_Cursor *CurrentCursor = NULL;
+static Uint8 EventStates[SDL12_NUMEVENTS];
 
 
 // !!! FIXME: need a mutex for the event queue.
@@ -467,7 +466,8 @@ DoSDLInit(const int justsubs, Uint32 sdl12flags)
         EventQueuePool[SDL12_MAXEVENTS-1].next = NULL;
         EventQueueHead = EventQueueTail = NULL;
         EventQueueAvailable = EventQueuePool;
-
+        SDL_memset(EventStates, SDL_ENABLE, sizeof (EventStates)); /* on by default */
+        EventStates[SDL12_SYSWMEVENT] = SDL_IGNORE;  /* off by default. */
         SDL20_SetEventFilter(EventFilter20to12, NULL);
         VideoDisplayIndex = GetVideoDisplay();
     }
@@ -790,10 +790,26 @@ EventFilter20to12(void *data, SDL_Event *event20)
             return 0;  /* drop everything else. */
     }
 
-    if ((!EventFilter12) || (EventFilter12(&event12)))
-        SDL_PushEvent(&event12);
+    if (EventStates[event12->type] != SDL_IGNORE)
+    {
+        if ((!EventFilter12) || (EventFilter12(&event12)))
+            SDL_PushEvent(event12);
+    }
 
     return 0;  /* always drop it from the 2.0 event queue. */
+}
+
+Uint8
+SDL_EventState(Uint8 type, int state)
+{
+    /* the values of "state" match between 1.2 and 2.0 */
+    const Uint8 retval = EventStates[type];
+    SDL12_Event e;
+
+    if (state != SDL_QUERY)
+        EventStates[type] = state;
+    if (state == SDL_IGNORE)  /* drop existing events of this type. */
+        while (SDL_PeepEvents(&e, 1, SDL_GETEVENT, (1<<type))) {}
 }
 
 int
@@ -835,10 +851,9 @@ SDL_PushEvent(SDL12_Event *event12)
 int
 SDL_PeepEvents(SDL12_Event *events12, int numevents, SDL_eventaction action, Uint32 mask)
 {
-    int i;
-
     if (action == SDL_ADDEVENT)
     {
+        int i;
         for (i = 0; i < numevents; i++)
         {
             if (SDL_PushEvent(&events12[i]) == -1)
@@ -888,6 +903,16 @@ SDL_PeepEvents(SDL12_Event *events12, int numevents, SDL_eventaction action, Uin
 
     return 0;
 }
+
+int
+SDL_WaitEvent(SDL12_Event *event12)
+{
+    /* In 1.2, this only fails (-1) if you haven't SDL_Init()'d. */
+    while (!SDL_PollEvent(event12))
+        SDL_Delay(10);
+    return 1;
+}
+
 
 void
 SDL_SetEventFilter(SDL12_EventFilter filter12)
