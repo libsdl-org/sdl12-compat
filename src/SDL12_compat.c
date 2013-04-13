@@ -37,10 +37,7 @@
 
 // !!! IMPLEMENT_ME SDL_ConvertSurface
 // !!! IMPLEMENT_ME SDL_GL_GetAttribute
-// !!! IMPLEMENT_ME SDL_GL_Lock
 // !!! IMPLEMENT_ME SDL_GL_SetAttribute
-// !!! IMPLEMENT_ME SDL_GL_Unlock
-// !!! IMPLEMENT_ME SDL_GL_UpdateRects
 // !!! IMPLEMENT_ME SDL_GetKeyName
 // !!! IMPLEMENT_ME SDL_GetKeyState
 // !!! IMPLEMENT_ME SDL_GetModState
