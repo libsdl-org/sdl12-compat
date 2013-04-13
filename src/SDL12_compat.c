@@ -36,8 +36,6 @@
 //#include "render/SDL_yuv_sw_c.h"
 
 // !!! IMPLEMENT_ME SDL_ConvertSurface
-// !!! IMPLEMENT_ME SDL_GL_GetAttribute
-// !!! IMPLEMENT_ME SDL_GL_SetAttribute
 // !!! IMPLEMENT_ME SDL_GetKeyName
 // !!! IMPLEMENT_ME SDL_GetKeyState
 // !!! IMPLEMENT_ME SDL_GetModState
@@ -312,6 +310,27 @@ typedef struct
     SDL_Cursor *wm_cursor;  /* the real SDL 1.2 has an opaque pointer to a platform-specific cursor here. */
 } SDL12_Cursor;
 
+typedef enum
+{
+    SDL12_GL_RED_SIZE,
+    SDL12_GL_GREEN_SIZE,
+    SDL12_GL_BLUE_SIZE,
+    SDL12_GL_ALPHA_SIZE,
+    SDL12_GL_BUFFER_SIZE,
+    SDL12_GL_DOUBLEBUFFER,
+    SDL12_GL_DEPTH_SIZE,
+    SDL12_GL_STENCIL_SIZE,
+    SDL12_GL_ACCUM_RED_SIZE,
+    SDL12_GL_ACCUM_GREEN_SIZE,
+    SDL12_GL_ACCUM_BLUE_SIZE,
+    SDL12_GL_ACCUM_ALPHA_SIZE,
+    SDL12_GL_STEREO,
+    SDL12_GL_MULTISAMPLEBUFFERS,
+    SDL12_GL_MULTISAMPLESAMPLES,
+    SDL12_GL_ACCELERATED_VISUAL,
+    SDL12_GL_SWAP_CONTROL,
+    SDL12_GL_MAX_ATTRIBUTE
+} SDL12_GLattr;
 
 static SDL12_VideoInfo VideoInfo;
 static SDL_Window *VideoWindow20 = NULL;
@@ -331,7 +350,7 @@ static int CDRomInit = 0;
 static SDL12_EventFilter EventFilter12 = NULL;
 static SDL12_Cursor *CurrentCursor = NULL;
 static Uint8 EventStates[SDL12_NUMEVENTS];
-
+static int SwapInterval = 0;
 
 // !!! FIXME: need a mutex for the event queue.
 #define SDL12_MAXEVENTS 128
@@ -466,6 +485,7 @@ DoSDLInit(const int justsubs, Uint32 sdl12flags)
         EventStates[SDL12_SYSWMEVENT] = SDL_IGNORE;  /* off by default. */
         SDL20_SetEventFilter(EventFilter20to12, NULL);
         VideoDisplayIndex = GetVideoDisplay();
+        SwapInterval = 0;
     }
 
     return rc;
@@ -1548,6 +1568,9 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
         if (SDL_GL_MakeCurrent(VideoWindow20, VideoContext) < 0) {
             return NULL;
         }
+
+        SDL_GL_SetSwapInterval(SwapInterval);  /* don't care if this fails. */
+
         VideoSurface =
             SDL_CreateRGBSurfaceFrom(NULL, width, height, bpp, 0, 0, 0, 0, 0);
         if (!VideoSurface) {
@@ -2686,6 +2709,45 @@ SDL_FreeYUVOverlay(SDL_Overlay * overlay)
     }
     SDL_free(overlay);
 }
+
+int
+SDL_GL_SetAttribute(SDL12_GLattr attr, int value)
+{
+    if (attr >= SDL12_GL_MAX_ATTRIBUTE)
+    {
+        SDL_SetError("Unknown GL attribute");
+        return -1;
+    }
+
+    /* swap control was moved out of this API, everything else lines up. */
+    if (attr == SDL12_GL_SWAP_CONTROL)
+    {
+        SwapInterval = value;
+        return 0;
+    }
+
+    return SDL20_GL_SetAttribute((SDL_GLattr) attr, value);
+}
+
+int
+SDL_GL_GetAttribute(SDL12_GLattr attr, int* value)
+{
+    if (attr >= SDL12_GL_MAX_ATTRIBUTE)
+    {
+        SDL_SetError("Unknown GL attribute");
+        return -1;
+    }
+
+    /* swap control was moved out of this API, everything else lines up. */
+    if (attr == SDL12_GL_SWAP_CONTROL)
+    {
+        *value = SDL20_GL_GetSwapInterval();
+        return 0;
+    }
+
+    return SDL20_GL_GetAttribute((SDL_GLattr) attr, value);
+}
+
 
 void
 SDL_GL_SwapBuffers(void)
