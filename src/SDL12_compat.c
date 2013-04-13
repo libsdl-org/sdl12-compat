@@ -41,7 +41,6 @@
 // !!! IMPLEMENT_ME SDL_GetKeyName
 // !!! IMPLEMENT_ME SDL_GetKeyState
 // !!! IMPLEMENT_ME SDL_GetModState
-// !!! IMPLEMENT_ME SDL_GetMouseState
 // !!! IMPLEMENT_ME SDL_GetRelativeMouseState
 // !!! IMPLEMENT_ME SDL_LockSurface
 // !!! IMPLEMENT_ME SDL_LowerBlit
@@ -1938,6 +1937,21 @@ SDL_WM_GrabInput(SDL_GrabMode mode)
         SDL_SetWindowGrab(VideoWindow20, mode);
     }
     return (SDL_GrabMode) SDL_GetWindowGrab(VideoWindow20);
+}
+
+Uint8
+SDL_GetMouseState(int *x, int *y)
+{
+    const Uint32 state20 = SDL20_GetMouseState(x, y);
+    Uint8 retval = (state20 & 0x7);  /* left, right, and middle will match. */
+
+    /* the X[12] buttons are different in 1.2; mousewheel was in the way. */
+    if (state20 & SDL_BUTTON(SDL_BUTTON_X1))
+        retval |= (1<<5);
+    if (state20 & SDL_BUTTON(SDL_BUTTON_X2))
+        retval |= (1<<6);
+
+    return retval;
 }
 
 void

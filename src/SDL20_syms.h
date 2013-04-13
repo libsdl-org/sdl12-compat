@@ -50,6 +50,8 @@ SDL20_SYM(SDL_bool,SetClipRect,(SDL_Surface *a, const SDL_Rect *b),(a,b),return)
 SDL20_SYM(int,FillRect,(SDL_Surface *a,const SDL_Rect *b,Uint32 c),(a,b,c),return)
 SDL20_SYM(SDL_bool,IntersectRect,(const SDL_Rect *a,const SDL_Rect *b,SDL_Rect *c),(a,b,c),return)
 
+SDL20_SYM(Uint32,GetMouseState,(int *a, int *b),(a,b),return)
+
 SDL20_SYM_PASSTHROUGH(int,ShowCursor,(int a),(a),return)
 SDL20_SYM(SDL_Cursor *,CreateCursor,(const Uint8 *a,const Uint8 *b,int c,int d,int e,int f),(a,b,c,d,e,f),return)
 SDL20_SYM(void,SetCursor,(SDL_Cursor *a),(a),)
