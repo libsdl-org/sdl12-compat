@@ -28,6 +28,7 @@
 #ifndef _INCL_SDL20_INCLUDE_WRAPPER_H_
 #define _INCL_SDL20_INCLUDE_WRAPPER_H_
 
+#define SDL_ReportAssertion IGNORE_THIS_VERSION_OF_SDL_ReportAssertion
 #define SDL_SetError IGNORE_THIS_VERSION_OF_SDL_SetError
 #define SDL_PollEvent IGNORE_THIS_VERSION_OF_SDL_PollEvent
 #define SDL_PushEvent IGNORE_THIS_VERSION_OF_SDL_PushEvent
@@ -86,6 +87,7 @@
 #include "SDL.h"
 #include "SDL_syswm.h"
 
+#undef SDL_ReportAssertion
 #undef SDL_SetError
 #undef SDL_PollEvent
 #undef SDL_PushEvent
@@ -299,6 +301,14 @@
 
 #ifdef SDL_iconv_string
 #undef SDL_iconv_string
+#endif
+
+#ifdef SDL_atoi
+#undef SDL_atoi
+#endif
+
+#ifdef SDL_setenv
+#undef SDL_setenv
 #endif
 
 #endif

@@ -64,14 +64,28 @@
 #undef SDL20_SYM_PASSTHROUGH
 #undef SDL20_SYM
 
-typedef void (*SDL20_SetError_t)(const char *fmt, ...);
+typedef int (*SDL20_SetError_t)(const char *fmt, ...);
 static SDL20_SetError_t SDL20_SetError = NULL;
 
-/* these are macros in the SDL headers, so make our own. */
-#define SDL20_OutOfMemory()	SDL20_Error(SDL_ENOMEM)
-#define SDL20_Unsupported()	SDL20_Error(SDL_UNSUPPORTED)
-#define SDL20_InvalidParamError(param)	SDL20_SetError("Parameter '%s' is invalid", (param))
+/* Things that _should_ be binary compatible pass right through... */
+#define SDL20_SYM(rc,fn,params,args,ret)
+#define SDL20_SYM_PASSTHROUGH(rc,fn,params,args,ret) \
+    rc SDL_##fn params { ret SDL20_##fn args; }
+#include "SDL20_syms.h"
+#undef SDL20_SYM_PASSTHROUGH
+#undef SDL20_SYM
 
+
+/* these are macros (etc) in the SDL headers, so make our own. */
+#define SDL20_OutOfMemory() SDL20_Error(SDL_ENOMEM)
+#define SDL20_Unsupported() SDL20_Error(SDL_UNSUPPORTED)
+#define SDL20_InvalidParamError(param) SDL20_SetError("Parameter '%s' is invalid", (param))
+#define SDL20_zero(x) SDL20_memset(&(x), 0, sizeof((x)))
+#define SDL20_zerop(x) SDL20_memset((x), 0, sizeof(*(x)))
+#define SDL_ReportAssertion SDL20_ReportAssertion
+
+#define SDL12_DEFAULT_REPEAT_DELAY 500
+#define SDL12_DEFAULT_REPEAT_INTERVAL 30
 
 #define SDL12_INIT_TIMER       0x00000001
 #define SDL12_INIT_AUDIO       0x00000010
@@ -118,7 +132,7 @@ typedef struct SDL12_Surface
     Uint16 pitch;
     void *pixels;
     int offset;
-    SDL_Surface *hwdata; /* the real SDL 1.2 has an opaque pointer to a platform-specific thing here. */
+    SDL_Surface *surface20; /* the real SDL 1.2 has an opaque pointer to a platform-specific thing here named "hwdata". */
     SDL_Rect clip_rect;
     Uint32 unused1;
     Uint32 locked;
@@ -430,7 +444,7 @@ static void
 UnloadSDL20(void)
 {
     #define SDL20_SYM(rc,fn,params,args,ret) SDL20_##fn = NULL;
-    #define SDL20_SYM_PASSTHROUGH(rc,fn,params,args,ret) SDL20_##fn = NULL;
+    #define SDL20_SYM_PASSTHROUGH(rc,fn,params,args,ret) SDL20_SYM(rc,fn,params,args,ret)
     #include "SDL20_syms.h"
     #undef SDL20_SYM_PASSTHROUGH
     #undef SDL20_SYM
@@ -467,7 +481,7 @@ GetVideoDisplay()
         variable = SDL_getenv("SDL_VIDEO_FULLSCREEN_HEAD");
     }
     if ( variable ) {
-        return SDL_atoi(variable);
+        return SDL20_atoi(variable);
     } else {
         return 0;
     }
@@ -574,7 +588,7 @@ SDL_QuitSubSystem(Uint32 sdl12flags)
         EventQueueAvailable = EventQueueHead = EventQueueTail = NULL;
         CurrentCursor = NULL;
         SDL20_FreeFormat(VideoInfo.vfmt);
-        SDL_zero(VideoInfo);
+        SDL20_zero(VideoInfo);
     }
 
     // !!! FIXME: do something about SDL12_INIT_EVENTTHREAD
@@ -591,7 +605,7 @@ SDL_Quit(void)
     EventQueueAvailable = EventQueueHead = EventQueueTail = NULL;
     CurrentCursor = NULL;
     SDL20_FreeFormat(VideoInfo.vfmt);
-    SDL_zero(VideoInfo);
+    SDL20_zero(VideoInfo);
     CDRomInit = 0;
     SDL20_Quit();
     UnloadSDL20();
@@ -600,17 +614,24 @@ SDL_Quit(void)
 void
 SDL_SetError(const char *fmt, ...)
 {
+    char ch;
     char *str = NULL;
+    size_t len = 0;
     va_list ap;
     va_start(ap, fmt);
-    vasprintf(&str, fmt, ap);
+    len = SDL20_vsnprintf(&ch, 1, fmt, ap);
     va_end(ap);
+
+    str = (char *) SDL20_malloc(len + 1);
     if (!str)
         SDL20_OutOfMemory();
     else
     {
+        va_start(ap, fmt);
+        SDL20_vsnprintf(str, len + 1, fmt, ap);
+        va_end(ap);
         SDL20_SetError("%s", str);
-        free(str);
+        SDL20_free(str);
     }
 }
 
@@ -794,7 +815,7 @@ EventFilter20to12(void *data, SDL_Event *event20)
 
     SDL_assert(data == NULL);  /* currently unused. */
 
-    SDL_zero(event12);
+    SDL20_zero(event12);
 
     switch (event20->type)
     {
@@ -991,7 +1012,7 @@ SDL_GetEventFilter(void)
 }
 
 
-SDL12_Surface *
+static SDL12_Surface *
 Surface20to12(SDL_Surface *surface20)
 {
     SDL12_Surface *surface12 = NULL;
@@ -1014,11 +1035,11 @@ Surface20to12(SDL_Surface *surface20)
     if (!format12)
         goto failed;
 
-    SDL_zerop(palette12);
+    SDL20_zerop(palette12);
     palette12->ncolors = surface20->format->palette->ncolors;
     palette12->colors = surface20->format->palette->colors;
 
-    SDL_zerop(format12);
+    SDL20_zerop(format12);
     format12->palette = palette12;
     format12->BitsPerPixel = surface20->format->BitsPerPixel;
     format12->BytesPerPixel = surface20->format->BytesPerPixel;
@@ -1037,12 +1058,12 @@ Surface20to12(SDL_Surface *surface20)
     /* !!! FIXME: format12->colorkey; */
     /* !!! FIXME: format12->alpha; */
 
-    SDL_zerop(surface12);
+    SDL20_zerop(surface12);
     flags = surface20->flags;
     #define MAPSURFACEFLAGS(fl) { if (surface20->flags & SDL_##fl) { surface12->flags |= SDL12_##fl; flags &= ~SDL_##fl; } }
     MAPSURFACEFLAGS(PREALLOC);
     MAPSURFACEFLAGS(RLEACCEL);
-    MAPSURFACEFLAGS(DONTFREE);
+    /*MAPSURFACEFLAGS(DONTFREE);*/
     #undef MAPSURFACEFLAGS
     SDL_assert(flags == 0);  /* non-zero if there's a flag we didn't map. */
 
@@ -1052,7 +1073,7 @@ Surface20to12(SDL_Surface *surface20)
     surface12->pitch = (Uint16) surface20->pitch;  /* !!! FIXME: make sure this fits in a Uint16 */
     surface12->pixels = surface20->pixels;
     surface12->offset = 0;
-    surface12->hwdata = surface20;
+    surface12->surface20 = surface20;
     SDL20_memcpy(&surface12->clip_rect, &surface20->clip_rect, sizeof (SDL_Rect));
     surface12->refcount = surface20->refcount;
 
@@ -1096,7 +1117,7 @@ SDL_CreateRGBSurfaceFrom(void *pixels, int width, int height, int depth, int pit
 void SDL_FreeSurface(SDL12_Surface *surface12)
 {
     if (surface12) {
-        SDL20_FreeSurface(surface12->hwdata);
+        SDL20_FreeSurface(surface12->surface20);
         if (surface12->format) {
             SDL20_free(surface12->format->palette);
             SDL20_free(surface12->format);
@@ -1118,8 +1139,8 @@ SDL_SetClipRect(SDL12_Surface *surface12, const SDL_Rect *rect)
     SDL_bool retval = SDL_FALSE;
     if (surface12)
     {
-        retval = SDL20_SetClipRect(surface12->hwdata, rect);
-        SDL20_GetClipRect(surface12->hwdata, &surface12->clip_rect);
+        retval = SDL20_SetClipRect(surface12->surface20, rect);
+        SDL20_GetClipRect(surface12->surface20, &surface12->clip_rect);
     }
     return retval;
 }
@@ -1128,7 +1149,7 @@ int
 SDL_FillRect(SDL12_Surface *dst, SDL_Rect *dstrect, Uint32 color)
 {
     const SDL_Rect orig_dstrect = *dstrect;
-    const int retval = SDL20_FillRect(dst->hwdata, &orig_dstrect, color);
+    const int retval = SDL20_FillRect(dst->surface20, &orig_dstrect, color);
     if (retval != -1)
     {
         if (dstrect)  /* 1.2 stores the clip intersection in dstrect */
@@ -1145,7 +1166,7 @@ PixelFormat12to20(SDL_PixelFormat *format20, SDL_Palette *palette20, const SDL12
     palette20->colors = format12->palette->colors;
     palette20->version = 1;
     palette20->refcount = 1;
-    format20->format = SDL_MasksToPixelFormatEnum(format12->BitsPerPixel, format12->Rmask, format12->Gmask, format12->Bmask, format12->Amask);
+    format20->format = SDL20_MasksToPixelFormatEnum(format12->BitsPerPixel, format12->Rmask, format12->Gmask, format12->Bmask, format12->Amask);
     format20->palette = palette20;
     format20->BitsPerPixel = format12->BitsPerPixel;
     format20->BytesPerPixel = format12->BytesPerPixel;
@@ -1249,6 +1270,7 @@ SDL_VideoModeOK(int width, int height, int bpp, Uint32 sdl12flags)
     return actual_bpp;
 }
 
+#if SANITY_CHECK_THIS_CODE
 SDL_Rect **
 SDL_ListModes(const SDL12_PixelFormat *format, Uint32 flags)
 {
@@ -1313,6 +1335,7 @@ SDL_ListModes(const SDL12_PixelFormat *format, Uint32 flags)
     }
     return modes;
 }
+#endif
 
 void
 SDL_FreeCursor(SDL12_Cursor *cursor12)
@@ -1338,7 +1361,7 @@ SDL_CreateCursor(Uint8 *data, Uint8 *mask, int w, int h, int hot_x, int hot_y)
     if (!retval)
         goto outofmem;
 
-    SDL_zerop(retval);
+    SDL20_zerop(retval);
 
     retval->data = (Uint8 *) SDL20_malloc(datasize);
     if (!retval->data)
@@ -1405,6 +1428,7 @@ GetEnvironmentWindowPosition(int w, int h, int *x, int *y)
     }
 }
 
+#if SANITY_CHECK_THIS_CODE
 static void
 ClearVideoSurface()
 {
@@ -1415,6 +1439,7 @@ ClearVideoSurface()
     SDL20_FillRect(WindowSurface, NULL, 0);
     SDL20_UpdateWindowSurface(VideoWindow20);
 }
+#endif
 
 static void
 SetupScreenSaver(int flags12)
@@ -1425,7 +1450,7 @@ SetupScreenSaver(int flags12)
     /* Allow environment override of screensaver disable */
     env = SDL_getenv("SDL_VIDEO_ALLOW_SCREENSAVER");
     if (env) {
-        allow_screensaver = SDL_atoi(env) ? SDL_TRUE : SDL_FALSE;
+        allow_screensaver = SDL20_atoi(env) ? SDL_TRUE : SDL_FALSE;
     } else if (flags12 & SDL12_FULLSCREEN) {
         allow_screensaver = SDL_FALSE;
     } else {
@@ -1438,6 +1463,7 @@ SetupScreenSaver(int flags12)
     }
 }
 
+#if SANITY_CHECK_THIS_CODE
 static int
 ResizeVideoMode(int width, int height, int bpp, Uint32 flags12)
 {
@@ -1587,7 +1613,7 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
 
     SetupScreenSaver(flags12);
 
-    window_flags20 = SDL_GetWindowFlags(VideoWindow20);
+    window_flags20 = SDL20_GetWindowFlags(VideoWindow20);
     surface_flags12 = 0;
     if (window_flags20 & SDL_WINDOW_FULLSCREEN) {
         surface_flags12 |= SDL_FULLSCREEN;
@@ -1736,7 +1762,7 @@ SDL_DisplayFormatAlpha(SDL12_Surface *surface)
     Uint32 bmask = 0x000000ff;
 
     if (!PublicSurface) {
-        SDL_SetError("No video mode has been set");
+        SDL20_SetError("No video mode has been set");
         return NULL;
     }
     vf = PublicSurface->format;
@@ -1816,14 +1842,13 @@ SDL_UpdateRects(SDL_Surface * screen, int numrects, SDL_Rect * rects)
         }
     }
 }
+#endif
 
 void
 SDL_UpdateRect(SDL_Surface * screen, Sint32 x, Sint32 y, Uint32 w, Uint32 h)
 {
     if (screen) {
         SDL_Rect rect;
-
-        /* Fill the rectangle */
         rect.x = (int) x;
         rect.y = (int) y;
         rect.w = (int) (w ? w : screen->w);
@@ -1850,7 +1875,7 @@ SDL_WM_SetCaption(const char *title, const char *icon)
     }
     WindowTitle = title ? SDL_strdup(title) : NULL;
     WindowIconTitle = icon ? SDL_strdup(icon) : NULL;
-    SDL_SetWindowTitle(VideoWindow20, WindowTitle);
+    SDL20_SetWindowTitle(VideoWindow20, WindowTitle);
 }
 
 void
@@ -1864,23 +1889,26 @@ SDL_WM_GetCaption(const char **title, const char **icon)
     }
 }
 
+#if SANITY_CHECK_THIS_CODE
 void
-SDL_WM_SetIcon(SDL_Surface * icon, Uint8 * mask)
+SDL_WM_SetIcon(SDL_Surface *icon, Uint8 *mask)
 {
     // !!! FIXME: free previous icon?
     VideoIcon = icon;
     ++VideoIcon->refcount;
 }
+#endif
 
 int
 SDL_WM_IconifyWindow(void)
 {
-    SDL_MinimizeWindow(VideoWindow20);
+    SDL20_MinimizeWindow(VideoWindow20);
     return 0;
 }
 
+#if SANITY_CHECK_THIS_CODE
 int
-SDL_WM_ToggleFullScreen(SDL_Surface * surface)
+SDL_WM_ToggleFullScreen(SDL_Surface *surface)
 {
     int length;
     void *pixels;
@@ -1890,7 +1918,7 @@ SDL_WM_ToggleFullScreen(SDL_Surface * surface)
     int window_h;
 
     if (!PublicSurface) {
-        SDL_SetError("SDL_SetVideoMode() hasn't been called");
+        SDL20_SetError("SDL_SetVideoMode() hasn't been called");
         return 0;
     }
 
@@ -1908,20 +1936,20 @@ SDL_WM_ToggleFullScreen(SDL_Surface * surface)
     }
 
     /* Do the physical mode switch */
-    if (SDL_GetWindowFlags(VideoWindow20) & SDL_WINDOW_FULLSCREEN) {
-        if (SDL_SetWindowFullscreen(VideoWindow20, 0) < 0) {
+    if (SDL20_GetWindowFlags(VideoWindow20) & SDL_WINDOW_FULLSCREEN) {
+        if (SDL20_SetWindowFullscreen(VideoWindow20, 0) < 0) {
             return 0;
         }
         PublicSurface->flags &= ~SDL_FULLSCREEN;
     } else {
-        if (SDL_SetWindowFullscreen(VideoWindow20, 1) < 0) {
+        if (SDL20_SetWindowFullscreen(VideoWindow20, 1) < 0) {
             return 0;
         }
         PublicSurface->flags |= SDL_FULLSCREEN;
     }
 
     /* Recreate the screen surface */
-    WindowSurface = SDL_GetWindowSurface(VideoWindow20);
+    WindowSurface = SDL20_GetWindowSurface(VideoWindow20);
     if (!WindowSurface) {
         /* We're totally hosed... */
         return 0;
@@ -1998,6 +2026,7 @@ SDL_WM_ToggleFullScreen(SDL_Surface * surface)
     /* We're done! */
     return 1;
 }
+#endif
 
 typedef enum
 {
@@ -2010,9 +2039,9 @@ SDL12_GrabMode
 SDL_WM_GrabInput(SDL12_GrabMode mode)
 {
     if (mode != SDL12_GRAB_QUERY) {
-        SDL_SetWindowGrab(VideoWindow20, (mode == SDL_GRAB_ON));
+        SDL20_SetWindowGrab(VideoWindow20, (mode == SDL12_GRAB_ON));
     }
-    return SDL_GetWindowGrab(VideoWindow20) ? SDL12_GRAB_ON : SDL12_GRAB_OFF;
+    return SDL20_GetWindowGrab(VideoWindow20) ? SDL12_GRAB_ON : SDL12_GRAB_OFF;
 }
 
 Uint8
@@ -2033,36 +2062,29 @@ SDL_GetMouseState(int *x, int *y)
 void
 SDL_WarpMouse(Uint16 x, Uint16 y)
 {
-    SDL_WarpMouseInWindow(VideoWindow20, x, y);
+    SDL20_WarpMouseInWindow(VideoWindow20, x, y);
 }
 
 Uint8
 SDL_GetAppState(void)
 {
-    Uint8 state = 0;
-    Uint32 flags = 0;
+    Uint8 state12 = 0;
+    Uint32 flags20 = 0;
 
-    flags = SDL_GetWindowFlags(VideoWindow20);
-    if ((flags & SDL_WINDOW_SHOWN) && !(flags & SDL_WINDOW_MINIMIZED)) {
-        state |= SDL_APPACTIVE;
+    flags20 = SDL20_GetWindowFlags(VideoWindow20);
+    if ((flags20 & SDL_WINDOW_SHOWN) && !(flags20 & SDL_WINDOW_MINIMIZED)) {
+        state12 |= SDL12_APPACTIVE;
     }
-    if (flags & SDL_WINDOW_INPUT_FOCUS) {
-        state |= SDL_APPINPUTFOCUS;
+    if (flags20 & SDL_WINDOW_INPUT_FOCUS) {
+        state12 |= SDL12_APPINPUTFOCUS;
     }
-    if (flags & SDL_WINDOW_MOUSE_FOCUS) {
-        state |= SDL_APPMOUSEFOCUS;
+    if (flags20 & SDL_WINDOW_MOUSE_FOCUS) {
+        state12 |= SDL12_APPMOUSEFOCUS;
     }
-    return state;
+    return state12;
 }
 
-const SDL_version *
-SDL_Linked_Version(void)
-{
-    static SDL_version version;
-    SDL_VERSION(&version);
-    return &version;
-}
-
+#if SANITY_CHECK_THIS_CODE
 int
 SDL_SetPalette(SDL_Surface * surface, int flags, const SDL_Color * colors,
                int firstcolor, int ncolors)
@@ -2581,12 +2603,12 @@ SDL_CreateYUVOverlay(int w, int h, Uint32 format, SDL_Surface * display)
     SDL_SW_YUVTexture *texture;
 
     if ((display->flags & SDL_OPENGL) == SDL_OPENGL) {
-        SDL_SetError("YUV overlays are not supported in OpenGL mode");
+        SDL20_SetError("YUV overlays are not supported in OpenGL mode");
         return NULL;
     }
 
     if (display != PublicSurface) {
-        SDL_SetError("YUV display is only supported on the screen surface");
+        SDL20_SetError("YUV display is only supported on the screen surface");
         return NULL;
     }
 
@@ -2607,7 +2629,7 @@ SDL_CreateYUVOverlay(int w, int h, Uint32 format, SDL_Surface * display)
         texture_format = SDL_PIXELFORMAT_YVYU;
         break;
     default:
-        SDL_SetError("Unknown YUV format");
+        SDL20_SetError("Unknown YUV format");
         return NULL;
     }
 
@@ -2616,7 +2638,7 @@ SDL_CreateYUVOverlay(int w, int h, Uint32 format, SDL_Surface * display)
         SDL20_OutOfMemory();
         return NULL;
     }
-    SDL_zerop(overlay);
+    SDL20_zerop(overlay);
 
     overlay->hwdata =
         (struct private_yuvhwdata *) SDL20_malloc(sizeof(*overlay->hwdata));
@@ -2658,8 +2680,7 @@ SDL_LockYUVOverlay(SDL_Overlay * overlay)
     int pitch;
 
     if (!overlay) {
-        SDL_SetError("Passed a NULL overlay");
-        return -1;
+        return SDL20_SetError("Passed a NULL overlay");
     }
 
     rect.x = 0;
@@ -2710,8 +2731,7 @@ SDL_DisplayYUVOverlay(SDL_Overlay * overlay, SDL_Rect * dstrect)
     void *pixels;
 
     if (!overlay || !dstrect) {
-        SDL_SetError("Passed a NULL overlay or dstrect");
-        return -1;
+        return SDL20_SetError("Passed a NULL overlay or dstrect");
     }
 
     display = overlay->hwdata->display;
@@ -2762,15 +2782,13 @@ SDL_FreeYUVOverlay(SDL_Overlay * overlay)
     }
     SDL20_free(overlay);
 }
+#endif
 
 int
 SDL_GL_SetAttribute(SDL12_GLattr attr, int value)
 {
     if (attr >= SDL12_GL_MAX_ATTRIBUTE)
-    {
-        SDL_SetError("Unknown GL attribute");
-        return -1;
-    }
+        return SDL20_SetError("Unknown GL attribute");
 
     /* swap control was moved out of this API, everything else lines up. */
     if (attr == SDL12_GL_SWAP_CONTROL)
@@ -2786,10 +2804,7 @@ int
 SDL_GL_GetAttribute(SDL12_GLattr attr, int* value)
 {
     if (attr >= SDL12_GL_MAX_ATTRIBUTE)
-    {
-        SDL_SetError("Unknown GL attribute");
-        return -1;
-    }
+        return SDL20_SetError("Unknown GL attribute");
 
     /* swap control was moved out of this API, everything else lines up. */
     if (attr == SDL12_GL_SWAP_CONTROL)
@@ -2805,7 +2820,8 @@ SDL_GL_GetAttribute(SDL12_GLattr attr, int* value)
 void
 SDL_GL_SwapBuffers(void)
 {
-    SDL_GL_SwapWindow(VideoWindow20);
+    if (VideoWindow20)
+        SDL20_GL_SwapWindow(VideoWindow20);
 }
 
 int
@@ -2815,30 +2831,32 @@ SDL_SetGamma(float red, float green, float blue)
     Uint16 green_ramp[256];
     Uint16 blue_ramp[256];
 
-    SDL_CalculateGammaRamp(red, red_ramp);
+    SDL20_CalculateGammaRamp(red, red_ramp);
     if (green == red) {
-        SDL_memcpy(green_ramp, red_ramp, sizeof(red_ramp));
+        SDL20_memcpy(green_ramp, red_ramp, sizeof(red_ramp));
     } else {
-        SDL_CalculateGammaRamp(green, green_ramp);
+        SDL20_CalculateGammaRamp(green, green_ramp);
     }
     if (blue == red) {
-        SDL_memcpy(blue_ramp, red_ramp, sizeof(red_ramp));
+        SDL20_memcpy(blue_ramp, red_ramp, sizeof(red_ramp));
+    } else if (blue == green) {
+        SDL20_memcpy(blue_ramp, green_ramp, sizeof(green_ramp));
     } else {
-        SDL_CalculateGammaRamp(blue, blue_ramp);
+        SDL20_CalculateGammaRamp(blue, blue_ramp);
     }
-    return SDL_SetWindowGammaRamp(VideoWindow20, red_ramp, green_ramp, blue_ramp);
+    return SDL20_SetWindowGammaRamp(VideoWindow20, red_ramp, green_ramp, blue_ramp);
 }
 
 int
-SDL_SetGammaRamp(const Uint16 * red, const Uint16 * green, const Uint16 * blue)
+SDL_SetGammaRamp(const Uint16 *red, const Uint16 *green, const Uint16 *blue)
 {
-    return SDL_SetWindowGammaRamp(VideoWindow20, red, green, blue);
+    return SDL20_SetWindowGammaRamp(VideoWindow20, red, green, blue);
 }
 
 int
-SDL_GetGammaRamp(Uint16 * red, Uint16 * green, Uint16 * blue)
+SDL_GetGammaRamp(Uint16 *red, Uint16 *green, Uint16 *blue)
 {
-    return SDL_GetWindowGammaRamp(VideoWindow20, red, green, blue);
+    return SDL20_GetWindowGammaRamp(VideoWindow20, red, green, blue);
 }
 
 int
@@ -2851,16 +2869,14 @@ void
 SDL_GetKeyRepeat(int *delay, int *interval)
 {
     if (delay) {
-        *delay = SDL_DEFAULT_REPEAT_DELAY;
+        *delay = SDL12_DEFAULT_REPEAT_DELAY;
     }
     if (interval) {
-        *interval = SDL_DEFAULT_REPEAT_INTERVAL;
+        *interval = SDL12_DEFAULT_REPEAT_INTERVAL;
     }
 }
 
-
-
-
+#if SANITY_CHECK_THIS_CODE
 int
 SDL_EnableUNICODE(int enable)
 {
@@ -2869,18 +2885,19 @@ SDL_EnableUNICODE(int enable)
     switch (enable) {
     case 1:
         EnabledUnicode = 1;
-        SDL_StartTextInput();
+        SDL20_StartTextInput();
         break;
     case 0:
         EnabledUnicode = 0;
-        SDL_StopTextInput();
+        SDL20_StopTextInput();
         break;
     }
     return previous;
 }
+#endif
 
 static Uint32
-SDL_SetTimerCallback(Uint32 interval, void* param)
+SetTimerOld_Callback(Uint32 interval, void* param)
 {
     return ((SDL12_TimerCallback)param)(interval);
 }
@@ -2896,7 +2913,7 @@ SDL_SetTimer(Uint32 interval, SDL12_TimerCallback callback)
     }
 
     if (interval && callback) {
-        compat_timer = SDL20_AddTimer(interval, SDL_SetTimerCallback, callback);
+        compat_timer = SDL20_AddTimer(interval, SetTimerOld_Callback, callback);
         if (!compat_timer) {
             return -1;
         }
@@ -2908,19 +2925,19 @@ int
 SDL_putenv(const char *_var)
 {
     char *ptr = NULL;
-    char *var = SDL_strdup(_var);
+    char *var = SDL20_strdup(_var);
     if (var == NULL) {
         return -1;  /* we don't set errno. */
     }
 
-    ptr = SDL_strchr(var, '=');
+    ptr = SDL20_strchr(var, '=');
     if (ptr == NULL) {
         SDL20_free(var);
         return -1;
     }
 
     *ptr = '\0';  /* split the string into name and value. */
-    SDL_setenv(var, ptr + 1, 1);
+    SDL20_setenv(var, ptr + 1, 1);
     SDL20_free(var);
     return 0;
 }
@@ -2932,28 +2949,21 @@ SDL_putenv(const char *_var)
 typedef void *SDL12_CD;  /* close enough.  :) */
 typedef int SDL12_CDstatus;  /* close enough.  :) */
 
-static int
-CDUnsupported(void)
-{
-    SDL_SetError("CD interface is unsupported");
-    return -1;
-}
-
 int
 SDL_CDNumDrives(void)
 {
     return 0;  /* !!! FIXME: should return -1 without SDL_INIT_CDROM */
 }
 
-const char *SDL_CDName(int drive) { CDUnsupported(); return NULL; }
-SDL12_CD * SDL_CDOpen(int drive) { CDUnsupported(); return NULL; }
-SDL12_CDstatus SDL_CDStatus(SDL12_CD *cdrom) { return CDUnsupported(); }
-int SDL_CDPlayTracks(SDL12_CD *cdrom, int start_track, int start_frame, int ntracks, int nframes) { return CDUnsupported(); }
-int SDL_CDPlay(SDL12_CD *cdrom, int start, int length) { return CDUnsupported(); }
-int SDL_CDPause(SDL12_CD *cdrom) { return CDUnsupported(); }
-int SDL_CDResume(SDL12_CD *cdrom) { return CDUnsupported(); }
-int SDL_CDStop(SDL12_CD *cdrom) { return CDUnsupported(); }
-int SDL_CDEject(SDL12_CD *cdrom) { return CDUnsupported(); }
+const char *SDL_CDName(int drive) { SDL20_Unsupported(); return NULL; }
+SDL12_CD * SDL_CDOpen(int drive) { SDL20_Unsupported(); return NULL; }
+SDL12_CDstatus SDL_CDStatus(SDL12_CD *cdrom) { return SDL20_Unsupported(); }
+int SDL_CDPlayTracks(SDL12_CD *cdrom, int start_track, int start_frame, int ntracks, int nframes) { return SDL20_Unsupported(); }
+int SDL_CDPlay(SDL12_CD *cdrom, int start, int length) { return SDL20_Unsupported(); }
+int SDL_CDPause(SDL12_CD *cdrom) { return SDL20_Unsupported(); }
+int SDL_CDResume(SDL12_CD *cdrom) { return SDL20_Unsupported(); }
+int SDL_CDStop(SDL12_CD *cdrom) { return SDL20_Unsupported(); }
+int SDL_CDEject(SDL12_CD *cdrom) { return SDL20_Unsupported(); }
 void SDL_CDClose(SDL12_CD *cdrom) {}
 
 
@@ -3062,7 +3072,7 @@ RWops20to12(SDL_RWops *rwops20)
     if (!rwops12)
         return NULL;
 
-    SDL_zerop(rwops12);
+    SDL20_zerop(rwops12);
     rwops12->type = rwops20->type;
     rwops12->rwops20 = rwops20;
     rwops12->seek = RWops20to12_seek;
@@ -3123,14 +3133,6 @@ BYTESWAP_AND_WRITE(BE,32)
 BYTESWAP_AND_WRITE(LE,64)
 BYTESWAP_AND_WRITE(BE,64)
 #undef BYTESWAP_AND_WRITE
-
-/* Things that _should_ be binary compatible pass right through... */
-#define SDL20_SYM(rc,fn,params,args,ret)
-#define SDL20_SYM_PASSTHROUGH(rc,fn,params,args,ret) \
-    rc SDL_##fn params { ret SDL20_##fn args; }
-#include "SDL20_syms.h"
-#undef SDL20_SYM_PASSTHROUGH
-#undef SDL20_SYM
 
 
 static Sint64 SDLCALL
@@ -3206,7 +3208,7 @@ RWops12to20(SDL12_RWops *rwops12)
     if (!rwops20)
         return NULL;
 
-    SDL_zerop(rwops20);
+    SDL20_zerop(rwops20);
     rwops20->type = rwops12->type;
     rwops20->hidden.unknown.data1 = rwops12;
     rwops20->hidden.unknown.data2 = -1;  /* cached size of stream */
@@ -3222,19 +3224,21 @@ SDL12_Surface *
 SDL_LoadBMP_RW(SDL12_RWops *rwops12, int freerwops12)
 {
     SDL_RWops *rwops20 = RWops12to20(rwops12);
-    SDL_Surface *retval = SDL20_LoadBMP_RW(rwops20, freerwops12);
+    SDL_Surface *surface20 = SDL20_LoadBMP_RW(rwops20, freerwops12);
+    SDL12_Surface *surface12 = Surface20to12(surface20);
     if (!freerwops12)  /* free our wrapper if SDL2 didn't close it. */
         SDL20_FreeRW(rwops20);
-    // !!! FIXME: wrap surface.
-    return retval;
+    if ((!surface12) && (surface20))
+        SDL20_FreeSurface(surface20);
+    return surface12;
 }
 
 int
-SDL_SaveBMP_RW(SDL12_Surface *surface, SDL12_RWops *rwops12, int freerwops12)
+SDL_SaveBMP_RW(SDL12_Surface *surface12, SDL12_RWops *rwops12, int freerwops12)
 {
     // !!! FIXME: wrap surface.
     SDL_RWops *rwops20 = RWops12to20(rwops12);
-    const int retval = SDL20_SaveBMP_RW(surface, rwops20, freerwops12);
+    const int retval = SDL20_SaveBMP_RW(surface12->surface20, rwops20, freerwops12);
     if (!freerwops12)  /* free our wrapper if SDL2 didn't close it. */
         SDL20_FreeRW(rwops20);
     return retval;

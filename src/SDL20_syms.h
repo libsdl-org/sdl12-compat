@@ -26,8 +26,6 @@ SDL20_SYM(int,InitSubSystem,(Uint32 a),(a),return)
 SDL20_SYM(Uint32,WasInit,(Uint32 a),(a),return)
 SDL20_SYM(char*,GetError,(void),(),return)
 SDL20_SYM_PASSTHROUGH(int,Error,(SDL_errorcode a),(a),return)
-
-/*SDL20_SYM_PASSTHROUGH(void,SetError,(const char *fmt, ...);*/
 SDL20_SYM_PASSTHROUGH(void,ClearError,(void),(),)
 SDL20_SYM(void,Quit,(void),(),)
 SDL20_SYM(void,QuitSubSystem,(Uint32 a),(a),)
@@ -38,6 +36,8 @@ SDL20_SYM_PASSTHROUGH(void,AudioQuit,(void),(),)
 SDL20_SYM(const char *,GetCurrentAudioDriver,(void),(),return)
 SDL20_SYM(const char *,GetCurrentVideoDriver,(void),(),return)
 
+SDL20_SYM(SDL_assert_state,ReportAssertion,(SDL_assert_data *a,const char *b,const char *c, int d),(a,b,c,d),return)
+
 SDL20_SYM_PASSTHROUGH(void,PumpEvents,(void),(),)
 SDL20_SYM(void,SetEventFilter,(SDL_EventFilter a, void *b),(a,b),)
 
@@ -45,9 +45,9 @@ SDL20_SYM(int,GetNumDisplayModes,(int a),(a),return)
 SDL20_SYM(int,GetDisplayMode,(int a, int b, SDL_DisplayMode *c),(a,b,c),return)
 SDL20_SYM(int,GetDesktopDisplayMode,(int a, SDL_DisplayMode *b),(a,b),return)
 SDL20_SYM(int,GetCurrentDisplayMode,(int a, SDL_DisplayMode *b),(a,b),return)
+
 SDL20_SYM(void,EnableScreenSaver,(void),(),)
 SDL20_SYM(void,DisableScreenSaver,(void),(),)
-
 
 SDL20_SYM(SDL_Window *,CreateWindow,(const char *a, int b, int c, int d, int e, Uint32 f),(a,b,c,d,e,f),return)
 SDL20_SYM(void,DestroyWindow,(SDL_Window *a),(a),)
@@ -57,6 +57,13 @@ SDL20_SYM(SDL_Surface *,GetWindowSurface,(SDL_Window *a),(a),return)
 SDL20_SYM(void,GetWindowPosition,(SDL_Window *a,int *b, int *c),(a,b,c),)
 SDL20_SYM(void,SetWindowSize,(SDL_Window *a, int b, int c),(a,b,c),)
 SDL20_SYM(void,GetWindowSize,(SDL_Window *a, int *b, int *c),(a,b,c),)
+SDL20_SYM(void,MinimizeWindow,(SDL_Window *a),(a),)
+SDL20_SYM(int,SetWindowGammaRamp,(SDL_Window *a,const Uint16 *b,const Uint16 *c,const Uint16 *d),(a,b,c,d),return)
+SDL20_SYM(int,GetWindowGammaRamp,(SDL_Window *a,Uint16 *b,Uint16 *c,Uint16 *d),(a,b,c,d),return)
+SDL20_SYM(Uint32,GetWindowFlags,(SDL_Window *a),(a),return)
+SDL20_SYM(void,SetWindowGrab,(SDL_Window *a,SDL_bool b),(a,b),)
+SDL20_SYM(SDL_bool,GetWindowGrab,(SDL_Window *a),(a),return)
+SDL20_SYM(void,SetWindowTitle,(SDL_Window *a,const char *b),(a,b),)
 
 SDL20_SYM(SDL_PixelFormat *,AllocFormat,(Uint32 a),(a),return)
 SDL20_SYM(void,FreeFormat,(SDL_PixelFormat *a),(a),)
@@ -71,7 +78,8 @@ SDL20_SYM(int,GL_SetAttribute,(SDL_GLattr a, int b),(a,b),return)
 SDL20_SYM(int,GL_GetAttribute,(SDL_GLattr a, int *b),(a,b),return)
 SDL20_SYM(int,GL_SetSwapInterval,(int a),(a),return)
 SDL20_SYM(int,GL_GetSwapInterval,(void),(),return)
-SDL20_SYM(void,SDL_GL_DeleteContext,(SDL_GLContext a),(a),)
+SDL20_SYM(void,GL_SwapWindow,(SDL_Window *a),(a),)
+SDL20_SYM(void,GL_DeleteContext,(SDL_GLContext a),(a),)
 SDL20_SYM(void,GetClipRect,(SDL_Surface *a, SDL_Rect *b),(a,b),)
 SDL20_SYM(SDL_bool,SetClipRect,(SDL_Surface *a, const SDL_Rect *b),(a,b),return)
 SDL20_SYM(int,FillRect,(SDL_Surface *a,const SDL_Rect *b,Uint32 c),(a,b,c),return)
@@ -80,8 +88,11 @@ SDL20_SYM(void,GetRGB,(Uint32 a,const SDL_PixelFormat *b,Uint8 *c,Uint8 *d,Uint8
 SDL20_SYM(void,GetRGBA,(Uint32 a,const SDL_PixelFormat *b,Uint8 *c,Uint8 *d,Uint8 *e,Uint8 *f),(a,b,c,d,e,f),)
 SDL20_SYM(Uint32,MapRGB,(const SDL_PixelFormat *a,Uint8 b,Uint8 c,Uint8 d),(a,b,c,d),return)
 SDL20_SYM(Uint32,MapRGBA,(const SDL_PixelFormat *a,Uint8 b,Uint8 c,Uint8 d,Uint8 e),(a,b,c,d,e),return)
+SDL20_SYM(void,CalculateGammaRamp,(float a, Uint16 *b),(a,b),)
+SDL20_SYM(Uint32,MasksToPixelFormatEnum,(int a,Uint32 b,Uint32 c,Uint32 d,Uint32 e),(a,b,c,d,e),return)
 
 SDL20_SYM(Uint32,GetMouseState,(int *a, int *b),(a,b),return)
+SDL20_SYM(void,WarpMouseInWindow,(SDL_Window *a, int b, int c),(a,b,c),)
 
 SDL20_SYM_PASSTHROUGH(int,ShowCursor,(int a),(a),return)
 SDL20_SYM(SDL_Cursor *,CreateCursor,(const Uint8 *a,const Uint8 *b,int c,int d,int e,int f),(a,b,c,d,e,f),return)
@@ -210,6 +221,8 @@ SDL20_SYM_PASSTHROUGH(SDL_iconv_t,iconv_open,(const char *a, const char *b),(a,b
 SDL20_SYM_PASSTHROUGH(int,iconv_close,(SDL_iconv_t a),(a),return)
 SDL20_SYM_PASSTHROUGH(size_t,iconv,(SDL_iconv_t a, const char **b, size_t *c, char **d, size_t *e),(a,b,c,d,e),return)
 SDL20_SYM_PASSTHROUGH(char *,iconv_string,(const char *a, const char *b, const char *c, size_t d),(a,b,c,d),return)
+SDL20_SYM(int,setenv,(const char *a, const char *b, int c),(a,b,c),return)
+SDL20_SYM(int,atoi,(const char *a),(a),return)
 
 /* vi: set ts=4 sw=4 expandtab: */
 
