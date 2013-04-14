@@ -739,6 +739,23 @@ SDL_WaitEvent(SDL12_Event *event12)
     return 1;
 }
 
+static SDL_bool
+PushEventIfNotFiltered(SDL12_Event *event12)
+{
+    if (event12->type != SDL12_NOEVENT)
+    {
+        if (EventStates[event12->type] != SDL_IGNORE)
+        {
+            if ((!EventFilter12) || (EventFilter12(event12)))
+                return (SDL_PushEvent(event12) == 0);
+        }
+    }
+    return SDL_FALSE;
+}
+
+Uint8 SDL_GetMouseState(int *x, int *y);
+
+
 Uint8
 SDL_EventState(Uint8 type, int state)
 {
@@ -759,6 +776,7 @@ EventFilter20to12(void *data, SDL_Event *event20)
 {
     const int maxUserEvents12 = SDL12_NUMEVENTS - SDL12_USEREVENT;
     SDL12_Event event12;
+    int x, y;
 
     SDL_assert(data == NULL);  /* currently unused. */
 
@@ -869,10 +887,18 @@ EventFilter20to12(void *data, SDL_Event *event20)
             break;
 
         case SDL_MOUSEWHEEL:
-            return 0;  // !!! FIXME
-        	//event12.type = SDL12_MOUSEBUTTONDOWN;
-            //check app filter, push event
-        	//event12.type = SDL12_MOUSEBUTTONUP;
+            if (event20->wheel.y == 0)
+                break;  /* don't support horizontal wheels in 1.2. */
+
+            event12.type = SDL12_MOUSEBUTTONDOWN;
+            event12.button.which = (Uint8) event20->wheel.which;
+            event12.button.button = (event20->wheel.y > 0) ? 4 : 5;  /* wheelup is 4, down is 5. */
+            event12.button.state = SDL_GetMouseState(&x, &y);
+            event12.button.x = (Uint16) x;
+            event12.button.y = (Uint16) y;
+            PushEventIfNotFiltered(&event12);
+
+            event12.type = SDL12_MOUSEBUTTONUP;  /* immediately release mouse "button" at the end of this switch. */
             break;
 
         case SDL_JOYAXISMOTION:
@@ -932,11 +958,7 @@ EventFilter20to12(void *data, SDL_Event *event20)
             return 0;  /* drop everything else. */
     }
 
-    if (EventStates[event12.type] != SDL_IGNORE)
-    {
-        if ((!EventFilter12) || (EventFilter12(&event12)))
-            SDL_PushEvent(&event12);
-    }
+    PushEventIfNotFiltered(&event12);
 
     return 0;  /* always drop it from the 2.0 event queue. */
 }
