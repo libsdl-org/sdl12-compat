@@ -27,6 +27,13 @@
 #error You need to compile against SDL 2.0 headers.
 #endif
 
+/*
+ * We report the library version as 1.2.$(SDL12_COMPAT_VERSION). This number
+ *  should be way ahead of what SDL-1.2 Classic would report, so apps can
+ *  decide if they're running under the compat layer, if they really care.
+ */
+#define SDL12_COMPAT_VERSION 50
+
 #include <stdarg.h>
 
 //#include "video/SDL_sysvideo.h"
@@ -374,6 +381,13 @@ static EventQueueType EventQueuePool[SDL12_MAXEVENTS];
 static EventQueueType *EventQueueHead = NULL;
 static EventQueueType *EventQueueTail = NULL;
 static EventQueueType *EventQueueAvailable = NULL;
+
+const SDL_version *
+SDL_Linked_Version(void)
+{
+    static const SDL_version version = { 1, 2, SDL12_COMPAT_VERSION };
+    return &version;
+}
 
 /* Obviously we can't use SDL_LoadObject() to load SDL2.  :)  */
 #if defined(_WINDOWS)
