@@ -23,8 +23,10 @@
 
 SDL20_SYM(int,Init,(Uint32 a),(a),return)
 SDL20_SYM(int,InitSubSystem,(Uint32 a),(a),return)
+SDL20_SYM(Uint32,WasInit,(Uint32 a),(a),return)
 SDL20_SYM(char*,GetError,(void),(),return)
-SDL20_SYM_PASSTHROUGH(void,Error,(SDL_errorcode a),(a),)
+SDL20_SYM_PASSTHROUGH(int,Error,(SDL_errorcode a),(a),return)
+
 /*SDL20_SYM_PASSTHROUGH(void,SetError,(const char *fmt, ...);*/
 SDL20_SYM_PASSTHROUGH(void,ClearError,(void),(),)
 SDL20_SYM(void,Quit,(void),(),)
@@ -33,8 +35,28 @@ SDL20_SYM_PASSTHROUGH(int,VideoInit,(const char *a),(a),return)
 SDL20_SYM_PASSTHROUGH(void,VideoQuit,(void),(),)
 SDL20_SYM_PASSTHROUGH(int,AudioInit,(const char *a),(a),return)
 SDL20_SYM_PASSTHROUGH(void,AudioQuit,(void),(),)
+SDL20_SYM(const char *,GetCurrentAudioDriver,(void),(),return)
+SDL20_SYM(const char *,GetCurrentVideoDriver,(void),(),return)
 
 SDL20_SYM_PASSTHROUGH(void,PumpEvents,(void),(),)
+SDL20_SYM(void,SetEventFilter,(SDL_EventFilter a, void *b),(a,b),)
+
+SDL20_SYM(int,GetNumDisplayModes,(int a),(a),return)
+SDL20_SYM(int,GetDisplayMode,(int a, int b, SDL_DisplayMode *c),(a,b,c),return)
+SDL20_SYM(int,GetDesktopDisplayMode,(int a, SDL_DisplayMode *b),(a,b),return)
+SDL20_SYM(int,GetCurrentDisplayMode,(int a, SDL_DisplayMode *b),(a,b),return)
+SDL20_SYM(void,EnableScreenSaver,(void),(),)
+SDL20_SYM(void,DisableScreenSaver,(void),(),)
+
+
+SDL20_SYM(SDL_Window *,CreateWindow,(const char *a, int b, int c, int d, int e, Uint32 f),(a,b,c,d,e,f),return)
+SDL20_SYM(void,DestroyWindow,(SDL_Window *a),(a),)
+SDL20_SYM(void,SetWindowIcon,(SDL_Window *a,SDL_Surface *b),(a,b),)
+SDL20_SYM(int,UpdateWindowSurface,(SDL_Window *a),(a),return)
+SDL20_SYM(SDL_Surface *,GetWindowSurface,(SDL_Window *a),(a),return)
+SDL20_SYM(void,GetWindowPosition,(SDL_Window *a,int *b, int *c),(a,b,c),)
+SDL20_SYM(void,SetWindowSize,(SDL_Window *a, int b, int c),(a,b,c),)
+SDL20_SYM(void,GetWindowSize,(SDL_Window *a, int *b, int *c),(a,b,c),)
 
 SDL20_SYM(SDL_PixelFormat *,AllocFormat,(Uint32 a),(a),return)
 SDL20_SYM(void,FreeFormat,(SDL_PixelFormat *a),(a),)
@@ -47,10 +69,17 @@ SDL20_SYM_PASSTHROUGH(int,GL_LoadLibrary,(const char *a),(a),return)
 SDL20_SYM_PASSTHROUGH(void *,GL_GetProcAddress,(const char *a),(a),return)
 SDL20_SYM(int,GL_SetAttribute,(SDL_GLattr a, int b),(a,b),return)
 SDL20_SYM(int,GL_GetAttribute,(SDL_GLattr a, int *b),(a,b),return)
+SDL20_SYM(int,GL_SetSwapInterval,(int a),(a),return)
+SDL20_SYM(int,GL_GetSwapInterval,(void),(),return)
+SDL20_SYM(void,SDL_GL_DeleteContext,(SDL_GLContext a),(a),)
 SDL20_SYM(void,GetClipRect,(SDL_Surface *a, SDL_Rect *b),(a,b),)
 SDL20_SYM(SDL_bool,SetClipRect,(SDL_Surface *a, const SDL_Rect *b),(a,b),return)
 SDL20_SYM(int,FillRect,(SDL_Surface *a,const SDL_Rect *b,Uint32 c),(a,b,c),return)
 SDL20_SYM(SDL_bool,IntersectRect,(const SDL_Rect *a,const SDL_Rect *b,SDL_Rect *c),(a,b,c),return)
+SDL20_SYM(void,GetRGB,(Uint32 a,const SDL_PixelFormat *b,Uint8 *c,Uint8 *d,Uint8 *e),(a,b,c,d,e),)
+SDL20_SYM(void,GetRGBA,(Uint32 a,const SDL_PixelFormat *b,Uint8 *c,Uint8 *d,Uint8 *e,Uint8 *f),(a,b,c,d,e,f),)
+SDL20_SYM(Uint32,MapRGB,(const SDL_PixelFormat *a,Uint8 b,Uint8 c,Uint8 d),(a,b,c,d),return)
+SDL20_SYM(Uint32,MapRGBA,(const SDL_PixelFormat *a,Uint8 b,Uint8 c,Uint8 d,Uint8 e),(a,b,c,d,e),return)
 
 SDL20_SYM(Uint32,GetMouseState,(int *a, int *b),(a,b),return)
 
@@ -134,11 +163,12 @@ SDL20_SYM_PASSTHROUGH(int,JoystickGetBall,(SDL_Joystick *a, int b, int *c, int *
 SDL20_SYM_PASSTHROUGH(Uint8,JoystickGetButton,(SDL_Joystick *a, int b),(a,b),return)
 SDL20_SYM_PASSTHROUGH(void,JoystickClose,(SDL_Joystick *a),(a),return)
 
-/* We don't call most things that use 2.0 RWops, so most aren't listed here. */
-SDL20_SYM(SDL_RWops *,SDL_RWFromFile,(const char *a, const char *b),(a,b),return)
-SDL20_SYM(SDL_RWops *,SDL_RWFromFP,(FILE *a, int b),(a,b),return)
-SDL20_SYM(SDL_RWops *,SDL_RWFromMem,(void *a, int b),(a,b),return)
-SDL20_SYM(SDL_RWops *,SDL_RWFromConstMem,(const void *a, int b),(a,b),return)
+SDL20_SYM(SDL_RWops *,RWFromFile,(const char *a, const char *b),(a,b),return)
+SDL20_SYM(SDL_RWops *,RWFromFP,(FILE *a, int b),(a,b),return)
+SDL20_SYM(SDL_RWops *,RWFromMem,(void *a, int b),(a,b),return)
+SDL20_SYM(SDL_RWops *,RWFromConstMem,(const void *a, int b),(a,b),return)
+SDL20_SYM(SDL_RWops *,AllocRW,(void),(),return)
+SDL20_SYM(void,FreeRW,(SDL_RWops *a),(a),)
 
 SDL20_SYM_PASSTHROUGH(void *,malloc,(size_t a),(a),return)
 SDL20_SYM_PASSTHROUGH(void *,calloc,(size_t a, size_t b),(a,b),return)

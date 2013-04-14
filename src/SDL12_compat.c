@@ -21,13 +21,11 @@
 
 /* This file contains functions for backwards compatibility with SDL 1.2 */
 
-#include "SDL.h"
+#include "SDL20_include_wrapper.h"
 
 #if !SDL_VERSION_ATLEAST(2,0,0)
 #error You need to compile against SDL 2.0 headers.
 #endif
-
-#include "SDL_syswm.h"
 
 #include <stdarg.h>
 
@@ -62,6 +60,10 @@
 typedef void (*SDL20_SetError_t)(const char *fmt, ...);
 static SDL20_SetError_t SDL20_SetError = NULL;
 
+/* these are macros in the SDL headers, so make our own. */
+#define SDL20_OutOfMemory()	SDL20_Error(SDL_ENOMEM)
+#define SDL20_Unsupported()	SDL20_Error(SDL_UNSUPPORTED)
+#define SDL20_InvalidParamError(param)	SDL20_SetError("Parameter '%s' is invalid", (param))
 
 
 #define SDL12_INIT_TIMER       0x00000001
@@ -156,9 +158,6 @@ typedef struct
 #define SDL12_SRCALPHA 0x00010000
 #define SDL12_PREALLOC 0x01000000
 
-typedef int (SDLCALL *SDL12_EventFilter)(const SDL12_Event *event12);
-static int EventFilter20to12(void *data, SDL_Event *event20);
-
 typedef enum
 {
     SDL12_NOEVENT = 0,
@@ -183,6 +182,11 @@ typedef enum
     SDL12_NUMEVENTS = 32
 } SDL12_EventType;
 
+
+#define SDL12_APPMOUSEFOCUS (1<<0)
+#define SDL12_APPINPUTFOCUS (1<<1)
+#define SDL12_APPACTIVE     (1<<2)
+
 typedef struct
 {
     Uint8 type;
@@ -195,7 +199,7 @@ typedef struct
     Uint8 type;
     Uint8 which;
     Uint8 state;
-    SDL12_keysym keysym;
+    //FIXME: SDL12_keysym keysym;
 } SDL12_KeyboardEvent;
 
 typedef struct
@@ -299,8 +303,14 @@ typedef union
     SDL12_SysWMEvent syswm;
 } SDL12_Event;
 
+typedef int (SDLCALL *SDL12_EventFilter)(const SDL12_Event *event12);
+static int EventFilter20to12(void *data, SDL_Event *event20);
+
+typedef Uint32 (SDLCALL *SDL12_TimerCallback)(Uint32 interval);
+typedef SDL_TimerCallback SDL12_NewTimerCallback;
+
 typedef struct
-`{
+{
     SDL_Rect area;
     Sint16 hot_x;
     Sint16 hot_y;
@@ -628,206 +638,6 @@ SDL_VideoDriverName(char *namebuf, int maxlen)
     return GetDriverName(SDL20_GetCurrentVideoDriver(), namebuf, maxlen);
 }
 
-static int
-EventFilter20to12(void *data, SDL_Event *event20)
-{
-    const int maxUserEvents12 = SDL12_NUMEVENTS - SDL12_USEREVENT;
-    SDL12_Event event12;
-
-    SDL_assert(data == NULL);  /* currently unused. */
-
-    SDL_zero(event12);
-
-    switch (event20->type)
-    {
-        case SDL_QUIT:
-            event12->type = SDL12_QUIT;
-            break;
-
-        case SDL_WINDOWEVENT:
-            switch (event20->window.event)
-            {
-                case SDL_WINDOWEVENT_CLOSE:
-                    event12->type = SDL12_QUIT;
-                    break;
-
-                case SDL_WINDOWEVENT_SHOWN:
-                case SDL_WINDOWEVENT_EXPOSED:
-                    event12->type = SDL12_VIDEOEXPOSE;
-                    break;
-
-                case SDL_WINDOWEVENT_RESIZED:
-                case SDL_WINDOWEVENT_SIZE_CHANGED:  // !!! FIXME: what's the difference between RESIZED and SIZE_CHANGED?
-                    event12->type = SDL12_VIDEORESIZE;
-                    event12->resize.w = event20->window.data1;
-                    event12->resize.h = event20->window.data2;
-                    break;
-
-                case SDL_WINDOWEVENT_MINIMIZED:
-                    event12->type = SDL_ACTIVEEVENT;
-                    event12->active.gain = 0;
-                    event12->active.state = SDL_APPACTIVE;
-                    break;
-
-                case SDL_WINDOWEVENT_RESTORED:
-                    event12->type = SDL_ACTIVEEVENT;
-                    event12->active.gain = 1;
-                    event12->active.state = SDL_APPACTIVE;
-                    break;
-
-                case SDL_WINDOWEVENT_ENTER:
-                    event12->type = SDL_ACTIVEEVENT;
-                    event12->active.gain = 1;
-                    event12->active.state = SDL_APPMOUSEFOCUS;
-                    break;
-
-                case SDL_WINDOWEVENT_LEAVE:
-                    event12->type = SDL_ACTIVEEVENT;
-                    event12->active.gain = 0;
-                    event12->active.state = SDL_APPMOUSEFOCUS;
-                    break;
-
-                case SDL_WINDOWEVENT_FOCUS_GAINED:
-                    event12->type = SDL_ACTIVEEVENT;
-                    event12->active.gain = 1;
-                    event12->active.state = SDL_APPINPUTFOCUS;
-                    break;
-
-                case SDL_WINDOWEVENT_FOCUS_LOST:
-                    event12->type = SDL_ACTIVEEVENT;
-                    event12->active.gain = 0;
-                    event12->active.state = SDL_APPINPUTFOCUS;
-                    break;
-            }
-            break;
-
-        // !!! FIXME: this is sort of a mess to convert.
-        //case SDL_SYSWMEVENT:
-
-        // !!! FIXME: write me
-        case SDL_KEYDOWN:
-        case SDL_KEYUP:
-            return 0;
-
-        // !!! FIXME: write me
-        case SDL_TEXTEDITING:
-        case SDL_TEXTINPUT:
-            return 0;
-
-        case SDL_MOUSEMOTION:
-        	event12->type = SDL12_MOUSEMOTION;
-            event12->motion.which = (Uint8) event20->motion.which;
-            event12->motion.state = event20->motion.state;
-            event12->motion.x = (Uint16) event20->motion.x;
-            event12->motion.y = (Uint16) event20->motion.y;
-            event12->motion.xrel = (Sint16) event20->motion.xrel;
-            event12->motion.yrel = (Sint16) event20->motion.yrel;
-            break;
-
-        case SDL_MOUSEBUTTONDOWN:
-        	event12->type = SDL12_MOUSEBUTTONDOWN;
-            event12->button.which = (Uint8) event20->button.which;
-            event12->button.button = event20->button.button;
-            event12->button.state = event20->button.state;
-            event12->button.x = (Uint16) event20->button.x;
-            event12->button.y = (Uint16) event20->button.y;
-            break;
-
-        case SDL_MOUSEBUTTONUP:
-        	event12->type = SDL12_MOUSEBUTTONUP;
-            event12->button.which = (Uint8) event20->button.which;
-            event12->button.button = event20->button.button;
-            event12->button.state = event20->button.state;
-            event12->button.x = (Uint16) event20->button.x;
-            event12->button.y = (Uint16) event20->button.y;
-            break;
-
-        case SDL_MOUSEWHEEL:
-            return 0;  // !!! FIXME
-        	//event12->type = SDL12_MOUSEBUTTONDOWN;
-            //check app filter, push event
-        	//event12->type = SDL12_MOUSEBUTTONUP;
-            break;
-
-        case SDL_JOYAXISMOTION:
-            event12->type = SDL12_JOYAXISMOTION;
-            event12->jaxis.which = (Uint8) event20->jaxis.which;
-            event12->jaxis.axis = event20->jaxis.axis;
-            event12->jaxis.value = event20->jaxis.value;
-            break;
-
-        case SDL_JOYBALLMOTION:
-            event12->type = SDL12_JOYBALLMOTION;
-            event12->jball.which = (Uint8) event20->jball.which;
-            event12->jball.ball = event20->jball.ball;
-            event12->jball.xrel = event20->jball.xrel;
-            event12->jball.yrel = event20->jball.yrel;
-            break;
-
-        case SDL_JOYHATMOTION:
-            event12->type = SDL12_JOYHATMOTION;
-            event12->jhat.which = (Uint8) event20->jhat.which;
-            event12->jhat.hat = event20->jhat.hat;
-            event12->jhat.value = event20->jhat.xrel;
-            break;
-
-        case SDL_JOYBUTTONDOWN:
-            event12->type = SDL12_JOYBUTTONDOWN;
-            event12->jbutton.which = (Uint8) event20->jbutton.which;
-            event12->jbutton.button = event20->jbutton.button;
-            event12->jbutton.state = event20->jbutton.state;
-            break;
-
-        case SDL_JOYBUTTONUP:
-            event12->type = SDL12_JOYBUTTONUP;
-            event12->jbutton.which = (Uint8) event20->jbutton.which;
-            event12->jbutton.button = event20->jbutton.button;
-            event12->jbutton.state = event20->jbutton.state;
-            break;
-
-        //case SDL_JOYDEVICEADDED:
-        //case SDL_JOYDEVICEREMOVED:
-	    //case SDL_CONTROLLERAXISMOTION:
-	    //case SDL_CONTROLLERBUTTONDOWN:
-	    //case SDL_CONTROLLERBUTTONUP:
-	    //case SDL_CONTROLLERDEVICEADDED:
-	    //case SDL_CONTROLLERDEVICEREMOVED:
-	    //case SDL_CONTROLLERDEVICEREMAPPED:
-        //case SDL_FINGERDOWN:
-        //case SDL_FINGERUP:
-        //case SDL_FINGERMOTION:
-        //case SDL_DOLLARGESTURE:
-        //case SDL_DOLLARRECORD:
-        //case SDL_MULTIGESTURE:
-        //case SDL_CLIPBOARDUPDATE:
-        //case SDL_DROPFILE:
-
-        default:
-            return 0;  /* drop everything else. */
-    }
-
-    if (EventStates[event12->type] != SDL_IGNORE)
-    {
-        if ((!EventFilter12) || (EventFilter12(&event12)))
-            SDL_PushEvent(event12);
-    }
-
-    return 0;  /* always drop it from the 2.0 event queue. */
-}
-
-Uint8
-SDL_EventState(Uint8 type, int state)
-{
-    /* the values of "state" match between 1.2 and 2.0 */
-    const Uint8 retval = EventStates[type];
-    SDL12_Event e;
-
-    if (state != SDL_QUERY)
-        EventStates[type] = state;
-    if (state == SDL_IGNORE)  /* drop existing events of this type. */
-        while (SDL_PeepEvents(&e, 1, SDL_GETEVENT, (1<<type))) {}
-}
-
 int
 SDL_PollEvent(SDL12_Event *event12)
 {
@@ -879,7 +689,7 @@ SDL_PeepEvents(SDL12_Event *events12, int numevents, SDL_eventaction action, Uin
     }
     else if ((action == SDL_PEEKEVENT) || (action == SDL_GETEVENT))
     {
-        const int isGet = (action == SDL_GETEVENT);
+        const SDL_bool isGet = (action == SDL_GETEVENT);
         EventQueueType *prev = NULL;
         EventQueueType *item = EventQueueHead;
         EventQueueType *next = NULL;
@@ -892,7 +702,7 @@ SDL_PeepEvents(SDL12_Event *events12, int numevents, SDL_eventaction action, Uin
 
             next = item->next;  /* copy, since we might overwrite item->next */
 
-            if (mask & (1<<event12->type))
+            if (mask & (1<<item->event12.type))
             {
                 SDL_memcpy(&events12[chosen++], &item->event12, sizeof (SDL12_Event));
                 if (isGet)  /* remove from list? */
@@ -929,6 +739,207 @@ SDL_WaitEvent(SDL12_Event *event12)
     return 1;
 }
 
+Uint8
+SDL_EventState(Uint8 type, int state)
+{
+    /* the values of "state" match between 1.2 and 2.0 */
+    const Uint8 retval = EventStates[type];
+    SDL12_Event e;
+
+    if (state != SDL_QUERY)
+        EventStates[type] = state;
+    if (state == SDL_IGNORE)  /* drop existing events of this type. */
+        while (SDL_PeepEvents(&e, 1, SDL_GETEVENT, (1<<type))) {}
+
+    return retval;
+}
+
+static int
+EventFilter20to12(void *data, SDL_Event *event20)
+{
+    const int maxUserEvents12 = SDL12_NUMEVENTS - SDL12_USEREVENT;
+    SDL12_Event event12;
+
+    SDL_assert(data == NULL);  /* currently unused. */
+
+    SDL_zero(event12);
+
+    switch (event20->type)
+    {
+        case SDL_QUIT:
+            event12.type = SDL12_QUIT;
+            break;
+
+        case SDL_WINDOWEVENT:
+            switch (event20->window.event)
+            {
+                case SDL_WINDOWEVENT_CLOSE:
+                    event12.type = SDL12_QUIT;
+                    break;
+
+                case SDL_WINDOWEVENT_SHOWN:
+                case SDL_WINDOWEVENT_EXPOSED:
+                    event12.type = SDL12_VIDEOEXPOSE;
+                    break;
+
+                case SDL_WINDOWEVENT_RESIZED:
+                case SDL_WINDOWEVENT_SIZE_CHANGED:  // !!! FIXME: what's the difference between RESIZED and SIZE_CHANGED?
+                    event12.type = SDL12_VIDEORESIZE;
+                    event12.resize.w = event20->window.data1;
+                    event12.resize.h = event20->window.data2;
+                    break;
+
+                case SDL_WINDOWEVENT_MINIMIZED:
+                    event12.type = SDL12_ACTIVEEVENT;
+                    event12.active.gain = 0;
+                    event12.active.state = SDL12_APPACTIVE;
+                    break;
+
+                case SDL_WINDOWEVENT_RESTORED:
+                    event12.type = SDL12_ACTIVEEVENT;
+                    event12.active.gain = 1;
+                    event12.active.state = SDL12_APPACTIVE;
+                    break;
+
+                case SDL_WINDOWEVENT_ENTER:
+                    event12.type = SDL12_ACTIVEEVENT;
+                    event12.active.gain = 1;
+                    event12.active.state = SDL12_APPMOUSEFOCUS;
+                    break;
+
+                case SDL_WINDOWEVENT_LEAVE:
+                    event12.type = SDL12_ACTIVEEVENT;
+                    event12.active.gain = 0;
+                    event12.active.state = SDL12_APPMOUSEFOCUS;
+                    break;
+
+                case SDL_WINDOWEVENT_FOCUS_GAINED:
+                    event12.type = SDL12_ACTIVEEVENT;
+                    event12.active.gain = 1;
+                    event12.active.state = SDL12_APPINPUTFOCUS;
+                    break;
+
+                case SDL_WINDOWEVENT_FOCUS_LOST:
+                    event12.type = SDL12_ACTIVEEVENT;
+                    event12.active.gain = 0;
+                    event12.active.state = SDL12_APPINPUTFOCUS;
+                    break;
+            }
+            break;
+
+        // !!! FIXME: this is sort of a mess to convert.
+        //case SDL_SYSWMEVENT:
+
+        // !!! FIXME: write me
+        case SDL_KEYDOWN:
+        case SDL_KEYUP:
+            return 0;
+
+        // !!! FIXME: write me
+        case SDL_TEXTEDITING:
+        case SDL_TEXTINPUT:
+            return 0;
+
+        case SDL_MOUSEMOTION:
+        	event12.type = SDL12_MOUSEMOTION;
+            event12.motion.which = (Uint8) event20->motion.which;
+            event12.motion.state = event20->motion.state;
+            event12.motion.x = (Uint16) event20->motion.x;
+            event12.motion.y = (Uint16) event20->motion.y;
+            event12.motion.xrel = (Sint16) event20->motion.xrel;
+            event12.motion.yrel = (Sint16) event20->motion.yrel;
+            break;
+
+        case SDL_MOUSEBUTTONDOWN:
+        	event12.type = SDL12_MOUSEBUTTONDOWN;
+            event12.button.which = (Uint8) event20->button.which;
+            event12.button.button = event20->button.button;
+            event12.button.state = event20->button.state;
+            event12.button.x = (Uint16) event20->button.x;
+            event12.button.y = (Uint16) event20->button.y;
+            break;
+
+        case SDL_MOUSEBUTTONUP:
+        	event12.type = SDL12_MOUSEBUTTONUP;
+            event12.button.which = (Uint8) event20->button.which;
+            event12.button.button = event20->button.button;
+            event12.button.state = event20->button.state;
+            event12.button.x = (Uint16) event20->button.x;
+            event12.button.y = (Uint16) event20->button.y;
+            break;
+
+        case SDL_MOUSEWHEEL:
+            return 0;  // !!! FIXME
+        	//event12.type = SDL12_MOUSEBUTTONDOWN;
+            //check app filter, push event
+        	//event12.type = SDL12_MOUSEBUTTONUP;
+            break;
+
+        case SDL_JOYAXISMOTION:
+            event12.type = SDL12_JOYAXISMOTION;
+            event12.jaxis.which = (Uint8) event20->jaxis.which;
+            event12.jaxis.axis = event20->jaxis.axis;
+            event12.jaxis.value = event20->jaxis.value;
+            break;
+
+        case SDL_JOYBALLMOTION:
+            event12.type = SDL12_JOYBALLMOTION;
+            event12.jball.which = (Uint8) event20->jball.which;
+            event12.jball.ball = event20->jball.ball;
+            event12.jball.xrel = event20->jball.xrel;
+            event12.jball.yrel = event20->jball.yrel;
+            break;
+
+        case SDL_JOYHATMOTION:
+            event12.type = SDL12_JOYHATMOTION;
+            event12.jhat.which = (Uint8) event20->jhat.which;
+            event12.jhat.hat = event20->jhat.hat;
+            event12.jhat.value = event20->jhat.value;
+            break;
+
+        case SDL_JOYBUTTONDOWN:
+            event12.type = SDL12_JOYBUTTONDOWN;
+            event12.jbutton.which = (Uint8) event20->jbutton.which;
+            event12.jbutton.button = event20->jbutton.button;
+            event12.jbutton.state = event20->jbutton.state;
+            break;
+
+        case SDL_JOYBUTTONUP:
+            event12.type = SDL12_JOYBUTTONUP;
+            event12.jbutton.which = (Uint8) event20->jbutton.which;
+            event12.jbutton.button = event20->jbutton.button;
+            event12.jbutton.state = event20->jbutton.state;
+            break;
+
+        //case SDL_JOYDEVICEADDED:
+        //case SDL_JOYDEVICEREMOVED:
+	    //case SDL_CONTROLLERAXISMOTION:
+	    //case SDL_CONTROLLERBUTTONDOWN:
+	    //case SDL_CONTROLLERBUTTONUP:
+	    //case SDL_CONTROLLERDEVICEADDED:
+	    //case SDL_CONTROLLERDEVICEREMOVED:
+	    //case SDL_CONTROLLERDEVICEREMAPPED:
+        //case SDL_FINGERDOWN:
+        //case SDL_FINGERUP:
+        //case SDL_FINGERMOTION:
+        //case SDL_DOLLARGESTURE:
+        //case SDL_DOLLARRECORD:
+        //case SDL_MULTIGESTURE:
+        //case SDL_CLIPBOARDUPDATE:
+        //case SDL_DROPFILE:
+
+        default:
+            return 0;  /* drop everything else. */
+    }
+
+    if (EventStates[event12.type] != SDL_IGNORE)
+    {
+        if ((!EventFilter12) || (EventFilter12(&event12)))
+            SDL_PushEvent(&event12);
+    }
+
+    return 0;  /* always drop it from the 2.0 event queue. */
+}
 
 void
 SDL_SetEventFilter(SDL12_EventFilter filter12)
@@ -950,7 +961,7 @@ Surface20to12(SDL_Surface *surface20)
     SDL12_Surface *surface12 = NULL;
     SDL12_Palette *palette12 = NULL;
     SDL12_PixelFormat *format12 = NULL;
-    UInt32 flags = 0;
+    Uint32 flags = 0;
 
     if (!surface20)
         return NULL;
@@ -968,8 +979,8 @@ Surface20to12(SDL_Surface *surface20)
         goto failed;
 
     SDL_zerop(palette12);
-    palette12->ncolors = surface20->palette->ncolors;
-    palette12->colors = surface20->palette->colors;
+    palette12->ncolors = surface20->format->palette->ncolors;
+    palette12->colors = surface20->format->palette->colors;
 
     SDL_zerop(format12);
     format12->palette = palette12;
@@ -997,7 +1008,7 @@ Surface20to12(SDL_Surface *surface20)
     MAPSURFACEFLAGS(RLEACCEL);
     MAPSURFACEFLAGS(DONTFREE);
     #undef MAPSURFACEFLAGS
-    assert(flags == 0);  /* non-zero if there's a flag we didn't map. */
+    SDL_assert(flags == 0);  /* non-zero if there's a flag we didn't map. */
 
     surface12->format = format12;
     surface12->w = surface20->w;
@@ -1028,21 +1039,21 @@ SDL_CreateRGBSurface(Uint32 sdl12flags, int width, int height, int depth, Uint32
         return NULL;
     }
 
-    assert(surface12->flags == 0);  // shouldn't have prealloc, rleaccel, or dontfree.
+    SDL_assert(surface12->flags == 0);  // shouldn't have prealloc, rleaccel, or dontfree.
     return surface12;
 }
 
 SDL12_Surface *
 SDL_CreateRGBSurfaceFrom(void *pixels, int width, int height, int depth, int pitch, Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask)
 {
-    SDL_Surface *surface20 = SDL20_CreateRGBSurfaceFrom(pixels, width, height, depth, Rmask, Gmask, Bmask, Amask);
+    SDL_Surface *surface20 = SDL20_CreateRGBSurfaceFrom(pixels, width, height, depth, pitch, Rmask, Gmask, Bmask, Amask);
     SDL12_Surface *surface12 = Surface20to12(surface20);
     if (!surface12) {
         SDL20_FreeSurface(surface20);
         return NULL;
     }
 
-    assert(surface12->flags == SDL12_PREALLOC);  // should _only_ have prealloc.
+    SDL_assert(surface12->flags == SDL12_PREALLOC);  // should _only_ have prealloc.
     return surface12;
 }
 
@@ -1081,18 +1092,18 @@ int
 SDL_FillRect(SDL12_Surface *dst, SDL_Rect *dstrect, Uint32 color)
 {
     const SDL_Rect orig_dstrect = *dstrect;
-    const int retval = SDL20_FillRect(dst->hwdata, orig_dstrect, color);
+    const int retval = SDL20_FillRect(dst->hwdata, &orig_dstrect, color);
     if (retval != -1)
     {
         if (dstrect)  /* 1.2 stores the clip intersection in dstrect */
-            SDL20_IntersectRect(orig_dstrect, &dst->clip_rect, dstrect);
+            SDL20_IntersectRect(&orig_dstrect, &dst->clip_rect, dstrect);
     }
     return retval;
 }
 
 
 static SDL_PixelFormat *
-PixelFormat12to20(SDL_PixelFormat *format20, SDL_Palette *palette20, SDL12_PixelFormat *format12)
+PixelFormat12to20(SDL_PixelFormat *format20, SDL_Palette *palette20, const SDL12_PixelFormat *format12)
 {
     palette20->ncolors = format12->palette->ncolors;
     palette20->colors = format12->palette->colors;
@@ -1152,7 +1163,7 @@ SDL_GetRGBA(Uint32 pixel, const SDL12_PixelFormat *format12, Uint8 *r, Uint8 *g,
     /* This is probably way slower than apps expect. */
     SDL_PixelFormat format20;
     SDL_Palette palette20;
-    return SDL20_GetRGB(pixel, PixelFormat12to20(&format20, &palette20, format12), r, g, b, a);
+    return SDL20_GetRGBA(pixel, PixelFormat12to20(&format20, &palette20, format12), r, g, b, a);
 }
 
 const SDL12_VideoInfo *
@@ -1267,6 +1278,18 @@ SDL_ListModes(const SDL12_PixelFormat *format, Uint32 flags)
     return modes;
 }
 
+void
+SDL_FreeCursor(SDL12_Cursor *cursor12)
+{
+    if (cursor12)
+    {
+        if (cursor12->wm_cursor)
+            SDL20_FreeCursor(cursor12->wm_cursor);
+        SDL20_free(cursor12->data);
+        SDL20_free(cursor12->mask);
+        SDL20_free(cursor12);
+    }
+}
 
 SDL12_Cursor *
 SDL_CreateCursor(Uint8 *data, Uint8 *mask, int w, int h, int hot_x, int hot_y)
@@ -1282,11 +1305,11 @@ SDL_CreateCursor(Uint8 *data, Uint8 *mask, int w, int h, int hot_x, int hot_y)
     SDL_zerop(retval);
 
     retval->data = (Uint8 *) SDL20_malloc(datasize);
-    if (!retval->data);
+    if (!retval->data)
         goto outofmem;
 
     retval->mask = (Uint8 *) SDL20_malloc(datasize);
-    if (!retval->mask);
+    if (!retval->mask)
         goto outofmem;
 
     cursor20 = SDL20_CreateCursor(data, mask, w, h, hot_x, hot_y);
@@ -1306,7 +1329,7 @@ SDL_CreateCursor(Uint8 *data, Uint8 *mask, int w, int h, int hot_x, int hot_y)
     return retval;
 
 outofmem:
-    SDL_OutOfMemory();
+    SDL20_OutOfMemory();
 
 failed:
     SDL_FreeCursor(retval);
@@ -1325,20 +1348,6 @@ SDL_GetCursor(void)
 {
     return CurrentCursor;
 }
-
-void
-SDL_FreeCursor(SDL12_Cursor *cursor)
-{
-    if (retval)
-    {
-        if (retval->wm_cursor)
-            SDL20_FreeCursor(cursor);
-        SDL20_free(retval->data);
-        SDL20_free(retval->mask);
-        SDL20_free(retval);
-    }
-}
-
 
 static void
 GetEnvironmentWindowPosition(int w, int h, int *x, int *y)
@@ -1561,6 +1570,7 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
 
     /* If we're in OpenGL mode, just create a stub surface and we're done! */
     if (flags12 & SDL_OPENGL) {
+
         VideoContext = SDL_GL_CreateContext(VideoWindow20);
         if (!VideoContext) {
             return NULL;
@@ -1569,7 +1579,7 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
             return NULL;
         }
 
-        SDL_GL_SetSwapInterval(SwapInterval);  /* don't care if this fails. */
+        SDL20_GL_SetSwapInterval(SwapInterval);  /* don't care if this fails. */
 
         VideoSurface =
             SDL_CreateRGBSurfaceFrom(NULL, width, height, bpp, 0, 0, 0, 0, 0);
@@ -1734,28 +1744,6 @@ SDL_DisplayFormatAlpha(SDL12_Surface *surface)
     return converted;
 }
 
-int
-SDL_Flip(SDL_Surface * screen)
-{
-    SDL_UpdateRect(screen, 0, 0, 0, 0);
-    return 0;
-}
-
-void
-SDL_UpdateRect(SDL_Surface * screen, Sint32 x, Sint32 y, Uint32 w, Uint32 h)
-{
-    if (screen) {
-        SDL_Rect rect;
-
-        /* Fill the rectangle */
-        rect.x = (int) x;
-        rect.y = (int) y;
-        rect.w = (int) (w ? w : screen->w);
-        rect.h = (int) (h ? h : screen->h);
-        SDL_UpdateRects(screen, 1, &rect);
-    }
-}
-
 void
 SDL_UpdateRects(SDL_Surface * screen, int numrects, SDL_Rect * rects)
 {
@@ -1794,13 +1782,35 @@ SDL_UpdateRects(SDL_Surface * screen, int numrects, SDL_Rect * rects)
 }
 
 void
+SDL_UpdateRect(SDL_Surface * screen, Sint32 x, Sint32 y, Uint32 w, Uint32 h)
+{
+    if (screen) {
+        SDL_Rect rect;
+
+        /* Fill the rectangle */
+        rect.x = (int) x;
+        rect.y = (int) y;
+        rect.w = (int) (w ? w : screen->w);
+        rect.h = (int) (h ? h : screen->h);
+        SDL_UpdateRects(screen, 1, &rect);
+    }
+}
+
+int
+SDL_Flip(SDL_Surface * screen)
+{
+    SDL_UpdateRect(screen, 0, 0, 0, 0);
+    return 0;
+}
+
+void
 SDL_WM_SetCaption(const char *title, const char *icon)
 {
     if (WindowTitle) {
-        SDL_free(WindowTitle);
+        SDL20_free(WindowTitle);
     }
     if (WindowIconTitle) {
-        SDL_free(WindowIconTitle);
+        SDL20_free(WindowIconTitle);
     }
     WindowTitle = title ? SDL_strdup(title) : NULL;
     WindowIconTitle = icon ? SDL_strdup(icon) : NULL;
@@ -1850,7 +1860,7 @@ SDL_WM_ToggleFullScreen(SDL_Surface * surface)
 
     /* Copy the old bits out */
     length = PublicSurface->w * PublicSurface->format->BytesPerPixel;
-    pixels = SDL_malloc(PublicSurface->h * length);
+    pixels = SDL20_malloc(PublicSurface->h * length);
     if (pixels && PublicSurface->pixels) {
         src = (Uint8*)PublicSurface->pixels;
         dst = (Uint8*)pixels;
@@ -1895,7 +1905,7 @@ SDL_WM_ToggleFullScreen(SDL_Surface * surface)
                 /* Whee!  We don't need a shadow surface anymore! */
                 VideoSurface->flags &= ~SDL_DONTFREE;
                 SDL_FreeSurface(VideoSurface);
-                SDL_free(ShadowSurface->pixels);
+                SDL20_free(ShadowSurface->pixels);
                 VideoSurface = ShadowSurface;
                 VideoSurface->flags |= SDL_PREALLOC;
                 ShadowSurface = NULL;
@@ -1910,7 +1920,7 @@ SDL_WM_ToggleFullScreen(SDL_Surface * surface)
             /* We can make the video surface the shadow surface */
             ShadowSurface = VideoSurface;
             ShadowSurface->pitch = SDL_CalculatePitch(ShadowSurface);
-            ShadowSurface->pixels = SDL_malloc(ShadowSurface->h * ShadowSurface->pitch);
+            ShadowSurface->pixels = SDL20_malloc(ShadowSurface->h * ShadowSurface->pitch);
             if (!ShadowSurface->pixels) {
                 /* Uh oh, we're hosed */
                 ShadowSurface = NULL;
@@ -1946,20 +1956,27 @@ SDL_WM_ToggleFullScreen(SDL_Surface * surface)
             dst += PublicSurface->pitch;
         }
         SDL_Flip(PublicSurface);
-        SDL_free(pixels);
+        SDL20_free(pixels);
     }
 
     /* We're done! */
     return 1;
 }
 
-SDL_GrabMode
-SDL_WM_GrabInput(SDL_GrabMode mode)
+typedef enum
 {
-    if (mode != SDL_GRAB_QUERY) {
-        SDL_SetWindowGrab(VideoWindow20, mode);
+    SDL12_GRAB_QUERY = -1,
+    SDL12_GRAB_OFF = 0,
+    SDL12_GRAB_ON = 1
+} SDL12_GrabMode;
+
+SDL12_GrabMode
+SDL_WM_GrabInput(SDL12_GrabMode mode)
+{
+    if (mode != SDL12_GRAB_QUERY) {
+        SDL_SetWindowGrab(VideoWindow20, (mode == SDL_GRAB_ON));
     }
-    return (SDL_GrabMode) SDL_GetWindowGrab(VideoWindow20);
+    return SDL_GetWindowGrab(VideoWindow20) ? SDL12_GRAB_ON : SDL12_GRAB_OFF;
 }
 
 Uint8
@@ -2558,25 +2575,25 @@ SDL_CreateYUVOverlay(int w, int h, Uint32 format, SDL_Surface * display)
         return NULL;
     }
 
-    overlay = (SDL_Overlay *) SDL_malloc(sizeof(*overlay));
+    overlay = (SDL_Overlay *) SDL20_malloc(sizeof(*overlay));
     if (!overlay) {
-        SDL_OutOfMemory();
+        SDL20_OutOfMemory();
         return NULL;
     }
     SDL_zerop(overlay);
 
     overlay->hwdata =
-        (struct private_yuvhwdata *) SDL_malloc(sizeof(*overlay->hwdata));
+        (struct private_yuvhwdata *) SDL20_malloc(sizeof(*overlay->hwdata));
     if (!overlay->hwdata) {
-        SDL_free(overlay);
-        SDL_OutOfMemory();
+        SDL20_free(overlay);
+        SDL20_OutOfMemory();
         return NULL;
     }
 
     texture = SDL_SW_CreateYUVTexture(texture_format, w, h);
     if (!texture) {
-        SDL_free(overlay->hwdata);
-        SDL_free(overlay);
+        SDL20_free(overlay->hwdata);
+        SDL20_free(overlay);
         return NULL;
     }
     overlay->hwdata->texture = texture;
@@ -2705,9 +2722,9 @@ SDL_FreeYUVOverlay(SDL_Overlay * overlay)
         if (overlay->hwdata->texture) {
             SDL_SW_DestroyYUVTexture(overlay->hwdata->texture);
         }
-        SDL_free(overlay->hwdata);
+        SDL20_free(overlay->hwdata);
     }
-    SDL_free(overlay);
+    SDL20_free(overlay);
 }
 
 int
@@ -2829,11 +2846,11 @@ SDL_EnableUNICODE(int enable)
 static Uint32
 SDL_SetTimerCallback(Uint32 interval, void* param)
 {
-    return ((SDL_OldTimerCallback)param)(interval);
+    return ((SDL12_TimerCallback)param)(interval);
 }
 
 int
-SDL_SetTimer(Uint32 interval, SDL_OldTimerCallback callback)
+SDL_SetTimer(Uint32 interval, SDL12_TimerCallback callback)
 {
     static SDL_TimerID compat_timer;
 
@@ -2862,13 +2879,13 @@ SDL_putenv(const char *_var)
 
     ptr = SDL_strchr(var, '=');
     if (ptr == NULL) {
-        SDL_free(var);
+        SDL20_free(var);
         return -1;
     }
 
     *ptr = '\0';  /* split the string into name and value. */
     SDL_setenv(var, ptr + 1, 1);
-    SDL_free(var);
+    SDL20_free(var);
     return 0;
 }
 
@@ -2894,7 +2911,7 @@ SDL_CDNumDrives(void)
 
 const char *SDL_CDName(int drive) { CDUnsupported(); return NULL; }
 SDL12_CD * SDL_CDOpen(int drive) { CDUnsupported(); return NULL; }
-SDL12_CDstatus SDL_CDStatus(SDL_CD *cdrom) { return CDUnsupported(); }
+SDL12_CDstatus SDL_CDStatus(SDL12_CD *cdrom) { return CDUnsupported(); }
 int SDL_CDPlayTracks(SDL12_CD *cdrom, int start_track, int start_frame, int ntracks, int nframes) { return CDUnsupported(); }
 int SDL_CDPlay(SDL12_CD *cdrom, int start, int length) { return CDUnsupported(); }
 int SDL_CDPause(SDL12_CD *cdrom) { return CDUnsupported(); }
@@ -2926,8 +2943,9 @@ void SDL_KillThread(SDL_Thread *thread) {}
 typedef struct _SDL12_TimerID *SDL12_TimerID;
 SDL_COMPILE_TIME_ASSERT(timer, sizeof(SDL12_TimerID) >= sizeof(SDL_TimerID));
 
+
 SDL12_TimerID
-SDL_AddTimer(Uint32 interval, SDL_NewTimerCallback callback, void *param)
+SDL_AddTimer(Uint32 interval, SDL12_NewTimerCallback callback, void *param)
 {
     return (SDL12_TimerID) ((size_t) SDL20_AddTimer(interval, callback, param));
 }
@@ -2940,10 +2958,10 @@ SDL_RemoveTimer(SDL12_TimerID id)
 
 
 typedef struct SDL12_RWops {
-    int (SDLCALL *seek)(struct SDL_RWops *context, int offset, int whence);
-    int (SDLCALL *read)(struct SDL_RWops *context, void *ptr, int size, int maxnum);
-    int (SDLCALL *write)(struct SDL_RWops *context, const void *ptr, int size, int num);
-    int (SDLCALL *close)(struct SDL_RWops *context);
+    int (SDLCALL *seek)(struct SDL12_RWops *context, int offset, int whence);
+    int (SDLCALL *read)(struct SDL12_RWops *context, void *ptr, int size, int maxnum);
+    int (SDLCALL *write)(struct SDL12_RWops *context, const void *ptr, int size, int num);
+    int (SDLCALL *close)(struct SDL12_RWops *context);
     Uint32 type;
     void *padding[8];
     SDL_RWops *rwops20;
@@ -2953,7 +2971,7 @@ typedef struct SDL12_RWops {
 SDL12_RWops *
 SDL_AllocRW(void)
 {
-    SDL12_RWops *rwops = (SDL12_RWops *) SDL_malloc(sizeof (SDL12_RWops));
+    SDL12_RWops *rwops = (SDL12_RWops *) SDL20_malloc(sizeof (SDL12_RWops));
     if (!rwops)
         SDL20_OutOfMemory();
     return rwops;
@@ -2962,29 +2980,29 @@ SDL_AllocRW(void)
 void
 SDL_FreeRW(SDL12_RWops *rwops12)
 {
-    SDL_free(rwops12);
+    SDL20_free(rwops12);
 }
 
 static int SDLCALL
-RWops12to20_seek(struct SDL12_RWops *rwops12, int offset, int whence)
+RWops20to12_seek(struct SDL12_RWops *rwops12, int offset, int whence)
 {
     return rwops12->rwops20->seek(rwops12->rwops20, offset, whence);
 }
 
 static int SDLCALL
-RWops12to20_read(struct SDL12_RWops *rwops12, void *ptr, int size, int maxnum)
+RWops20to12_read(struct SDL12_RWops *rwops12, void *ptr, int size, int maxnum)
 {
     return rwops12->rwops20->read(rwops12->rwops20, ptr, size, maxnum);
 }
 
 static int SDLCALL
-RWops12to20_write(struct SDL12_RWops *rwops12, const void *ptr, int size, int num)
+RWops20to12_write(struct SDL12_RWops *rwops12, const void *ptr, int size, int num)
 {
     return rwops12->rwops20->write(rwops12->rwops20, ptr, size, num);
 }
 
 static int SDLCALL
-RWops12to20_close(struct SDL12_RWops *rwops12)
+RWops20to12_close(struct SDL12_RWops *rwops12)
 {
     int rc = 0;
     if (rwops12)
@@ -2997,49 +3015,50 @@ RWops12to20_close(struct SDL12_RWops *rwops12)
 }
 
 static SDL12_RWops *
-RWops12to20(SDL12_RWops *rwops12, SDL_RWops *rwops20)
+RWops20to12(SDL_RWops *rwops20)
 {
+    SDL12_RWops *rwops12;
+
     if (!rwops20)
-    {
-        SDL_FreeRW(rwops12);
         return NULL;
-    }
+
+    rwops12 = SDL_AllocRW();
+    if (!rwops12)
+        return NULL;
+
     SDL_zerop(rwops12);
     rwops12->type = rwops20->type;
     rwops12->rwops20 = rwops20;
-    rwops12->seek = RWops12to20_seek;
-    rwops12->read = RWops12to20_read;
-    rwops12->write = RWops12to20_write;
-    rwops12->close = RWops12to20_close;
+    rwops12->seek = RWops20to12_seek;
+    rwops12->read = RWops20to12_read;
+    rwops12->write = RWops20to12_write;
+    rwops12->close = RWops20to12_close;
+
     return rwops12;
 }
 
 SDL12_RWops *
 SDL_RWFromFile(const char *file, const char *mode)
 {
-    SDL12_RWops *rwops12 = SDL_AllocRW();
-    return rwops12 ? RWops12to20(rwops12, SDL20_RWFromFile(file, mode)) : NULL;
+    return RWops20to12(SDL20_RWFromFile(file, mode));
 }
 
 SDL12_RWops *
 SDL_RWFromFP(FILE *io, int autoclose)
 {
-    SDL12_RWops *rwops12 = SDL_AllocRW();
-    return rwops12 ? RWops12to20(rwops12, SDL20_RWFromFP(io, autoclose)) : NULL;
+    return RWops20to12(SDL20_RWFromFP(io, autoclose));
 }
 
 SDL12_RWops *
 SDL_RWFromMem(void *mem, int size)
 {
-    SDL12_RWops *rwops12 = SDL_AllocRW();
-    return rwops12 ? RWops12to20(rwops12, SDL20_RWFromMem(mem, size)) : NULL;
+    return RWops20to12(SDL20_RWFromMem(mem, size));
 }
 
 SDL12_RWops *
 SDL_RWFromConstMem(const void *mem, int size)
 {
-    SDL12_RWops *rwops12 = SDL_AllocRW();
-    return rwops12 ? RWops12to20(rwops12, SDL20_RWFromConstMem(mem, size)) : NULL;
+    return RWops20to12(SDL20_RWFromConstMem(mem, size));
 }
 
 #define READ_AND_BYTESWAP(endian, bits) \
@@ -3057,7 +3076,7 @@ READ_AND_BYTESWAP(BE,64)
 #undef READ_AND_BYTESWAP
 
 #define BYTESWAP_AND_WRITE(endian, bits) \
-    int SDL_Write##endian##bits(SDL12_RWops *rwops12, Uint##endian##bits val) { \
+    int SDL_Write##endian##bits(SDL12_RWops *rwops12, Uint##bits val) { \
         val = SDL_Swap##endian##bits(val); \
         return rwops12->write(rwops12, &val, sizeof (val), 1); \
     }
@@ -3079,7 +3098,7 @@ BYTESWAP_AND_WRITE(BE,64)
 
 
 static Sint64 SDLCALL
-RWops20to12_size(struct SDL_RWops *rwops20)
+RWops12to20_size(struct SDL_RWops *rwops20)
 {
     SDL12_RWops *rwops12 = (SDL12_RWops *) rwops20->hidden.unknown.data1;
     int size = rwops20->hidden.unknown.data2;
@@ -3092,17 +3111,17 @@ RWops20to12_size(struct SDL_RWops *rwops20)
     if (pos == -1)
         return -1;
 
-    size = (Sint64) rwops->seek(rwops12, 0, SEEK_END);
+    size = (Sint64) rwops12->seek(rwops12, 0, SEEK_END);
     if (size == -1)
         return -1;
 
-    rwops->seek(rwops12, pos, SEEK_SET);  /* !!! FIXME: and if this fails? */
+    rwops12->seek(rwops12, pos, SEEK_SET);  /* !!! FIXME: and if this fails? */
     rwops20->hidden.unknown.data2 = size;
     return size;
 }
 
 static Sint64
-RWops20to12_seek(struct SDL_RWops *rwops20, Sint64 offset, int whence)
+RWops12to20_seek(struct SDL_RWops *rwops20, Sint64 offset, int whence)
 {
     /* !!! FIXME: fail if (offset) is too big */
     SDL12_RWops *rwops12 = (SDL12_RWops *) rwops20->hidden.unknown.data1;
@@ -3110,7 +3129,7 @@ RWops20to12_seek(struct SDL_RWops *rwops20, Sint64 offset, int whence)
 }
 
 static size_t SDLCALL
-RWops20to12_read(struct SDL_RWops *rwops20, void *ptr, size_t size, size_t maxnum)
+RWops12to20_read(struct SDL_RWops *rwops20, void *ptr, size_t size, size_t maxnum)
 {
     /* !!! FIXME: fail if (size) or (maxnum) is too big */
     SDL12_RWops *rwops12 = (SDL12_RWops *) rwops20->hidden.unknown.data1;
@@ -3118,7 +3137,7 @@ RWops20to12_read(struct SDL_RWops *rwops20, void *ptr, size_t size, size_t maxnu
 }
 
 static size_t SDLCALL
-RWops20to12_write(struct SDL_RWops *rwops20, const void *ptr, size_t size, size_t num)
+RWops12to20_write(struct SDL_RWops *rwops20, const void *ptr, size_t size, size_t num)
 {
     /* !!! FIXME: fail if (size) or (maxnum) is too big */
     SDL12_RWops *rwops12 = (SDL12_RWops *) rwops20->hidden.unknown.data1;
@@ -3126,7 +3145,7 @@ RWops20to12_write(struct SDL_RWops *rwops20, const void *ptr, size_t size, size_
 }
 
 static int SDLCALL
-RWops20to12_close(struct SDL_RWops *rwops20)
+RWops12to20_close(struct SDL_RWops *rwops20)
 {
     int rc = 0;
     if (rwops20)
@@ -3139,10 +3158,10 @@ RWops20to12_close(struct SDL_RWops *rwops20)
     return rc;
 }
 
-static SDL12_RWops *
-RWops20to12(SDL12_RWops *rwops12)
+static SDL_RWops *
+RWops12to20(SDL12_RWops *rwops12)
 {
-    SDL20_RWops *rwops20;
+    SDL_RWops *rwops20;
 
     if (!rwops12)
         return NULL;
@@ -3155,18 +3174,18 @@ RWops20to12(SDL12_RWops *rwops12)
     rwops20->type = rwops12->type;
     rwops20->hidden.unknown.data1 = rwops12;
     rwops20->hidden.unknown.data2 = -1;  /* cached size of stream */
-    rwops20->size = RWops20to12_size;
-    rwops20->seek = RWops20to12_seek;
-    rwops20->read = RWops20to12_read;
-    rwops20->write = RWops20to12_write;
-    rwops20->close = RWops20to12_close;
+    rwops20->size = RWops12to20_size;
+    rwops20->seek = RWops12to20_seek;
+    rwops20->read = RWops12to20_read;
+    rwops20->write = RWops12to20_write;
+    rwops20->close = RWops12to20_close;
     return rwops20;
 }
 
 SDL12_Surface *
 SDL_LoadBMP_RW(SDL12_RWops *rwops12, int freerwops12)
 {
-    SDL_RWops *rwops20 = RWops20to12(rwops12);
+    SDL_RWops *rwops20 = RWops12to20(rwops12);
     SDL_Surface *retval = SDL20_LoadBMP_RW(rwops20, freerwops12);
     if (!freerwops12)  /* free our wrapper if SDL2 didn't close it. */
         SDL20_FreeRW(rwops20);
@@ -3178,7 +3197,7 @@ int
 SDL_SaveBMP_RW(SDL12_Surface *surface, SDL12_RWops *rwops12, int freerwops12)
 {
     // !!! FIXME: wrap surface.
-    SDL_RWops *rwops20 = RWops20to12(rwops12);
+    SDL_RWops *rwops20 = RWops12to20(rwops12);
     const int retval = SDL20_SaveBMP_RW(surface, rwops20, freerwops12);
     if (!freerwops12)  /* free our wrapper if SDL2 didn't close it. */
         SDL20_FreeRW(rwops20);
@@ -3189,7 +3208,7 @@ SDL_AudioSpec *
 SDL_LoadWAV_RW(SDL12_RWops *rwops12, int freerwops12,
                SDL_AudioSpec *spec, Uint8 **buf, Uint32 *len)
 {
-    SDL_RWops *rwops20 = RWops20to12(rwops12);
+    SDL_RWops *rwops20 = RWops12to20(rwops12);
     SDL_AudioSpec *retval = SDL20_LoadWAV_RW(rwops20, freerwops12, spec, buf, len);
     if (!freerwops12)  /* free our wrapper if SDL2 didn't close it. */
         SDL20_FreeRW(rwops20);
