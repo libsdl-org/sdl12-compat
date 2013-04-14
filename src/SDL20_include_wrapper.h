@@ -84,6 +84,7 @@
 #define SDL_SaveBMP_RW IGNORE_THIS_VERSION_OF_SDL_SaveBMP_RW
 #define SDL_LoadWAV_RW IGNORE_THIS_VERSION_OF_SDL_LoadWAV_RW
 
+#define BUILD_SDL 1
 #include "SDL.h"
 #include "SDL_syswm.h"
 

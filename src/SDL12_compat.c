@@ -36,10 +36,6 @@
 
 #include <stdarg.h>
 
-//#include "video/SDL_sysvideo.h"
-//#include "video/SDL_pixels_c.h"
-//#include "render/SDL_yuv_sw_c.h"
-
 // !!! IMPLEMENT_ME SDL_ConvertSurface
 // !!! IMPLEMENT_ME SDL_GetKeyName
 // !!! IMPLEMENT_ME SDL_GetKeyState
@@ -56,7 +52,7 @@
 
 
 #define SDL20_SYM(rc,fn,params,args,ret) \
-    typedef rc (*SDL20_##fn##_t) params; \
+    typedef rc (SDLCALL *SDL20_##fn##_t) params; \
     static SDL20_##fn##_t SDL20_##fn = NULL;
 #define SDL20_SYM_PASSTHROUGH(rc,fn,params,args,ret) \
     SDL20_SYM(rc,fn,params,args,ret)
@@ -64,13 +60,13 @@
 #undef SDL20_SYM_PASSTHROUGH
 #undef SDL20_SYM
 
-typedef int (*SDL20_SetError_t)(const char *fmt, ...);
+typedef int (SDLCALL *SDL20_SetError_t)(const char *fmt, ...);
 static SDL20_SetError_t SDL20_SetError = NULL;
 
 /* Things that _should_ be binary compatible pass right through... */
 #define SDL20_SYM(rc,fn,params,args,ret)
 #define SDL20_SYM_PASSTHROUGH(rc,fn,params,args,ret) \
-    rc SDL_##fn params { ret SDL20_##fn args; }
+    DECLSPEC rc SDLCALL SDL_##fn params { ret SDL20_##fn args; }
 #include "SDL20_syms.h"
 #undef SDL20_SYM_PASSTHROUGH
 #undef SDL20_SYM
@@ -396,12 +392,6 @@ static EventQueueType *EventQueueHead = NULL;
 static EventQueueType *EventQueueTail = NULL;
 static EventQueueType *EventQueueAvailable = NULL;
 
-const SDL_version *
-SDL_Linked_Version(void)
-{
-    static const SDL_version version = { 1, 2, SDL12_COMPAT_VERSION };
-    return &version;
-}
 
 /* Obviously we can't use SDL_LoadObject() to load SDL2.  :)  */
 #if defined(_WINDOWS)
@@ -471,6 +461,12 @@ LoadSDL20(void)
     return okay;
 }
 
+DECLSPEC const SDL_version * SDLCALL
+SDL_Linked_Version(void)
+{
+    static const SDL_version version = { 1, 2, SDL12_COMPAT_VERSION };
+    return &version;
+}
 
 static int
 GetVideoDisplay()
@@ -529,19 +525,19 @@ DoSDLInit(const int justsubs, Uint32 sdl12flags)
     return rc;
 }
 
-int
+DECLSPEC int SDLCALL
 SDL_InitSubSystem(Uint32 sdl12flags)
 {
     return DoSDLInit(1, sdl12flags);
 }
 
-int
+DECLSPEC int SDLCALL
 SDL_Init(Uint32 sdl12flags)
 {
     return DoSDLInit(0, sdl12flags);
 }
 
-Uint32
+DECLSPEC Uint32 SDLCALL
 SDL_WasInit(Uint32 sdl12flags)
 {
     // !!! FIXME: this is cut and pasted several places.
@@ -565,7 +561,7 @@ SDL_WasInit(Uint32 sdl12flags)
     return SDL20_WasInit(sdl20flags) | extraflags;
 }
 
-void
+DECLSPEC void SDLCALL
 SDL_QuitSubSystem(Uint32 sdl12flags)
 {
     Uint32 sdl20flags = 0;
@@ -597,7 +593,7 @@ SDL_QuitSubSystem(Uint32 sdl12flags)
     // !!! FIXME: UnloadSDL20() ?
 }
 
-void
+DECLSPEC void SDLCALL
 SDL_Quit(void)
 {
     // !!! FIXME: reset a bunch of other global variables too.
@@ -611,7 +607,7 @@ SDL_Quit(void)
     UnloadSDL20();
 }
 
-void
+DECLSPEC void SDLCALL
 SDL_SetError(const char *fmt, ...)
 {
     char ch;
@@ -635,7 +631,7 @@ SDL_SetError(const char *fmt, ...)
     }
 }
 
-const char *
+DECLSPEC const char * SDLCALL
 SDL_GetError(void)
 {
     if (!Loaded_SDL20)
@@ -661,19 +657,19 @@ GetDriverName(const char *name, char *namebuf, int maxlen)
     return NULL;
 }
 
-const char *
+DECLSPEC const char * SDLCALL
 SDL_AudioDriverName(char *namebuf, int maxlen)
 {
     return GetDriverName(SDL20_GetCurrentAudioDriver(), namebuf, maxlen);
 }
 
-const char *
+DECLSPEC const char * SDLCALL
 SDL_VideoDriverName(char *namebuf, int maxlen)
 {
     return GetDriverName(SDL20_GetCurrentVideoDriver(), namebuf, maxlen);
 }
 
-int
+DECLSPEC int SDLCALL
 SDL_PollEvent(SDL12_Event *event12)
 {
     EventQueueType *next;
@@ -691,7 +687,7 @@ SDL_PollEvent(SDL12_Event *event12)
     return 1;
 }
 
-int
+DECLSPEC int SDLCALL
 SDL_PushEvent(SDL12_Event *event12)
 {
     EventQueueType *item = EventQueueAvailable;
@@ -709,7 +705,7 @@ SDL_PushEvent(SDL12_Event *event12)
     return 0;
 }
 
-int
+DECLSPEC int SDLCALL
 SDL_PeepEvents(SDL12_Event *events12, int numevents, SDL_eventaction action, Uint32 mask)
 {
     if (action == SDL_ADDEVENT)
@@ -765,7 +761,7 @@ SDL_PeepEvents(SDL12_Event *events12, int numevents, SDL_eventaction action, Uin
     return 0;
 }
 
-int
+DECLSPEC int SDLCALL
 SDL_WaitEvent(SDL12_Event *event12)
 {
     /* In 1.2, this only fails (-1) if you haven't SDL_Init()'d. */
@@ -788,10 +784,7 @@ PushEventIfNotFiltered(SDL12_Event *event12)
     return SDL_FALSE;
 }
 
-Uint8 SDL_GetMouseState(int *x, int *y);
-
-
-Uint8
+DECLSPEC Uint8 SDLCALL
 SDL_EventState(Uint8 type, int state)
 {
     /* the values of "state" match between 1.2 and 2.0 */
@@ -802,6 +795,21 @@ SDL_EventState(Uint8 type, int state)
         EventStates[type] = state;
     if (state == SDL_IGNORE)  /* drop existing events of this type. */
         while (SDL_PeepEvents(&e, 1, SDL_GETEVENT, (1<<type))) {}
+
+    return retval;
+}
+
+DECLSPEC Uint8 SDLCALL
+SDL_GetMouseState(int *x, int *y)
+{
+    const Uint32 state20 = SDL20_GetMouseState(x, y);
+    Uint8 retval = (state20 & 0x7);  /* left, right, and middle will match. */
+
+    /* the X[12] buttons are different in 1.2; mousewheel was in the way. */
+    if (state20 & SDL_BUTTON(SDL_BUTTON_X1))
+        retval |= (1<<5);
+    if (state20 & SDL_BUTTON(SDL_BUTTON_X2))
+        retval |= (1<<6);
 
     return retval;
 }
@@ -998,14 +1006,14 @@ EventFilter20to12(void *data, SDL_Event *event20)
     return 0;  /* always drop it from the 2.0 event queue. */
 }
 
-void
+DECLSPEC void SDLCALL
 SDL_SetEventFilter(SDL12_EventFilter filter12)
 {
     /* We always have a filter installed, but will call the app's too. */
     EventFilter12 = filter12;
 }
 
-SDL12_EventFilter
+DECLSPEC SDL12_EventFilter SDLCALL
 SDL_GetEventFilter(void)
 {
     return EventFilter12;
@@ -1086,7 +1094,7 @@ failed:
     return NULL;
 }
 
-SDL12_Surface *
+DECLSPEC SDL12_Surface * SDLCALL
 SDL_CreateRGBSurface(Uint32 sdl12flags, int width, int height, int depth, Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask)
 {
     SDL_Surface *surface20 = SDL20_CreateRGBSurface(0, width, height, depth, Rmask, Gmask, Bmask, Amask);
@@ -1100,7 +1108,7 @@ SDL_CreateRGBSurface(Uint32 sdl12flags, int width, int height, int depth, Uint32
     return surface12;
 }
 
-SDL12_Surface *
+DECLSPEC SDL12_Surface * SDLCALL
 SDL_CreateRGBSurfaceFrom(void *pixels, int width, int height, int depth, int pitch, Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask)
 {
     SDL_Surface *surface20 = SDL20_CreateRGBSurfaceFrom(pixels, width, height, depth, pitch, Rmask, Gmask, Bmask, Amask);
@@ -1114,7 +1122,8 @@ SDL_CreateRGBSurfaceFrom(void *pixels, int width, int height, int depth, int pit
     return surface12;
 }
 
-void SDL_FreeSurface(SDL12_Surface *surface12)
+DECLSPEC void SDLCALL
+SDL_FreeSurface(SDL12_Surface *surface12)
 {
     if (surface12) {
         SDL20_FreeSurface(surface12->surface20);
@@ -1126,14 +1135,14 @@ void SDL_FreeSurface(SDL12_Surface *surface12)
     }
 }
 
-void
+DECLSPEC void SDLCALL
 SDL_GetClipRect(SDL12_Surface *surface12, SDL_Rect *rect)
 {
     if (surface12 && rect)
 	    SDL_memcpy(rect, &surface12->clip_rect, sizeof (SDL_Rect));
 }
 
-SDL_bool
+DECLSPEC SDL_bool SDLCALL
 SDL_SetClipRect(SDL12_Surface *surface12, const SDL_Rect *rect)
 {
     SDL_bool retval = SDL_FALSE;
@@ -1145,7 +1154,7 @@ SDL_SetClipRect(SDL12_Surface *surface12, const SDL_Rect *rect)
     return retval;
 }
 
-int
+DECLSPEC int SDLCALL
 SDL_FillRect(SDL12_Surface *dst, SDL_Rect *dstrect, Uint32 color)
 {
     const SDL_Rect orig_dstrect = *dstrect;
@@ -1187,7 +1196,7 @@ PixelFormat12to20(SDL_PixelFormat *format20, SDL_Palette *palette20, const SDL12
     return format20;
 }
 
-Uint32
+DECLSPEC Uint32 SDLCALL
 SDL_MapRGB(const SDL12_PixelFormat *format12, Uint8 r, Uint8 g, Uint8 b)
 {
     /* This is probably way slower than apps expect. */
@@ -1196,7 +1205,7 @@ SDL_MapRGB(const SDL12_PixelFormat *format12, Uint8 r, Uint8 g, Uint8 b)
     return SDL20_MapRGB(PixelFormat12to20(&format20, &palette20, format12), r, g, b);
 }
 
-Uint32
+DECLSPEC Uint32 SDLCALL
 SDL_MapRGBA(const SDL12_PixelFormat *format12, Uint8 r, Uint8 g, Uint8 b, Uint8 a)
 {
     /* This is probably way slower than apps expect. */
@@ -1205,7 +1214,7 @@ SDL_MapRGBA(const SDL12_PixelFormat *format12, Uint8 r, Uint8 g, Uint8 b, Uint8 
     return SDL20_MapRGBA(PixelFormat12to20(&format20, &palette20, format12), r, g, b, a);
 }
 
-void
+DECLSPEC void SDLCALL
 SDL_GetRGB(Uint32 pixel, const SDL12_PixelFormat *format12, Uint8 *r, Uint8 *g, Uint8 *b)
 {
     /* This is probably way slower than apps expect. */
@@ -1214,7 +1223,7 @@ SDL_GetRGB(Uint32 pixel, const SDL12_PixelFormat *format12, Uint8 *r, Uint8 *g, 
     return SDL20_GetRGB(pixel, PixelFormat12to20(&format20, &palette20, format12), r, g, b);
 }
 
-void
+DECLSPEC void SDLCALL
 SDL_GetRGBA(Uint32 pixel, const SDL12_PixelFormat *format12, Uint8 *r, Uint8 *g, Uint8 *b, Uint8 *a)
 {
     /* This is probably way slower than apps expect. */
@@ -1223,7 +1232,7 @@ SDL_GetRGBA(Uint32 pixel, const SDL12_PixelFormat *format12, Uint8 *r, Uint8 *g,
     return SDL20_GetRGBA(pixel, PixelFormat12to20(&format20, &palette20, format12), r, g, b, a);
 }
 
-const SDL12_VideoInfo *
+DECLSPEC const SDL12_VideoInfo * SDLCALL
 SDL_GetVideoInfo(void)
 {
     SDL_DisplayMode mode;
@@ -1239,7 +1248,7 @@ SDL_GetVideoInfo(void)
     return &VideoInfo;
 }
 
-int
+DECLSPEC int SDLCALL
 SDL_VideoModeOK(int width, int height, int bpp, Uint32 sdl12flags)
 {
     int i, nummodes, actual_bpp = 0;
@@ -1271,7 +1280,7 @@ SDL_VideoModeOK(int width, int height, int bpp, Uint32 sdl12flags)
 }
 
 #if SANITY_CHECK_THIS_CODE
-SDL_Rect **
+DECLSPEC SDL_Rect ** SDLCALL
 SDL_ListModes(const SDL12_PixelFormat *format, Uint32 flags)
 {
     int i, nmodes;
@@ -1337,7 +1346,7 @@ SDL_ListModes(const SDL12_PixelFormat *format, Uint32 flags)
 }
 #endif
 
-void
+DECLSPEC void SDLCALL
 SDL_FreeCursor(SDL12_Cursor *cursor12)
 {
     if (cursor12)
@@ -1350,7 +1359,7 @@ SDL_FreeCursor(SDL12_Cursor *cursor12)
     }
 }
 
-SDL12_Cursor *
+DECLSPEC SDL12_Cursor * SDLCALL
 SDL_CreateCursor(Uint8 *data, Uint8 *mask, int w, int h, int hot_x, int hot_y)
 {
     const size_t datasize = h * (w / 8);
@@ -1395,14 +1404,14 @@ failed:
     return NULL;
 }
 
-void
+DECLSPEC void SDLCALL
 SDL_SetCursor(SDL12_Cursor *cursor)
 {
     CurrentCursor = cursor;
     SDL20_SetCursor(cursor ? cursor->wm_cursor : NULL);
 }
 
-SDL12_Cursor *
+DECLSPEC SDL12_Cursor * SDLCALL
 SDL_GetCursor(void)
 {
     return CurrentCursor;
@@ -1531,7 +1540,7 @@ ResizeVideoMode(int width, int height, int bpp, Uint32 flags12)
     return 0;
 }
 
-SDL_Surface *
+DECLSPEC SDL12_Surface * SDLCALL
 SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
 {
     SDL_DisplayMode desktop_mode;
@@ -1709,14 +1718,14 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
     return PublicSurface;
 }
 
-SDL_Surface *
+DECLSPEC SDL12_Surface * SDLCALL
 SDL_GetVideoSurface(void)
 {
     return PublicSurface;
 }
 
-int
-SDL_SetAlpha(SDL_Surface * surface, Uint32 flag, Uint8 value)
+DECLSPEC int SDLCALL
+SDL_SetAlpha(SDL12_Surface * surface, Uint32 flag, Uint8 value)
 {
     if (flag & SDL_SRCALPHA) {
         /* According to the docs, value is ignored for alpha surfaces */
@@ -1734,7 +1743,7 @@ SDL_SetAlpha(SDL_Surface * surface, Uint32 flag, Uint8 value)
     return 0;
 }
 
-SDL12_Surface *
+DECLSPEC SDL12_Surface * SDLCALL
 SDL_DisplayFormat(SDL12_Surface *surface12)
 {
     SDL12_PixelFormat *format;
@@ -1749,7 +1758,7 @@ SDL_DisplayFormat(SDL12_Surface *surface12)
     return SDL_ConvertSurface(surface, format, SDL12_RLEACCEL);
 }
 
-SDL12_Surface *
+DECLSPEC SDL12_Surface * SDLCALL
 SDL_DisplayFormatAlpha(SDL12_Surface *surface)
 {
     SDL_PixelFormat *vf;
@@ -1806,7 +1815,7 @@ SDL_DisplayFormatAlpha(SDL12_Surface *surface)
     return converted;
 }
 
-void
+DECLSPEC void SDLCALL
 SDL_UpdateRects(SDL_Surface * screen, int numrects, SDL_Rect * rects)
 {
     int i;
@@ -1844,27 +1853,27 @@ SDL_UpdateRects(SDL_Surface * screen, int numrects, SDL_Rect * rects)
 }
 #endif
 
-void
-SDL_UpdateRect(SDL_Surface * screen, Sint32 x, Sint32 y, Uint32 w, Uint32 h)
+DECLSPEC void SDLCALL
+SDL_UpdateRect(SDL12_Surface *screen12, Sint32 x, Sint32 y, Uint32 w, Uint32 h)
 {
-    if (screen) {
+    if (screen12) {
         SDL_Rect rect;
         rect.x = (int) x;
         rect.y = (int) y;
-        rect.w = (int) (w ? w : screen->w);
-        rect.h = (int) (h ? h : screen->h);
-        SDL_UpdateRects(screen, 1, &rect);
+        rect.w = (int) (w ? w : screen12->w);
+        rect.h = (int) (h ? h : screen12->h);
+        SDL_UpdateRects(screen12, 1, &rect);
     }
 }
 
-int
-SDL_Flip(SDL_Surface * screen)
+DECLSPEC int SDLCALL
+SDL_Flip(SDL12_Surface *screen12)
 {
-    SDL_UpdateRect(screen, 0, 0, 0, 0);
+    SDL_UpdateRect(screen12, 0, 0, 0, 0);
     return 0;
 }
 
-void
+DECLSPEC void SDLCALL
 SDL_WM_SetCaption(const char *title, const char *icon)
 {
     if (WindowTitle) {
@@ -1878,7 +1887,7 @@ SDL_WM_SetCaption(const char *title, const char *icon)
     SDL20_SetWindowTitle(VideoWindow20, WindowTitle);
 }
 
-void
+DECLSPEC void SDLCALL
 SDL_WM_GetCaption(const char **title, const char **icon)
 {
     if (title) {
@@ -1890,7 +1899,7 @@ SDL_WM_GetCaption(const char **title, const char **icon)
 }
 
 #if SANITY_CHECK_THIS_CODE
-void
+DECLSPEC void SDLCALL
 SDL_WM_SetIcon(SDL_Surface *icon, Uint8 *mask)
 {
     // !!! FIXME: free previous icon?
@@ -1899,7 +1908,7 @@ SDL_WM_SetIcon(SDL_Surface *icon, Uint8 *mask)
 }
 #endif
 
-int
+DECLSPEC int SDLCALL
 SDL_WM_IconifyWindow(void)
 {
     SDL20_MinimizeWindow(VideoWindow20);
@@ -1907,7 +1916,7 @@ SDL_WM_IconifyWindow(void)
 }
 
 #if SANITY_CHECK_THIS_CODE
-int
+DECLSPEC int SDLCALL
 SDL_WM_ToggleFullScreen(SDL_Surface *surface)
 {
     int length;
@@ -2035,7 +2044,7 @@ typedef enum
     SDL12_GRAB_ON = 1
 } SDL12_GrabMode;
 
-SDL12_GrabMode
+DECLSPEC SDL12_GrabMode SDLCALL
 SDL_WM_GrabInput(SDL12_GrabMode mode)
 {
     if (mode != SDL12_GRAB_QUERY) {
@@ -2044,28 +2053,13 @@ SDL_WM_GrabInput(SDL12_GrabMode mode)
     return SDL20_GetWindowGrab(VideoWindow20) ? SDL12_GRAB_ON : SDL12_GRAB_OFF;
 }
 
-Uint8
-SDL_GetMouseState(int *x, int *y)
-{
-    const Uint32 state20 = SDL20_GetMouseState(x, y);
-    Uint8 retval = (state20 & 0x7);  /* left, right, and middle will match. */
-
-    /* the X[12] buttons are different in 1.2; mousewheel was in the way. */
-    if (state20 & SDL_BUTTON(SDL_BUTTON_X1))
-        retval |= (1<<5);
-    if (state20 & SDL_BUTTON(SDL_BUTTON_X2))
-        retval |= (1<<6);
-
-    return retval;
-}
-
-void
+DECLSPEC void SDLCALL
 SDL_WarpMouse(Uint16 x, Uint16 y)
 {
     SDL20_WarpMouseInWindow(VideoWindow20, x, y);
 }
 
-Uint8
+DECLSPEC Uint8 SDLCALL
 SDL_GetAppState(void)
 {
     Uint8 state12 = 0;
@@ -2085,18 +2079,18 @@ SDL_GetAppState(void)
 }
 
 #if SANITY_CHECK_THIS_CODE
-int
-SDL_SetPalette(SDL_Surface * surface, int flags, const SDL_Color * colors,
+DECLSPEC int SDLCALL
+SDL_SetPalette(SDL12_Surface *surface12, int flags, const SDL_Color *colors,
                int firstcolor, int ncolors)
 {
-    return SDL_SetColors(surface, colors, firstcolor, ncolors);
+    return SDL_SetColors(surface12, colors, firstcolor, ncolors);
 }
 
-int
-SDL_SetColors(SDL_Surface * surface, const SDL_Color * colors, int firstcolor,
+DECLSPEC int SDLCALL
+SDL_SetColors(SDL12_Surface *surface12, const SDL_Color * colors, int firstcolor,
               int ncolors)
 {
-    if (SDL_SetPaletteColors
+    if (SDL20_SetPaletteColors
         (surface->format->palette, colors, firstcolor, ncolors) == 0) {
         return 1;
     } else {
@@ -2104,7 +2098,7 @@ SDL_SetColors(SDL_Surface * surface, const SDL_Color * colors, int firstcolor,
     }
 }
 
-int
+DECLSPEC int SDLCALL
 SDL_GetWMInfo(SDL_SysWMinfo * info)
 {
     return SDL_GetWindowWMInfo(VideoWindow20, info);
@@ -2595,8 +2589,8 @@ struct private_yuvhwdata
     Uint32 display_format;
 };
 
-SDL_Overlay *
-SDL_CreateYUVOverlay(int w, int h, Uint32 format, SDL_Surface * display)
+DECLSPEC SDL_Overlay * SDLCALL
+SDL_CreateYUVOverlay(int w, int h, Uint32 format, SDL12_Surface *display)
 {
     SDL_Overlay *overlay;
     Uint32 texture_format;
@@ -2672,7 +2666,7 @@ SDL_CreateYUVOverlay(int w, int h, Uint32 format, SDL_Surface * display)
     return overlay;
 }
 
-int
+DECLSPEC int SDLCALL
 SDL_LockYUVOverlay(SDL_Overlay * overlay)
 {
     SDL_Rect rect;
@@ -2712,7 +2706,7 @@ SDL_LockYUVOverlay(SDL_Overlay * overlay)
     return 0;
 }
 
-void
+DECLSPEC void SDLCALL
 SDL_UnlockYUVOverlay(SDL_Overlay * overlay)
 {
     if (!overlay) {
@@ -2722,7 +2716,7 @@ SDL_UnlockYUVOverlay(SDL_Overlay * overlay)
     SDL_SW_UnlockYUVTexture(overlay->hwdata->texture);
 }
 
-int
+DECLSPEC int SDLCALL
 SDL_DisplayYUVOverlay(SDL_Overlay * overlay, SDL_Rect * dstrect)
 {
     SDL_Surface *display;
@@ -2768,7 +2762,7 @@ SDL_DisplayYUVOverlay(SDL_Overlay * overlay, SDL_Rect * dstrect)
     return 0;
 }
 
-void
+DECLSPEC void SDLCALL
 SDL_FreeYUVOverlay(SDL_Overlay * overlay)
 {
     if (!overlay) {
@@ -2784,7 +2778,7 @@ SDL_FreeYUVOverlay(SDL_Overlay * overlay)
 }
 #endif
 
-int
+DECLSPEC int SDLCALL
 SDL_GL_SetAttribute(SDL12_GLattr attr, int value)
 {
     if (attr >= SDL12_GL_MAX_ATTRIBUTE)
@@ -2800,7 +2794,7 @@ SDL_GL_SetAttribute(SDL12_GLattr attr, int value)
     return SDL20_GL_SetAttribute((SDL_GLattr) attr, value);
 }
 
-int
+DECLSPEC int SDLCALL
 SDL_GL_GetAttribute(SDL12_GLattr attr, int* value)
 {
     if (attr >= SDL12_GL_MAX_ATTRIBUTE)
@@ -2817,14 +2811,14 @@ SDL_GL_GetAttribute(SDL12_GLattr attr, int* value)
 }
 
 
-void
+DECLSPEC void SDLCALL
 SDL_GL_SwapBuffers(void)
 {
     if (VideoWindow20)
         SDL20_GL_SwapWindow(VideoWindow20);
 }
 
-int
+DECLSPEC int SDLCALL
 SDL_SetGamma(float red, float green, float blue)
 {
     Uint16 red_ramp[256];
@@ -2847,25 +2841,25 @@ SDL_SetGamma(float red, float green, float blue)
     return SDL20_SetWindowGammaRamp(VideoWindow20, red_ramp, green_ramp, blue_ramp);
 }
 
-int
+DECLSPEC int SDLCALL
 SDL_SetGammaRamp(const Uint16 *red, const Uint16 *green, const Uint16 *blue)
 {
     return SDL20_SetWindowGammaRamp(VideoWindow20, red, green, blue);
 }
 
-int
+DECLSPEC int SDLCALL
 SDL_GetGammaRamp(Uint16 *red, Uint16 *green, Uint16 *blue)
 {
     return SDL20_GetWindowGammaRamp(VideoWindow20, red, green, blue);
 }
 
-int
+DECLSPEC int SDLCALL
 SDL_EnableKeyRepeat(int delay, int interval)
 {
     return 0;
 }
 
-void
+DECLSPEC void SDLCALL
 SDL_GetKeyRepeat(int *delay, int *interval)
 {
     if (delay) {
@@ -2877,7 +2871,7 @@ SDL_GetKeyRepeat(int *delay, int *interval)
 }
 
 #if SANITY_CHECK_THIS_CODE
-int
+DECLSPEC int SDLCALL
 SDL_EnableUNICODE(int enable)
 {
     int previous = EnabledUnicode;
@@ -2902,7 +2896,7 @@ SetTimerOld_Callback(Uint32 interval, void* param)
     return ((SDL12_TimerCallback)param)(interval);
 }
 
-int
+DECLSPEC int SDLCALL
 SDL_SetTimer(Uint32 interval, SDL12_TimerCallback callback)
 {
     static SDL_TimerID compat_timer;
@@ -2921,7 +2915,7 @@ SDL_SetTimer(Uint32 interval, SDL12_TimerCallback callback)
     return 0;
 }
 
-int
+DECLSPEC int SDLCALL
 SDL_putenv(const char *_var)
 {
     char *ptr = NULL;
@@ -2949,32 +2943,32 @@ SDL_putenv(const char *_var)
 typedef void *SDL12_CD;  /* close enough.  :) */
 typedef int SDL12_CDstatus;  /* close enough.  :) */
 
-int
+DECLSPEC int SDLCALL
 SDL_CDNumDrives(void)
 {
     return 0;  /* !!! FIXME: should return -1 without SDL_INIT_CDROM */
 }
 
-const char *SDL_CDName(int drive) { SDL20_Unsupported(); return NULL; }
-SDL12_CD * SDL_CDOpen(int drive) { SDL20_Unsupported(); return NULL; }
-SDL12_CDstatus SDL_CDStatus(SDL12_CD *cdrom) { return SDL20_Unsupported(); }
-int SDL_CDPlayTracks(SDL12_CD *cdrom, int start_track, int start_frame, int ntracks, int nframes) { return SDL20_Unsupported(); }
-int SDL_CDPlay(SDL12_CD *cdrom, int start, int length) { return SDL20_Unsupported(); }
-int SDL_CDPause(SDL12_CD *cdrom) { return SDL20_Unsupported(); }
-int SDL_CDResume(SDL12_CD *cdrom) { return SDL20_Unsupported(); }
-int SDL_CDStop(SDL12_CD *cdrom) { return SDL20_Unsupported(); }
-int SDL_CDEject(SDL12_CD *cdrom) { return SDL20_Unsupported(); }
-void SDL_CDClose(SDL12_CD *cdrom) {}
+DECLSPEC const char *SDLCALL SDL_CDName(int drive) { SDL20_Unsupported(); return NULL; }
+DECLSPEC SDL12_CD *SDLCALL SDL_CDOpen(int drive) { SDL20_Unsupported(); return NULL; }
+DECLSPEC SDL12_CDstatus SDLCALL SDL_CDStatus(SDL12_CD *cdrom) { return SDL20_Unsupported(); }
+DECLSPEC int SDLCALL SDL_CDPlayTracks(SDL12_CD *cdrom, int start_track, int start_frame, int ntracks, int nframes) { return SDL20_Unsupported(); }
+DECLSPEC int SDLCALL SDL_CDPlay(SDL12_CD *cdrom, int start, int length) { return SDL20_Unsupported(); }
+DECLSPEC int SDLCALL SDL_CDPause(SDL12_CD *cdrom) { return SDL20_Unsupported(); }
+DECLSPEC int SDLCALL SDL_CDResume(SDL12_CD *cdrom) { return SDL20_Unsupported(); }
+DECLSPEC int SDLCALL SDL_CDStop(SDL12_CD *cdrom) { return SDL20_Unsupported(); }
+DECLSPEC int SDLCALL SDL_CDEject(SDL12_CD *cdrom) { return SDL20_Unsupported(); }
+DECLSPEC void SDLCALL SDL_CDClose(SDL12_CD *cdrom) {}
 
 
 #ifdef SDL_PASSED_BEGINTHREAD_ENDTHREAD
-SDL_Thread *
+DECLSPEC SDL_Thread * SDLCALL
 SDL_CreateThread(int (SDLCALL *fn)(void *), void *data, pfnSDL_CurrentBeginThread pfnBeginThread, pfnSDL_CurrentEndThread pfnEndThread)
 {
     return SDL20_CreateThread(fn, NULL, data, pfnBeginThread, pfnEndThread);
 }
 #else
-SDL_Thread *
+DECLSPEC SDL_Thread * SDLCALL
 SDL_CreateThread(int (SDLCALL *fn)(void *), void *data)
 {
     return SDL20_CreateThread(fn, NULL, data);
@@ -2983,20 +2977,20 @@ SDL_CreateThread(int (SDLCALL *fn)(void *), void *data)
 
 
 /* !!! FIXME: Removed from 2.0; do nothing. We can't even report failure. */
-void SDL_KillThread(SDL_Thread *thread) {}
+DECLSPEC void SDLCALL SDL_KillThread(SDL_Thread *thread) {}
 
 /* This changed from an opaque pointer to an int in 2.0. */
 typedef struct _SDL12_TimerID *SDL12_TimerID;
 SDL_COMPILE_TIME_ASSERT(timer, sizeof(SDL12_TimerID) >= sizeof(SDL_TimerID));
 
 
-SDL12_TimerID
+DECLSPEC SDL12_TimerID SDLCALL
 SDL_AddTimer(Uint32 interval, SDL12_NewTimerCallback callback, void *param)
 {
     return (SDL12_TimerID) ((size_t) SDL20_AddTimer(interval, callback, param));
 }
 
-SDL_bool
+DECLSPEC SDL_bool SDLCALL
 SDL_RemoveTimer(SDL12_TimerID id)
 {
     return SDL20_RemoveTimer((SDL_TimerID) ((size_t)id));
@@ -3014,7 +3008,7 @@ typedef struct SDL12_RWops {
 } SDL12_RWops;
 
 
-SDL12_RWops *
+DECLSPEC SDL12_RWops * SDLCALL
 SDL_AllocRW(void)
 {
     SDL12_RWops *rwops = (SDL12_RWops *) SDL20_malloc(sizeof (SDL12_RWops));
@@ -3023,7 +3017,7 @@ SDL_AllocRW(void)
     return rwops;
 }
 
-void
+DECLSPEC void SDLCALL
 SDL_FreeRW(SDL12_RWops *rwops12)
 {
     SDL20_free(rwops12);
@@ -3083,32 +3077,32 @@ RWops20to12(SDL_RWops *rwops20)
     return rwops12;
 }
 
-SDL12_RWops *
+DECLSPEC SDL12_RWops * SDLCALL
 SDL_RWFromFile(const char *file, const char *mode)
 {
     return RWops20to12(SDL20_RWFromFile(file, mode));
 }
 
-SDL12_RWops *
+DECLSPEC SDL12_RWops * SDLCALL
 SDL_RWFromFP(FILE *io, int autoclose)
 {
     return RWops20to12(SDL20_RWFromFP(io, autoclose));
 }
 
-SDL12_RWops *
+DECLSPEC SDL12_RWops * SDLCALL
 SDL_RWFromMem(void *mem, int size)
 {
     return RWops20to12(SDL20_RWFromMem(mem, size));
 }
 
-SDL12_RWops *
+DECLSPEC SDL12_RWops * SDLCALL
 SDL_RWFromConstMem(const void *mem, int size)
 {
     return RWops20to12(SDL20_RWFromConstMem(mem, size));
 }
 
 #define READ_AND_BYTESWAP(endian, bits) \
-    Uint##bits SDL_Read##endian##bits(SDL12_RWops *rwops12) { \
+    DECLSPEC Uint##bits SDLCALL SDL_Read##endian##bits(SDL12_RWops *rwops12) { \
         Uint##bits val; rwops12->read(rwops12, &val, sizeof (val), 1); \
         return SDL_Swap##endian##bits(val); \
     }
@@ -3122,7 +3116,7 @@ READ_AND_BYTESWAP(BE,64)
 #undef READ_AND_BYTESWAP
 
 #define BYTESWAP_AND_WRITE(endian, bits) \
-    int SDL_Write##endian##bits(SDL12_RWops *rwops12, Uint##bits val) { \
+    DECLSPEC int SDLCALL SDL_Write##endian##bits(SDL12_RWops *rwops12, Uint##bits val) { \
         val = SDL_Swap##endian##bits(val); \
         return rwops12->write(rwops12, &val, sizeof (val), 1); \
     }
@@ -3158,7 +3152,7 @@ RWops12to20_size(struct SDL_RWops *rwops20)
     return size;
 }
 
-static Sint64
+static Sint64 SDLCALL
 RWops12to20_seek(struct SDL_RWops *rwops20, Sint64 offset, int whence)
 {
     /* !!! FIXME: fail if (offset) is too big */
@@ -3220,7 +3214,7 @@ RWops12to20(SDL12_RWops *rwops12)
     return rwops20;
 }
 
-SDL12_Surface *
+DECLSPEC SDL12_Surface * SDLCALL
 SDL_LoadBMP_RW(SDL12_RWops *rwops12, int freerwops12)
 {
     SDL_RWops *rwops20 = RWops12to20(rwops12);
@@ -3233,7 +3227,7 @@ SDL_LoadBMP_RW(SDL12_RWops *rwops12, int freerwops12)
     return surface12;
 }
 
-int
+DECLSPEC int SDLCALL
 SDL_SaveBMP_RW(SDL12_Surface *surface12, SDL12_RWops *rwops12, int freerwops12)
 {
     // !!! FIXME: wrap surface.
@@ -3244,7 +3238,7 @@ SDL_SaveBMP_RW(SDL12_Surface *surface12, SDL12_RWops *rwops12, int freerwops12)
     return retval;
 }
 
-SDL_AudioSpec *
+DECLSPEC SDL_AudioSpec * SDLCALL
 SDL_LoadWAV_RW(SDL12_RWops *rwops12, int freerwops12,
                SDL_AudioSpec *spec, Uint8 **buf, Uint32 *len)
 {
