@@ -483,8 +483,8 @@ GetVideoDisplay()
     }
 }
 
-static int
-DoSDLInit(const int justsubs, Uint32 sdl12flags)
+DECLSPEC int SDLCALL
+SDL_InitSubSystem(Uint32 sdl12flags)
 {
     Uint32 sdl20flags = 0;
     int rc;
@@ -506,7 +506,7 @@ DoSDLInit(const int justsubs, Uint32 sdl12flags)
 
     // !!! FIXME: do something about SDL12_INIT_EVENTTHREAD
 
-    rc = justsubs ? SDL20_InitSubSystem(sdl20flags) : SDL20_Init(sdl20flags);
+    rc = SDL20_Init(sdl20flags);
     if ((rc == 0) && (sdl20flags & SDL_INIT_VIDEO))
     {
         int i;
@@ -526,15 +526,9 @@ DoSDLInit(const int justsubs, Uint32 sdl12flags)
 }
 
 DECLSPEC int SDLCALL
-SDL_InitSubSystem(Uint32 sdl12flags)
-{
-    return DoSDLInit(1, sdl12flags);
-}
-
-DECLSPEC int SDLCALL
 SDL_Init(Uint32 sdl12flags)
 {
-    return DoSDLInit(0, sdl12flags);
+    return SDL_InitSubSubsystem(sdl12flags);   /* there's no difference betwee Init and InitSubSystem in SDL2. */
 }
 
 DECLSPEC Uint32 SDLCALL
