@@ -531,14 +531,14 @@ SDL_Init(Uint32 sdl12flags)
     return SDL_InitSubSubsystem(sdl12flags);   /* there's no difference betwee Init and InitSubSystem in SDL2. */
 }
 
-DECLSPEC Uint32 SDLCALL
-SDL_WasInit(Uint32 sdl12flags)
+
+static void
+InitFlags12To20(const Uint32 flags12, Uint32 *_flags20, Uint32 *_extraflags)
 {
-    // !!! FIXME: this is cut and pasted several places.
-    Uint32 sdl20flags = 0;
+    Uint32 flags20 = 0;
     Uint32 extraflags = 0;
 
-    #define SETFLAG(flag) if (sdl12flags & SDL12_INIT_##flag) sdl20flags |= SDL_INIT_##flag
+    #define SETFLAG(flag) if (flags12 & SDL12_INIT_##flag) flags20 |= SDL_INIT_##flag
     SETFLAG(TIMER);
     SETFLAG(AUDIO);
     SETFLAG(VIDEO);
@@ -546,31 +546,51 @@ SDL_WasInit(Uint32 sdl12flags)
     SETFLAG(NOPARACHUTE);
     #undef SETFLAG
 
-    if ((sdl12flags & SDL12_INIT_CDROM) && (CDRomInit))
+    if ((flags12 & SDL12_INIT_CDROM) && (CDRomInit)) {
         extraflags |= SDL12_INIT_CDROM;
+    }
 
     // !!! FIXME: do something about SDL12_INIT_EVENTTHREAD
 
-    // !!! FIXME: convert back to 1.2
-    return SDL20_WasInit(sdl20flags) | extraflags;
+    *_flags20 = flags20;
+    *_extraflags = extraflags;
+}
+
+static Uint32
+InitFlags20to12(const Uint32 flags20)
+{
+    Uint32 flags12 = 0;
+
+    #define SETFLAG(flag) if (flags20 & SDL_INIT_##flag) flags12 |= SDL12_INIT_##flag
+    SETFLAG(TIMER);
+    SETFLAG(AUDIO);
+    SETFLAG(VIDEO);
+    SETFLAG(JOYSTICK);
+    SETFLAG(NOPARACHUTE);
+    #undef SETFLAG
+
+    return flags12;
+}
+
+
+DECLSPEC Uint32 SDLCALL
+SDL_WasInit(Uint32 sdl12flags)
+{
+    Uint32 sdl20flags, extraflags;
+    InitFlags12To20(sdl12flags, &sdl20flags, &extraflags);
+
+    return InitFlags20to12(SDL20_WasInit(sdl20flags)) | extraflags;
 }
 
 DECLSPEC void SDLCALL
 SDL_QuitSubSystem(Uint32 sdl12flags)
 {
-    Uint32 sdl20flags = 0;
+    Uint32 sdl20flags, extraflags;
+    InitFlags12To20(sdl12flags, &sdl20flags, &extraflags);
 
-    #define SETFLAG(flag) if (sdl12flags & SDL12_INIT_##flag) sdl20flags |= SDL_INIT_##flag
-    SETFLAG(TIMER);
-    SETFLAG(AUDIO);
-    SETFLAG(VIDEO);
-    SETFLAG(JOYSTICK);
-    SETFLAG(NOPARACHUTE);
-    // There's no CDROM in 2.0, but we'll just pretend it succeeded.
-    #undef SETFLAG
-
-    if (sdl12flags & SDL12_INIT_CDROM)
+    if (extraflags & SDL12_INIT_CDROM) {
         CDRomInit = 0;
+    }
 
     // !!! FIXME: reset a bunch of other global variables too.
     if (sdl12flags & SDL12_INIT_VIDEO) {
