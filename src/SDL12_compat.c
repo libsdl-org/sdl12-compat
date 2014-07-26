@@ -359,6 +359,16 @@ typedef enum
     SDL12_GL_MAX_ATTRIBUTE
 } SDL12_GLattr;
 
+
+typedef struct
+{
+    Uint32 format;
+    SDL_Rect *modeslist;
+    SDL_Rect **modes;  /* ptrs to each item in modeslist, for SDL_ListModes() */
+} VideoModeList;
+
+static VideoModeList *VideoModes = NULL;
+static int VideoModesCount = 0;
 static SDL12_VideoInfo VideoInfo;
 static SDL_Window *VideoWindow20 = NULL;
 static SDL12_Surface *WindowSurface = NULL;
@@ -483,6 +493,115 @@ GetVideoDisplay()
     }
 }
 
+/* This sets up VideoModes and VideoModesCount. You end up with arrays by pixel
+    format, each with a value that 1.2's SDL_ListModes() can return. */
+static int
+Init12VidModes(void)
+{
+    const int total = SDL20_GetNumDisplayModes(VideoDisplayIndex);
+    VideoModeList *vmode = NULL;
+    int num_modes = 0;
+    void *ptr = NULL;
+    int i, j;
+
+    SDL_assert(VideoModes == NULL);
+    SDL_assert(VideoModesCount == 0);
+
+    for (i = 0; i < total; ++i) {
+        SDL_DisplayMode mode;
+
+        if (SDL20_GetDisplayMode(VideoDisplayIndex, i, &mode) == -1) {
+            continue;
+        } else if (!mode.w || !mode.h) {
+            SDL_assert(0 && "Can this actually happen?");
+            continue;
+        }
+
+        if (!vmode || (mode.format != vmode->format)) {  // SDL20_GetDisplayMode() sorts on bpp first. We know when to change arrays.
+            if (VideoModesCount > 0) {
+                VideoModes[VideoModesCount-1].modes[num_modes] = NULL;
+            }
+            ptr = (VideoModeList *) SDL20_realloc(VideoModes, sizeof (VideoModeList) * (VideoModesCount+1));
+            if (!ptr) {
+                return SDL20_OutOfMemory();
+            }
+            VideoModes = (VideoModeList *) ptr;
+            vmode = &VideoModes[VideoModesCount];
+            vmode->format = mode.format;
+            vmode->modeslist = NULL;
+            vmode->modes = NULL;
+            VideoModesCount++;
+            num_modes = 0;
+        }
+
+        /* make sure we don't have this one already (with a different refresh rate, etc). */
+        for (j = 0; j < num_modes; j++) {
+            if ((vmode->modeslist[j].w == mode.w) && (vmode->modeslist[j].h == mode.h)) {
+                break;
+            }
+        }
+
+        if (j < num_modes) {
+            continue;  /* already have this one. */
+        }
+
+        ptr = SDL20_realloc(vmode->modes, sizeof (SDL_Rect *) * (num_modes + 2));
+        if (ptr == NULL) {
+            return SDL20_OutOfMemory();
+        }
+        vmode->modes = (SDL_Rect **) ptr;
+
+        ptr = SDL20_realloc(vmode->modeslist, sizeof (SDL_Rect) * (num_modes + 1));
+        if (ptr == NULL) {
+            return SDL20_OutOfMemory();
+        }
+        vmode->modeslist = (SDL_Rect *) ptr;
+
+        vmode->modeslist[num_modes].x = 0;
+        vmode->modeslist[num_modes].y = 0;
+        vmode->modeslist[num_modes].w = mode.w;
+        vmode->modeslist[num_modes].h = mode.h;
+
+        vmode->modes[num_modes] = &vmode->modeslist[num_modes];
+
+        num_modes++;
+    }
+
+    if (VideoModesCount > 0) {
+        VideoModes[VideoModesCount-1].modes[num_modes] = NULL;
+    }
+
+    return 0;
+}
+
+static int
+Init12Video(void)
+{
+    int i;
+
+    for (i = 0; i < SDL12_MAXEVENTS-1; i++)
+        EventQueuePool[i].next = &EventQueuePool[i+1];
+    EventQueuePool[SDL12_MAXEVENTS-1].next = NULL;
+
+    EventQueueHead = EventQueueTail = NULL;
+    EventQueueAvailable = EventQueuePool;
+
+    SDL_memset(EventStates, SDL_ENABLE, sizeof (EventStates)); /* on by default */
+    EventStates[SDL12_SYSWMEVENT] = SDL_IGNORE;  /* off by default. */
+
+    SDL20_SetEventFilter(EventFilter20to12, NULL);
+
+    VideoDisplayIndex = GetVideoDisplay();
+    SwapInterval = 0;
+
+    if (Init12VidModes() == -1) {
+        return -1;
+    }
+
+    return 0;
+}
+
+
 DECLSPEC int SDLCALL
 SDL_InitSubSystem(Uint32 sdl12flags)
 {
@@ -507,19 +626,10 @@ SDL_InitSubSystem(Uint32 sdl12flags)
     // !!! FIXME: do something about SDL12_INIT_EVENTTHREAD
 
     rc = SDL20_Init(sdl20flags);
-    if ((rc == 0) && (sdl20flags & SDL_INIT_VIDEO))
-    {
-        int i;
-        for (i = 0; i < SDL12_MAXEVENTS-1; i++)
-            EventQueuePool[i].next = &EventQueuePool[i+1];
-        EventQueuePool[SDL12_MAXEVENTS-1].next = NULL;
-        EventQueueHead = EventQueueTail = NULL;
-        EventQueueAvailable = EventQueuePool;
-        SDL_memset(EventStates, SDL_ENABLE, sizeof (EventStates)); /* on by default */
-        EventStates[SDL12_SYSWMEVENT] = SDL_IGNORE;  /* off by default. */
-        SDL20_SetEventFilter(EventFilter20to12, NULL);
-        VideoDisplayIndex = GetVideoDisplay();
-        SwapInterval = 0;
+    if ((rc == 0) && (sdl20flags & SDL_INIT_VIDEO)) {
+        if (Init12Video() == -1) {
+            return -1;  /* !!! FIXME: should we deinit other subsystems? */
+        }
     }
 
     return rc;
@@ -582,6 +692,27 @@ SDL_WasInit(Uint32 sdl12flags)
     return InitFlags20to12(SDL20_WasInit(sdl20flags)) | extraflags;
 }
 
+static void
+Quit12Video(void)
+{
+    int i;
+
+    for (i = 0; i < VideoModesCount; i++) {
+        SDL20_free(VideoModes[i].modeslist);
+        SDL20_free(VideoModes[i].modes);
+    }
+    SDL20_free(VideoModes);
+
+    SDL20_FreeFormat(VideoInfo.vfmt);
+    SDL20_zero(VideoInfo);
+
+    EventFilter12 = NULL;
+    EventQueueAvailable = EventQueueHead = EventQueueTail = NULL;
+    CurrentCursor = NULL;
+    VideoModes = NULL;
+    VideoModesCount = 0;
+}
+
 DECLSPEC void SDLCALL
 SDL_QuitSubSystem(Uint32 sdl12flags)
 {
@@ -594,11 +725,7 @@ SDL_QuitSubSystem(Uint32 sdl12flags)
 
     // !!! FIXME: reset a bunch of other global variables too.
     if (sdl12flags & SDL12_INIT_VIDEO) {
-        EventFilter12 = NULL;
-        EventQueueAvailable = EventQueueHead = EventQueueTail = NULL;
-        CurrentCursor = NULL;
-        SDL20_FreeFormat(VideoInfo.vfmt);
-        SDL20_zero(VideoInfo);
+        Quit12Video();
     }
 
     // !!! FIXME: do something about SDL12_INIT_EVENTTHREAD
@@ -1251,6 +1378,8 @@ SDL_GetVideoInfo(void)
 {
     SDL_DisplayMode mode;
 
+    // !!! FIXME: calculate this in Init12Video(), then this just does: return VideoInfo.vfmt ? &VideoInfo : NULL;
+
     if (!VideoInfo.vfmt && SDL20_GetDesktopDisplayMode(VideoDisplayIndex, &mode) == 0) {
         VideoInfo.vfmt = SDL20_AllocFormat(mode.format);
         VideoInfo.current_w = mode.w;
@@ -1293,72 +1422,41 @@ SDL_VideoModeOK(int width, int height, int bpp, Uint32 sdl12flags)
     return actual_bpp;
 }
 
-#if SANITY_CHECK_THIS_CODE
 DECLSPEC SDL_Rect ** SDLCALL
-SDL_ListModes(const SDL12_PixelFormat *format, Uint32 flags)
+SDL_ListModes(const SDL12_PixelFormat *format12, Uint32 flags)
 {
-    int i, nmodes;
-    SDL_Rect **modes;
+    Uint32 fmt;
+    int i;
 
     if (!SDL20_WasInit(SDL_INIT_VIDEO)) {
         return NULL;
     }
 
+    if ((!format12) && (!VideoInfo.vfmt)) {
+        SDL20_SetError("No pixel format specified");
+        return NULL;
+    }
+
     if (!(flags & SDL12_FULLSCREEN)) {
-        return (SDL_Rect **) (-1);
+        return (SDL_Rect **) (-1);  /* any resolution is fine. */
     }
 
-    if (!format) {
-        format = VideoInfo.vfmt;
+    if (format12) {
+        fmt = SDL20_MasksToPixelFormatEnum(format12->BitsPerPixel, format12->Rmask, format12->Gmask, format12->Bmask, format12->Amask);
+    } else {
+        fmt = VideoInfo.vfmt->format;
     }
 
-    /* !!! FIXME: Memory leak */
-    nmodes = 0;
-    modes = NULL;
-    for (i = 0; i < SDL20_GetNumDisplayModes(VideoDisplayIndex); ++i) {
-        SDL_DisplayMode mode;
-        int bpp;
-
-        SDL20_GetDisplayMode(VideoDisplayIndex, i, &mode);
-        if (!mode.w || !mode.h) {
-            return (SDL_Rect **) (-1);
+    for (i = 0; i < VideoModesCount; i++) {
+        VideoModeList *modes = &VideoModes[i];
+        if (modes->format == fmt) {
+            return modes->modes;
         }
-        
-        /* Copied from src/video/SDL_pixels.c:SDL_PixelFormatEnumToMasks */
-        if (SDL_BYTESPERPIXEL(mode.format) <= 2) {
-            bpp = SDL_BITSPERPIXEL(mode.format);
-        } else {
-            bpp = SDL_BYTESPERPIXEL(mode.format) * 8;
-        }
-
-        if (bpp != format->BitsPerPixel) {
-            continue;
-        }
-        if (nmodes > 0 && modes[nmodes - 1]->w == mode.w
-            && modes[nmodes - 1]->h == mode.h) {
-            continue;
-        }
-
-        modes = SDL20_realloc(modes, (nmodes + 2) * sizeof(*modes));
-        if (!modes) {
-            return NULL;
-        }
-        modes[nmodes] = (SDL_Rect *) SDL20_malloc(sizeof(SDL_Rect));
-        if (!modes[nmodes]) {
-            return NULL;
-        }
-        modes[nmodes]->x = 0;
-        modes[nmodes]->y = 0;
-        modes[nmodes]->w = mode.w;
-        modes[nmodes]->h = mode.h;
-        ++nmodes;
     }
-    if (modes) {
-        modes[nmodes] = NULL;
-    }
-    return modes;
+
+    SDL20_SetError("No modes support requested pixel format");
+    return NULL;
 }
-#endif
 
 DECLSPEC void SDLCALL
 SDL_FreeCursor(SDL12_Cursor *cursor12)
