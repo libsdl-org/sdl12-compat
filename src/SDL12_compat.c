@@ -960,7 +960,7 @@ SDL_GetMouseState(int *x, int *y)
 static int
 EventFilter20to12(void *data, SDL_Event *event20)
 {
-    const int maxUserEvents12 = SDL12_NUMEVENTS - SDL12_USEREVENT;
+    //const int maxUserEvents12 = SDL12_NUMEVENTS - SDL12_USEREVENT;
     SDL12_Event event12;
     int x, y;
 
