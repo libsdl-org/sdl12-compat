@@ -738,21 +738,16 @@ SDL_QuitSubSystem(Uint32 sdl12flags)
     // !!! FIXME: do something about SDL12_INIT_EVENTTHREAD
     SDL20_QuitSubSystem(sdl20flags);
 
-    // !!! FIXME: UnloadSDL20() ?
+    if ((SDL20_WasInit(0) == 0) && (!CDRomInit)) {
+        SDL20_Quit();
+        UnloadSDL20();
+    }
 }
 
 DECLSPEC void SDLCALL
 SDL_Quit(void)
 {
-    // !!! FIXME: reset a bunch of other global variables too.
-    EventFilter12 = NULL;
-    EventQueueAvailable = EventQueueHead = EventQueueTail = NULL;
-    CurrentCursor = NULL;
-    SDL20_FreeFormat(VideoInfo.vfmt);
-    SDL20_zero(VideoInfo);
-    CDRomInit = 0;
-    SDL20_Quit();
-    UnloadSDL20();
+    SDL_QuitSubSystem(SDL_WasInit(0) | SDL12_INIT_CDROM);
 }
 
 DECLSPEC void SDLCALL
