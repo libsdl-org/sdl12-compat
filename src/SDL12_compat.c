@@ -605,6 +605,13 @@ Init12Video(void)
 DECLSPEC int SDLCALL
 SDL_InitSubSystem(Uint32 sdl12flags)
 {
+    // !!! FIXME: there is never a parachute in SDL2, should we catch segfaults ourselves?
+
+    // !!! FIXME: support event thread where it makes sense to do so?
+	if ( (sdl12flags & SDL12_INIT_EVENTTHREAD) == SDL12_INIT_EVENTTHREAD ) {
+		return SDL20_SetError("OS doesn't support threaded events");
+	}
+
     Uint32 sdl20flags = 0;
     int rc;
 
