@@ -645,7 +645,7 @@ SDL_InitSubSystem(Uint32 sdl12flags)
 DECLSPEC int SDLCALL
 SDL_Init(Uint32 sdl12flags)
 {
-    return SDL_InitSubSubsystem(sdl12flags);   /* there's no difference betwee Init and InitSubSystem in SDL2. */
+    return SDL_InitSubSystem(sdl12flags);   /* there's no difference betwee Init and InitSubSystem in SDL2. */
 }
 
 
