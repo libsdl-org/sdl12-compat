@@ -7,12 +7,8 @@ To compile and install SDL:
     2.  Look at the example programs in ./test, and check out the HTML
         documentation in ./docs to see how to use the SDL library.
 
-    3.  Join the SDL developer mailing list by sending E-mail to
-        sdl-request@libsdl.org
-        and put "subscribe" in the subject of the message.
-
-        Or alternatively you can use the web interface:
-            http://www.libsdl.org/mailing-list.php
+    3.  Join the SDL developer forums at https://discourse.libsdl.org/
 
 That's it!
 Sam Lantinga <slouken@libsdl.org>
+
