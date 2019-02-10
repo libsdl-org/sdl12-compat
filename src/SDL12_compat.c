@@ -1994,6 +1994,18 @@ SDL_CreateThread(int (SDLCALL *fn)(void *), void *data)
 }
 #endif
 
+DECLSPEC int SDLCALL
+SDL_mutexP(SDL_mutex *mutex)
+{
+    return SDL20_LockMutex(mutex);
+}
+
+DECLSPEC int SDLCALL
+SDL_mutexV(SDL_mutex *mutex)
+{
+    return SDL20_UnlockMutex(mutex);
+}
+
 
 /* !!! FIXME: Removed from 2.0; do nothing. We can't even report failure. */
 DECLSPEC void SDLCALL SDL_KillThread(SDL_Thread *thread) {}
