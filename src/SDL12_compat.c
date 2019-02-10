@@ -682,6 +682,7 @@ SDL_InitSubSystem(Uint32 sdl12flags)
 DECLSPEC int SDLCALL
 SDL_Init(Uint32 sdl12flags)
 {
+    // !!! FIXME: what was different in 1.2?
     return SDL_InitSubSystem(sdl12flags);   /* there's no difference betwee Init and InitSubSystem in SDL2. */
 }
 
@@ -944,7 +945,7 @@ SDL_PeepEvents(SDL12_Event *events12, int numevents, SDL_eventaction action, Uin
 DECLSPEC int SDLCALL
 SDL_WaitEvent(SDL12_Event *event12)
 {
-    /* In 1.2, this only fails (-1) if you haven't SDL_Init()'d. */
+    /* !!! FIXME: In 1.2, this only fails (-1) if you haven't SDL_Init()'d. */
     while (!SDL_PollEvent(event12))
         SDL_Delay(10);
     return 1;
@@ -1820,6 +1821,7 @@ SDL_GL_SetAttribute(SDL12_GLattr attr, int value)
     if (attr == SDL12_GL_SWAP_CONTROL)
     {
         SwapInterval = value;
+#error Actually set swap interval somewhere.
         return 0;
     }
 
@@ -2262,6 +2264,7 @@ SDL_LoadWAV_RW(SDL12_RWops *rwops12, int freerwops12,
 {
     SDL_RWops *rwops20 = RWops12to20(rwops12);
     SDL_AudioSpec *retval = SDL20_LoadWAV_RW(rwops20, freerwops12, spec, buf, len);
+    /* !!! FIXME: deal with non-1.2 formats, like float32 ... */
     if (!freerwops12)  /* free our wrapper if SDL2 didn't close it. */
         SDL20_FreeRW(rwops20);
     return retval;
