@@ -21,6 +21,14 @@
 
 /* don't #pragma once this file, it gets #included multiple times! */
 
+#ifndef SDL20_SYM
+#define SDL20_SYM(rc,fn,params,args,ret)
+#endif
+
+#ifndef SDL20_SYM_PASSTHROUGH
+#define SDL20_SYM_PASSTHROUGH(rc,fn,params,args,ret)
+#endif
+
 SDL20_SYM(int,Init,(Uint32 a),(a),return)
 SDL20_SYM(int,InitSubSystem,(Uint32 a),(a),return)
 SDL20_SYM(Uint32,WasInit,(Uint32 a),(a),return)
@@ -223,6 +231,9 @@ SDL20_SYM_PASSTHROUGH(size_t,iconv,(SDL_iconv_t a, const char **b, size_t *c, ch
 SDL20_SYM_PASSTHROUGH(char *,iconv_string,(const char *a, const char *b, const char *c, size_t d),(a,b,c,d),return)
 SDL20_SYM(int,setenv,(const char *a, const char *b, int c),(a,b,c),return)
 SDL20_SYM(int,atoi,(const char *a),(a),return)
+
+#undef SDL20_SYM
+#undef SDL20_SYM_PASSTHROUGH
 
 /* vi: set ts=4 sw=4 expandtab: */
 

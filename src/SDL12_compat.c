@@ -57,19 +57,15 @@
 #define SDL20_SYM_PASSTHROUGH(rc,fn,params,args,ret) \
     SDL20_SYM(rc,fn,params,args,ret)
 #include "SDL20_syms.h"
-#undef SDL20_SYM_PASSTHROUGH
-#undef SDL20_SYM
 
+/* this doesn't get handled in SDL20_syms.h because it uses varargs. */
 typedef int (SDLCALL *SDL20_SetError_t)(const char *fmt, ...);
 static SDL20_SetError_t SDL20_SetError = NULL;
 
 /* Things that _should_ be binary compatible pass right through... */
-#define SDL20_SYM(rc,fn,params,args,ret)
 #define SDL20_SYM_PASSTHROUGH(rc,fn,params,args,ret) \
     DECLSPEC rc SDLCALL SDL_##fn params { ret SDL20_##fn args; }
 #include "SDL20_syms.h"
-#undef SDL20_SYM_PASSTHROUGH
-#undef SDL20_SYM
 
 
 /* these are macros (etc) in the SDL headers, so make our own. */
@@ -446,8 +442,6 @@ UnloadSDL20(void)
     #define SDL20_SYM(rc,fn,params,args,ret) SDL20_##fn = NULL;
     #define SDL20_SYM_PASSTHROUGH(rc,fn,params,args,ret) SDL20_SYM(rc,fn,params,args,ret)
     #include "SDL20_syms.h"
-    #undef SDL20_SYM_PASSTHROUGH
-    #undef SDL20_SYM
     SDL20_SetError = NULL;
     CloseSDL20Library();
 }
@@ -462,8 +456,6 @@ LoadSDL20(void)
         #define SDL20_SYM(rc,fn,params,args,ret) SDL20_##fn = (SDL20_##fn##_t) LoadSDL20Symbol("SDL_" #fn, &okay);
         #define SDL20_SYM_PASSTHROUGH(rc,fn,params,args,ret) SDL20_SYM(rc,fn,params,args,ret)
         #include "SDL20_syms.h"
-        #undef SDL20_SYM_PASSTHROUGH
-        #undef SDL20_SYM
         SDL20_SetError = (SDL20_SetError_t) LoadSDL20Symbol("SDL_SetError", &okay);
         if (!okay)
             UnloadSDL20();
