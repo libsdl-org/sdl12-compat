@@ -947,7 +947,7 @@ SDL_WaitEvent(SDL12_Event *event12)
 {
     /* !!! FIXME: In 1.2, this only fails (-1) if you haven't SDL_Init()'d. */
     while (!SDL_PollEvent(event12))
-        SDL_Delay(10);
+        SDL20_Delay(10);
     return 1;
 }
 
@@ -1501,8 +1501,7 @@ SDL_ListModes(const SDL12_PixelFormat *format12, Uint32 flags)
 DECLSPEC void SDLCALL
 SDL_FreeCursor(SDL12_Cursor *cursor12)
 {
-    if (cursor12)
-    {
+    if (cursor12) {
         if (cursor12->wm_cursor)
             SDL20_FreeCursor(cursor12->wm_cursor);
         SDL20_free(cursor12->data);
@@ -1643,7 +1642,7 @@ SDL_DisplayFormatAlpha(SDL12_Surface *surface)
 }
 
 DECLSPEC void SDLCALL
-SDL_UpdateRects(SDL_Surface * screen, int numrects, SDL_Rect * rects)
+SDL_UpdateRects(SDL12_Surface * screen12, int numrects, SDL_Rect * rects)
 {
 #error write me
 }
@@ -1707,7 +1706,7 @@ SDL_WM_IconifyWindow(void)
 }
 
 DECLSPEC int SDLCALL
-SDL_WM_ToggleFullScreen(SDL_Surface *surface)
+SDL_WM_ToggleFullScreen(SDL12_Surface *surface)
 {
 #error write me
 }
