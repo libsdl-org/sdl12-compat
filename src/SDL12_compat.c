@@ -2008,7 +2008,12 @@ SDL_mutexV(SDL_mutex *mutex)
 
 
 /* !!! FIXME: Removed from 2.0; do nothing. We can't even report failure. */
-DECLSPEC void SDLCALL SDL_KillThread(SDL_Thread *thread) {}
+DECLSPEC void SDLCALL SDL_KillThread(SDL_Thread *thread)
+{
+    fprintf(stderr,
+        "WARNING: this app used SDL_KillThread(), an unforgivable curse.\n"
+        "This program should be fixed. No thread was actually harmed.\n");
+}
 
 /* This changed from an opaque pointer to an int in 2.0. */
 typedef struct _SDL12_TimerID *SDL12_TimerID;
