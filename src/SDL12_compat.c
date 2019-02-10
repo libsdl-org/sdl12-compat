@@ -21,6 +21,8 @@
 
 /* This file contains functions for backwards compatibility with SDL 1.2 */
 
+// !!! FIXME: clean up code conventions
+
 #include "SDL20_include_wrapper.h"
 
 #if !SDL_VERSION_ATLEAST(2,0,0)
@@ -36,20 +38,63 @@
 
 #include <stdarg.h>
 
+// !!! IMPLEMENT_ME SDL_CDClose
+// !!! IMPLEMENT_ME SDL_CDEject
+// !!! IMPLEMENT_ME SDL_CDName
+// !!! IMPLEMENT_ME SDL_CDNumDrives
+// !!! IMPLEMENT_ME SDL_CDOpen
+// !!! IMPLEMENT_ME SDL_CDPause
+// !!! IMPLEMENT_ME SDL_CDPlay
+// !!! IMPLEMENT_ME SDL_CDPlayTracks
+// !!! IMPLEMENT_ME SDL_CDResume
+// !!! IMPLEMENT_ME SDL_CDStatus
+// !!! IMPLEMENT_ME SDL_CDStop
 // !!! IMPLEMENT_ME SDL_ConvertSurface
+// !!! IMPLEMENT_ME SDL_CreateYUVOverlay
+
+// !!! IMPLEMENT_ME SDL_DisplayFormat
+// !!! IMPLEMENT_ME SDL_DisplayFormatAlpha
+// !!! IMPLEMENT_ME SDL_DisplayYUVOverlay
+// !!! IMPLEMENT_ME SDL_EnableKeyRepeat
+// !!! IMPLEMENT_ME SDL_EnableUNICODE
+// !!! IMPLEMENT_ME SDL_FreeYUVOverlay
+
+// !!! IMPLEMENT_ME SDL_GL_Lock
+// !!! IMPLEMENT_ME SDL_GL_Unlock
+// !!! IMPLEMENT_ME SDL_GL_UpdateRects
+
 // !!! IMPLEMENT_ME SDL_GetKeyName
 // !!! IMPLEMENT_ME SDL_GetKeyState
 // !!! IMPLEMENT_ME SDL_GetModState
 // !!! IMPLEMENT_ME SDL_GetRelativeMouseState
+
+// !!! IMPLEMENT_ME SDL_GetVideoSurface
+// !!! IMPLEMENT_ME SDL_GetWMInfo
+
 // !!! IMPLEMENT_ME SDL_LockSurface
+// !!! IMPLEMENT_ME SDL_LockYUVOverlay
 // !!! IMPLEMENT_ME SDL_LowerBlit
+
+// !!! IMPLEMENT_ME SDL_SetAlpha
 // !!! IMPLEMENT_ME SDL_SetColorKey
+// !!! IMPLEMENT_ME SDL_SetColors
+
 // !!! IMPLEMENT_ME SDL_SetModState
+// !!! IMPLEMENT_ME SDL_SetPalette
+// !!! IMPLEMENT_ME SDL_SetVideoMode
 // !!! IMPLEMENT_ME SDL_SoftStretch
 // !!! IMPLEMENT_ME SDL_UnlockSurface
+// !!! IMPLEMENT_ME SDL_UnlockYUVOverlay
+// !!! IMPLEMENT_ME SDL_UpdateRects
 // !!! IMPLEMENT_ME SDL_UpperBlit
-// !!! IMPLEMENT_ME X11_KeyToUnicode
 
+// !!! FIXME: should SDL_VideoInit really be a passthrough?
+// !!! FIXME: should SDL_VideoQuit really be a passthrough?
+
+// !!! IMPLEMENT_ME SDL_WM_SetIcon
+// !!! IMPLEMENT_ME SDL_WM_ToggleFullScreen
+
+// !!! IMPLEMENT_ME X11_KeyToUnicode
 
 #define SDL20_SYM(rc,fn,params,args,ret) \
     typedef rc (SDLCALL *SDL20_##fn##_t) params; \
@@ -1543,21 +1588,8 @@ GetEnvironmentWindowPosition(int w, int h, int *x, int *y)
     }
 }
 
-#if SANITY_CHECK_THIS_CODE
 static void
-ClearVideoSurface()
-{
-    if (ShadowSurface) {
-        SDL20_FillRect(ShadowSurface, NULL,
-            SDL20_MapRGB(ShadowSurface->format, 0, 0, 0));
-    }
-    SDL20_FillRect(WindowSurface, NULL, 0);
-    SDL20_UpdateWindowSurface(VideoWindow20);
-}
-#endif
-
-static void
-SetupScreenSaver(int flags12)
+SetupScreenSaver(const int flags12)
 {
     const char *env;
     SDL_bool allow_screensaver;
@@ -1578,386 +1610,42 @@ SetupScreenSaver(int flags12)
     }
 }
 
-#if SANITY_CHECK_THIS_CODE
-static int
-ResizeVideoMode(int width, int height, int bpp, Uint32 flags12)
-{
-    int w, h;
-
-    /* We can't resize something we don't have... */
-    if (!VideoSurface) {
-        return -1;
-    }
-
-    /* We probably have to recreate the window in fullscreen mode */
-    if (flags12 & SDL12_FULLSCREEN) {
-        return -1;
-    }
-
-    /* I don't think there's any change we can gracefully make in flags */
-    if (flags12 != VideoFlags) {
-        return -1;
-    }
-    if (bpp != VideoSurface->format->BitsPerPixel) {
-        return -1;
-    }
-
-    /* Resize the window */
-    SDL20_GetWindowSize(VideoWindow20, &w, &h);
-    if (w != width || h != height) {
-        SDL20_SetWindowSize(VideoWindow20, width, height);
-    }
-
-    /* If we're in OpenGL mode, just resize the stub surface and we're done! */
-    if (flags12 & SDL12_OPENGL) {
-        VideoSurface->w = width;
-        VideoSurface->h = height;
-        return 0;
-    }
-
-    WindowSurface = SDL20_GetWindowSurface(VideoWindow20);
-    if (!WindowSurface) {
-        return -1;
-    }
-    if (VideoSurface->format != WindowSurface->format) {
-        return -1;
-    }
-    VideoSurface->w = width;
-    VideoSurface->h = height;
-    VideoSurface->pixels = WindowSurface->pixels;
-    VideoSurface->pitch = WindowSurface->pitch;
-    SDL20_SetClipRect(VideoSurface, NULL);
-
-    if (ShadowSurface) {
-        ShadowSurface->w = width;
-        ShadowSurface->h = height;
-        ShadowSurface->pitch = SDL20_CalculatePitch(ShadowSurface);
-        ShadowSurface->pixels =
-            SDL20_realloc(ShadowSurface->pixels,
-                        ShadowSurface->h * ShadowSurface->pitch);
-        SDL20_SetClipRect(ShadowSurface, NULL);
-        SDL20_InvalidateMap(ShadowSurface->map);
-    } else {
-        PublicSurface = VideoSurface;
-    }
-
-    ClearVideoSurface();
-
-    return 0;
-}
 
 DECLSPEC SDL12_Surface * SDLCALL
 SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
 {
-    SDL_DisplayMode desktop_mode;
-    int display = VideoDisplayIndex;
-    int window_x = SDL_WINDOWPOS_UNDEFINED_DISPLAY(display);
-    int window_y = SDL_WINDOWPOS_UNDEFINED_DISPLAY(display);
-    int window_w;
-    int window_h;
-    Uint32 window_flags20;
-    Uint32 surface_flags12;
-
-    if (!SDL20_WasInit(SDL_INIT_VIDEO)) {
-        if (SDL_Init(SDL12_INIT_VIDEO | SDL12_INIT_NOPARACHUTE) < 0) {
-            return NULL;
-        }
-    }
-
-    SDL20_GetDesktopDisplayMode(display, &desktop_mode);
-
-    if (width == 0) {
-        width = desktop_mode.w;
-    }
-    if (height == 0) {
-        height = desktop_mode.h;
-    }
-    if (bpp == 0) {
-        bpp = SDL_BITSPERPIXEL(desktop_mode.format);
-    }
-
-    /* See if we can simply resize the existing window and surface */
-    if (ResizeVideoMode(width, height, bpp, flags12) == 0) {
-        return PublicSurface;
-    }
-
-    /* Destroy existing window */
-    PublicSurface = NULL;
-    if (ShadowSurface) {
-        ShadowSurface->flags &= ~SDL_DONTFREE;
-        SDL20_FreeSurface(ShadowSurface);
-        ShadowSurface = NULL;
-    }
-    if (VideoSurface) {
-        VideoSurface->flags &= ~SDL_DONTFREE;
-        SDL20_FreeSurface(VideoSurface);
-        VideoSurface = NULL;
-    }
-    if (VideoContext) {
-        /* SDL_GL_MakeCurrent(0, NULL); *//* Doesn't do anything */
-        SDL20_GL_DeleteContext(VideoContext);
-        VideoContext = NULL;
-    }
-    if (VideoWindow20) {
-        SDL20_GetWindowPosition(VideoWindow20, &window_x, &window_y);
-        SDL20_DestroyWindow(VideoWindow20);
-    }
-
-    /* Create a new window */
-    window_flags20 = SDL_WINDOW_SHOWN;
-    if (flags12 & SDL12_FULLSCREEN) {
-        window_flags20 |= SDL_WINDOW_FULLSCREEN;
-    }
-    if (flags12 & SDL12_OPENGL) {
-        window_flags20 |= SDL_WINDOW_OPENGL;
-    }
-    if (flags12 & SDL12_RESIZABLE) {
-        window_flags20 |= SDL_WINDOW_RESIZABLE;
-    }
-    if (flags12 & SDL12_NOFRAME) {
-        window_flags20 |= SDL_WINDOW_BORDERLESS;
-    }
-    GetEnvironmentWindowPosition(width, height, &window_x, &window_y);
-    VideoWindow20 =
-        SDL20_CreateWindow(WindowTitle, window_x, window_y, width, height,
-                         window_flags20);
-    if (!VideoWindow20) {
-        return NULL;
-    }
-    SDL20_SetWindowIcon(VideoWindow20, VideoIcon);
-
-    SetupScreenSaver(flags12);
-
-    window_flags20 = SDL20_GetWindowFlags(VideoWindow20);
-    surface_flags12 = 0;
-    if (window_flags20 & SDL_WINDOW_FULLSCREEN) {
-        surface_flags12 |= SDL_FULLSCREEN;
-    }
-    if ((window_flags & SDL_WINDOW_OPENGL) && (flags12 & SDL_OPENGL)) {
-        surface_flags12 |= SDL_OPENGL;
-    }
-    if (window_flags & SDL_WINDOW_RESIZABLE) {
-        surface_flags12 |= SDL_RESIZABLE;
-    }
-    if (window_flags & SDL_WINDOW_BORDERLESS) {
-        surface_flags12 |= SDL_NOFRAME;
-    }
-
-    VideoFlags = flags12;
-
-    /* If we're in OpenGL mode, just create a stub surface and we're done! */
-    if (flags12 & SDL_OPENGL) {
-
-        VideoContext = SDL_GL_CreateContext(VideoWindow20);
-        if (!VideoContext) {
-            return NULL;
-        }
-        if (SDL_GL_MakeCurrent(VideoWindow20, VideoContext) < 0) {
-            return NULL;
-        }
-
-        SDL20_GL_SetSwapInterval(SwapInterval);  /* don't care if this fails. */
-
-        VideoSurface =
-            SDL_CreateRGBSurfaceFrom(NULL, width, height, bpp, 0, 0, 0, 0, 0);
-        if (!VideoSurface) {
-            return NULL;
-        }
-        VideoSurface->flags |= surface_flags12;
-        PublicSurface = VideoSurface;
-        return PublicSurface;
-    }
-
-    /* Create the screen surface */
-    WindowSurface = SDL_GetWindowSurface(VideoWindow20);
-    if (!WindowSurface) {
-        return NULL;
-    }
-
-    /* Center the public surface in the window surface */
-    SDL_GetWindowSize(VideoWindow20, &window_w, &window_h);
-    VideoViewport.x = (window_w - width)/2;
-    VideoViewport.y = (window_h - height)/2;
-    VideoViewport.w = width;
-    VideoViewport.h = height;
-
-    VideoSurface = SDL_CreateRGBSurfaceFrom(NULL, 0, 0, 32, 0, 0, 0, 0, 0);
-    VideoSurface->flags |= surface_flags12;
-    VideoSurface->flags |= SDL12_DONTFREE;
-    SDL_FreeFormat(VideoSurface->format);
-    VideoSurface->format = WindowSurface->format;
-    VideoSurface->format->refcount++;
-    VideoSurface->w = width;
-    VideoSurface->h = height;
-    VideoSurface->pitch = WindowSurface->pitch;
-    VideoSurface->pixels = (void *)((Uint8 *)WindowSurface->pixels +
-        VideoViewport.y * VideoSurface->pitch +
-        VideoViewport.x  * VideoSurface->format->BytesPerPixel);
-    SDL_SetClipRect(VideoSurface, NULL);
-
-    /* Create a shadow surface if necessary */
-    if ((bpp != VideoSurface->format->BitsPerPixel)
-        && !(flags12 & SDL12_ANYFORMAT)) {
-        ShadowSurface =
-            SDL_CreateRGBSurface(0, width, height, bpp, 0, 0, 0, 0);
-        if (!ShadowSurface) {
-            return NULL;
-        }
-        ShadowSurface->flags |= surface_flags12;
-        ShadowSurface->flags |= SDL12_DONTFREE;
-
-        /* 8-bit ShadowSurface surfaces report that they have exclusive palette */
-        if (ShadowSurface->format->palette) {
-            ShadowSurface->flags |= SDL12_HWPALETTE;
-            SDL_DitherColors(ShadowSurface->format->palette->colors,
-                             ShadowSurface->format->BitsPerPixel);
-        }
-        SDL_FillRect(ShadowSurface, NULL,
-            SDL_MapRGB(ShadowSurface->format, 0, 0, 0));
-    }
-    PublicSurface =
-        (ShadowSurface ? ShadowSurface : VideoSurface);
-
-    ClearVideoSurface();
-
-    /* We're finally done! */
-    return PublicSurface;
+#error write me
 }
 
 DECLSPEC SDL12_Surface * SDLCALL
 SDL_GetVideoSurface(void)
 {
-    return PublicSurface;
+#error write me
 }
 
 DECLSPEC int SDLCALL
 SDL_SetAlpha(SDL12_Surface * surface, Uint32 flag, Uint8 value)
 {
-    if (flag & SDL_SRCALPHA) {
-        /* According to the docs, value is ignored for alpha surfaces */
-        if (surface->format->Amask) {
-            value = 0xFF;
-        }
-        SDL_SetSurfaceAlphaMod(surface, value);
-        SDL_SetSurfaceBlendMode(surface, SDL_BLENDMODE_BLEND);
-    } else {
-        SDL_SetSurfaceAlphaMod(surface, 0xFF);
-        SDL_SetSurfaceBlendMode(surface, SDL_BLENDMODE_NONE);
-    }
-    SDL_SetSurfaceRLE(surface, (flag & SDL_RLEACCEL));
-
-    return 0;
+#error write me
 }
 
 DECLSPEC SDL12_Surface * SDLCALL
 SDL_DisplayFormat(SDL12_Surface *surface12)
 {
-    SDL12_PixelFormat *format;
-
-    if (!PublicSurface) {
-        SDL20_SetError("No video mode has been set");
-        return NULL;
-    }
-    format = PublicSurface->format;
-
-    /* Set the flags appropriate for copying to display surface */
-    return SDL_ConvertSurface(surface, format, SDL12_RLEACCEL);
+#error write me
 }
 
 DECLSPEC SDL12_Surface * SDLCALL
 SDL_DisplayFormatAlpha(SDL12_Surface *surface)
 {
-    SDL_PixelFormat *vf;
-    SDL_PixelFormat *format;
-    SDL_Surface *converted;
-    /* default to ARGB8888 */
-    Uint32 amask = 0xff000000;
-    Uint32 rmask = 0x00ff0000;
-    Uint32 gmask = 0x0000ff00;
-    Uint32 bmask = 0x000000ff;
-
-    if (!PublicSurface) {
-        SDL20_SetError("No video mode has been set");
-        return NULL;
-    }
-    vf = PublicSurface->format;
-
-    switch (vf->BytesPerPixel) {
-    case 2:
-        /* For XGY5[56]5, use, AXGY8888, where {X, Y} = {R, B}.
-           For anything else (like ARGB4444) it doesn't matter
-           since we have no special code for it anyway */
-        if ((vf->Rmask == 0x1f) &&
-            (vf->Bmask == 0xf800 || vf->Bmask == 0x7c00)) {
-            rmask = 0xff;
-            bmask = 0xff0000;
-        }
-        break;
-
-    case 3:
-    case 4:
-        /* Keep the video format, as long as the high 8 bits are
-           unused or alpha */
-        if ((vf->Rmask == 0xff) && (vf->Bmask == 0xff0000)) {
-            rmask = 0xff;
-            bmask = 0xff0000;
-        }
-        break;
-
-    default:
-        /* We have no other optimised formats right now. When/if a new
-           optimised alpha format is written, add the converter here */
-        break;
-    }
-    format = SDL_AllocFormat(SDL_MasksToPixelFormatEnum(32, rmask,
-                                                            gmask,
-                                                            bmask,
-                                                            amask));
-    if (!format) {
-        return NULL;
-    }
-    converted = SDL_ConvertSurface(surface, format, SDL_RLEACCEL);
-    SDL_FreeFormat(format);
-    return converted;
+#error write me
 }
 
 DECLSPEC void SDLCALL
 SDL_UpdateRects(SDL_Surface * screen, int numrects, SDL_Rect * rects)
 {
-    int i;
-
-    if (screen == ShadowSurface) {
-        for (i = 0; i < numrects; ++i) {
-            SDL_BlitSurface(ShadowSurface, &rects[i], VideoSurface,
-                            &rects[i]);
-        }
-
-        /* Fall through to video surface update */
-        screen = VideoSurface;
-    }
-    if (screen == VideoSurface) {
-        if (VideoViewport.x || VideoViewport.y) {
-            SDL_Rect *stackrects = SDL_stack_alloc(SDL_Rect, numrects);
-            SDL_Rect *stackrect;
-            const SDL_Rect *rect;
-            
-            /* Offset all the rectangles before updating */
-            for (i = 0; i < numrects; ++i) {
-                rect = &rects[i];
-                stackrect = &stackrects[i];
-                stackrect->x = VideoViewport.x + rect->x;
-                stackrect->y = VideoViewport.y + rect->y;
-                stackrect->w = rect->w;
-                stackrect->h = rect->h;
-            }
-            SDL_UpdateWindowSurfaceRects(VideoWindow20, stackrects, numrects);
-            SDL_stack_free(stackrects);
-        } else {
-            SDL_UpdateWindowSurfaceRects(VideoWindow20, rects, numrects);
-        }
-    }
+#error write me
 }
-#endif
 
 DECLSPEC void SDLCALL
 SDL_UpdateRect(SDL12_Surface *screen12, Sint32 x, Sint32 y, Uint32 w, Uint32 h)
@@ -2004,15 +1692,11 @@ SDL_WM_GetCaption(const char **title, const char **icon)
     }
 }
 
-#if SANITY_CHECK_THIS_CODE
 DECLSPEC void SDLCALL
 SDL_WM_SetIcon(SDL_Surface *icon, Uint8 *mask)
 {
-    // !!! FIXME: free previous icon?
-    VideoIcon = icon;
-    ++VideoIcon->refcount;
+#error write me
 }
-#endif
 
 DECLSPEC int SDLCALL
 SDL_WM_IconifyWindow(void)
@@ -2021,127 +1705,11 @@ SDL_WM_IconifyWindow(void)
     return 0;
 }
 
-#if SANITY_CHECK_THIS_CODE
 DECLSPEC int SDLCALL
 SDL_WM_ToggleFullScreen(SDL_Surface *surface)
 {
-    int length;
-    void *pixels;
-    Uint8 *src, *dst;
-    int row;
-    int window_w;
-    int window_h;
-
-    if (!PublicSurface) {
-        SDL20_SetError("SDL_SetVideoMode() hasn't been called");
-        return 0;
-    }
-
-    /* Copy the old bits out */
-    length = PublicSurface->w * PublicSurface->format->BytesPerPixel;
-    pixels = SDL20_malloc(PublicSurface->h * length);
-    if (pixels && PublicSurface->pixels) {
-        src = (Uint8*)PublicSurface->pixels;
-        dst = (Uint8*)pixels;
-        for (row = 0; row < PublicSurface->h; ++row) {
-            SDL_memcpy(dst, src, length);
-            src += PublicSurface->pitch;
-            dst += length;
-        }
-    }
-
-    /* Do the physical mode switch */
-    if (SDL20_GetWindowFlags(VideoWindow20) & SDL_WINDOW_FULLSCREEN) {
-        if (SDL20_SetWindowFullscreen(VideoWindow20, 0) < 0) {
-            return 0;
-        }
-        PublicSurface->flags &= ~SDL_FULLSCREEN;
-    } else {
-        if (SDL20_SetWindowFullscreen(VideoWindow20, 1) < 0) {
-            return 0;
-        }
-        PublicSurface->flags |= SDL_FULLSCREEN;
-    }
-
-    /* Recreate the screen surface */
-    WindowSurface = SDL20_GetWindowSurface(VideoWindow20);
-    if (!WindowSurface) {
-        /* We're totally hosed... */
-        return 0;
-    }
-
-    /* Center the public surface in the window surface */
-    SDL_GetWindowSize(VideoWindow20, &window_w, &window_h);
-    VideoViewport.x = (window_w - VideoSurface->w)/2;
-    VideoViewport.y = (window_h - VideoSurface->h)/2;
-    VideoViewport.w = VideoSurface->w;
-    VideoViewport.h = VideoSurface->h;
-
-    /* Do some shuffling behind the application's back if format changes */
-    if (VideoSurface->format->format != WindowSurface->format->format) {
-        if (ShadowSurface) {
-            if (ShadowSurface->format->format == WindowSurface->format->format) {
-                /* Whee!  We don't need a shadow surface anymore! */
-                VideoSurface->flags &= ~SDL_DONTFREE;
-                SDL_FreeSurface(VideoSurface);
-                SDL20_free(ShadowSurface->pixels);
-                VideoSurface = ShadowSurface;
-                VideoSurface->flags |= SDL_PREALLOC;
-                ShadowSurface = NULL;
-            } else {
-                /* No problem, just change the video surface format */
-                SDL_FreeFormat(VideoSurface->format);
-                VideoSurface->format = WindowSurface->format;
-                VideoSurface->format->refcount++;
-                SDL_InvalidateMap(ShadowSurface->map);
-            }
-        } else {
-            /* We can make the video surface the shadow surface */
-            ShadowSurface = VideoSurface;
-            ShadowSurface->pitch = SDL_CalculatePitch(ShadowSurface);
-            ShadowSurface->pixels = SDL20_malloc(ShadowSurface->h * ShadowSurface->pitch);
-            if (!ShadowSurface->pixels) {
-                /* Uh oh, we're hosed */
-                ShadowSurface = NULL;
-                return 0;
-            }
-            ShadowSurface->flags &= ~SDL_PREALLOC;
-
-            VideoSurface = SDL_CreateRGBSurfaceFrom(NULL, 0, 0, 32, 0, 0, 0, 0, 0);
-            VideoSurface->flags = ShadowSurface->flags;
-            VideoSurface->flags |= SDL_PREALLOC;
-            SDL_FreeFormat(VideoSurface->format);
-            VideoSurface->format = WindowSurface->format;
-            VideoSurface->format->refcount++;
-            VideoSurface->w = ShadowSurface->w;
-            VideoSurface->h = ShadowSurface->h;
-        }
-    }
-
-    /* Update the video surface */
-    VideoSurface->pitch = WindowSurface->pitch;
-    VideoSurface->pixels = (void *)((Uint8 *)WindowSurface->pixels +
-        VideoViewport.y * VideoSurface->pitch +
-        VideoViewport.x  * VideoSurface->format->BytesPerPixel);
-    SDL_SetClipRect(VideoSurface, NULL);
-
-    /* Copy the old bits back */
-    if (pixels) {
-        src = (Uint8*)pixels;
-        dst = (Uint8*)PublicSurface->pixels;
-        for (row = 0; row < PublicSurface->h; ++row) {
-            SDL_memcpy(dst, src, length);
-            src += length;
-            dst += PublicSurface->pitch;
-        }
-        SDL_Flip(PublicSurface);
-        SDL20_free(pixels);
-    }
-
-    /* We're done! */
-    return 1;
+#error write me
 }
-#endif
 
 typedef enum
 {
@@ -2184,29 +1752,24 @@ SDL_GetAppState(void)
     return state12;
 }
 
-#if SANITY_CHECK_THIS_CODE
 DECLSPEC int SDLCALL
 SDL_SetPalette(SDL12_Surface *surface12, int flags, const SDL_Color *colors,
                int firstcolor, int ncolors)
 {
-    return SDL_SetColors(surface12, colors, firstcolor, ncolors);
+#error write me
 }
 
 DECLSPEC int SDLCALL
 SDL_SetColors(SDL12_Surface *surface12, const SDL_Color * colors, int firstcolor,
               int ncolors)
 {
-    if (SDL20_SetPaletteColors
-        (surface->format->palette, colors, firstcolor, ncolors) == 0) {
-        return 1;
-    } else {
-        return 0;
-    }
+#error write me
 }
 
 DECLSPEC int SDLCALL
 SDL_GetWMInfo(SDL_SysWMinfo * info)
 {
+#error write me
     return SDL_GetWindowWMInfo(VideoWindow20, info);
 }
 
@@ -2220,191 +1783,32 @@ struct private_yuvhwdata
 DECLSPEC SDL_Overlay * SDLCALL
 SDL_CreateYUVOverlay(int w, int h, Uint32 format, SDL12_Surface *display)
 {
-    SDL_Overlay *overlay;
-    Uint32 texture_format;
-    SDL_SW_YUVTexture *texture;
-
-    if ((display->flags & SDL_OPENGL) == SDL_OPENGL) {
-        SDL20_SetError("YUV overlays are not supported in OpenGL mode");
-        return NULL;
-    }
-
-    if (display != PublicSurface) {
-        SDL20_SetError("YUV display is only supported on the screen surface");
-        return NULL;
-    }
-
-    switch (format) {
-    case SDL_YV12_OVERLAY:
-        texture_format = SDL_PIXELFORMAT_YV12;
-        break;
-    case SDL_IYUV_OVERLAY:
-        texture_format = SDL_PIXELFORMAT_IYUV;
-        break;
-    case SDL_YUY2_OVERLAY:
-        texture_format = SDL_PIXELFORMAT_YUY2;
-        break;
-    case SDL_UYVY_OVERLAY:
-        texture_format = SDL_PIXELFORMAT_UYVY;
-        break;
-    case SDL_YVYU_OVERLAY:
-        texture_format = SDL_PIXELFORMAT_YVYU;
-        break;
-    default:
-        SDL20_SetError("Unknown YUV format");
-        return NULL;
-    }
-
-    overlay = (SDL_Overlay *) SDL20_malloc(sizeof(*overlay));
-    if (!overlay) {
-        SDL20_OutOfMemory();
-        return NULL;
-    }
-    SDL20_zerop(overlay);
-
-    overlay->hwdata =
-        (struct private_yuvhwdata *) SDL20_malloc(sizeof(*overlay->hwdata));
-    if (!overlay->hwdata) {
-        SDL20_free(overlay);
-        SDL20_OutOfMemory();
-        return NULL;
-    }
-
-    texture = SDL_SW_CreateYUVTexture(texture_format, w, h);
-    if (!texture) {
-        SDL20_free(overlay->hwdata);
-        SDL20_free(overlay);
-        return NULL;
-    }
-    overlay->hwdata->texture = texture;
-    overlay->hwdata->display = NULL;
-    overlay->hwdata->display_format = SDL_PIXELFORMAT_UNKNOWN;
-
-    overlay->format = format;
-    overlay->w = w;
-    overlay->h = h;
-    if (format == SDL_YV12_OVERLAY || format == SDL_IYUV_OVERLAY) {
-        overlay->planes = 3;
-    } else {
-        overlay->planes = 1;
-    }
-    overlay->pitches = texture->pitches;
-    overlay->pixels = texture->planes;
-
-    return overlay;
+#error write me
 }
 
 DECLSPEC int SDLCALL
 SDL_LockYUVOverlay(SDL_Overlay * overlay)
 {
-    SDL_Rect rect;
-    void *pixels;
-    int pitch;
-
-    if (!overlay) {
-        return SDL20_SetError("Passed a NULL overlay");
-    }
-
-    rect.x = 0;
-    rect.y = 0;
-    rect.w = overlay->w;
-    rect.h = overlay->h;
-
-    if (SDL_SW_LockYUVTexture(overlay->hwdata->texture, &rect, &pixels, &pitch) < 0) {
-        return -1;
-    }
-
-    overlay->pixels[0] = (Uint8 *) pixels;
-    overlay->pitches[0] = pitch;
-    switch (overlay->format) {
-    case SDL_YV12_OVERLAY:
-    case SDL_IYUV_OVERLAY:
-        overlay->pitches[1] = pitch / 2;
-        overlay->pitches[2] = pitch / 2;
-        overlay->pixels[1] =
-            overlay->pixels[0] + overlay->pitches[0] * overlay->h;
-        overlay->pixels[2] =
-            overlay->pixels[1] + overlay->pitches[1] * overlay->h / 2;
-        break;
-    case SDL_YUY2_OVERLAY:
-    case SDL_UYVY_OVERLAY:
-    case SDL_YVYU_OVERLAY:
-        break;
-    }
-    return 0;
+#error write me
 }
 
 DECLSPEC void SDLCALL
 SDL_UnlockYUVOverlay(SDL_Overlay * overlay)
 {
-    if (!overlay) {
-        return;
-    }
-
-    SDL_SW_UnlockYUVTexture(overlay->hwdata->texture);
+#error write me
 }
 
 DECLSPEC int SDLCALL
 SDL_DisplayYUVOverlay(SDL_Overlay * overlay, SDL_Rect * dstrect)
 {
-    SDL_Surface *display;
-    SDL_Rect src_rect;
-    SDL_Rect dst_rect;
-    void *pixels;
-
-    if (!overlay || !dstrect) {
-        return SDL20_SetError("Passed a NULL overlay or dstrect");
-    }
-
-    display = overlay->hwdata->display;
-    if (display != VideoSurface) {
-        overlay->hwdata->display = display = VideoSurface;
-        overlay->hwdata->display_format = SDL_MasksToPixelFormatEnum(
-                                                display->format->BitsPerPixel,
-                                                display->format->Rmask,
-                                                display->format->Gmask,
-                                                display->format->Bmask,
-                                                display->format->Amask);
-    }
-
-    src_rect.x = 0;
-    src_rect.y = 0;
-    src_rect.w = overlay->w;
-    src_rect.h = overlay->h;
-
-    if (!SDL_IntersectRect(&display->clip_rect, dstrect, &dst_rect)) {
-        return 0;
-    }
-     
-    pixels = (void *)((Uint8 *)display->pixels +
-                        dst_rect.y * display->pitch +
-                        dst_rect.x * display->format->BytesPerPixel);
-
-    if (SDL_SW_CopyYUVToRGB(overlay->hwdata->texture, &src_rect,
-                            overlay->hwdata->display_format,
-                            dst_rect.w, dst_rect.h,
-                            pixels, display->pitch) < 0) {
-        return -1;
-    }
-    SDL_UpdateWindowSurface(VideoWindow20);
-    return 0;
+#error write me
 }
 
 DECLSPEC void SDLCALL
 SDL_FreeYUVOverlay(SDL_Overlay * overlay)
 {
-    if (!overlay) {
-        return;
-    }
-    if (overlay->hwdata) {
-        if (overlay->hwdata->texture) {
-            SDL_SW_DestroyYUVTexture(overlay->hwdata->texture);
-        }
-        SDL20_free(overlay->hwdata);
-    }
-    SDL20_free(overlay);
+#error write me
 }
-#endif
 
 DECLSPEC int SDLCALL
 SDL_GL_SetAttribute(SDL12_GLattr attr, int value)
@@ -2498,25 +1902,11 @@ SDL_GetKeyRepeat(int *delay, int *interval)
     }
 }
 
-#if SANITY_CHECK_THIS_CODE
 DECLSPEC int SDLCALL
 SDL_EnableUNICODE(int enable)
 {
-    int previous = EnabledUnicode;
-
-    switch (enable) {
-    case 1:
-        EnabledUnicode = 1;
-        SDL20_StartTextInput();
-        break;
-    case 0:
-        EnabledUnicode = 0;
-        SDL20_StopTextInput();
-        break;
-    }
-    return previous;
+#error write me
 }
-#endif
 
 static Uint32
 SetTimerOld_Callback(Uint32 interval, void* param)
