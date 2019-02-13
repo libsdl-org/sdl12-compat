@@ -26,13 +26,19 @@
 #endif
 
 #ifndef SDL20_SYM_PASSTHROUGH
-#define SDL20_SYM_PASSTHROUGH(rc,fn,params,args,ret)
+#define SDL20_SYM_PASSTHROUGH(rc,fn,params,args,ret) SDL20_SYM(rc,fn,params,args,ret)
+#endif
+
+#ifndef SDL20_SYM_VARARGS
+#define SDL20_SYM_VARARGS(rc,fn,params) SDL20_SYM(rc,fn,params,unused,unused)
 #endif
 
 SDL20_SYM(int,Init,(Uint32 a),(a),return)
 SDL20_SYM(int,InitSubSystem,(Uint32 a),(a),return)
 SDL20_SYM(Uint32,WasInit,(Uint32 a),(a),return)
 SDL20_SYM(char*,GetError,(void),(),return)
+SDL20_SYM_VARARGS(int,SetError,(const char *fmt, ...))
+
 SDL20_SYM_PASSTHROUGH(int,Error,(SDL_errorcode a),(a),return)
 SDL20_SYM_PASSTHROUGH(void,ClearError,(void),(),)
 SDL20_SYM(void,Quit,(void),(),)
@@ -222,8 +228,8 @@ SDL20_SYM_PASSTHROUGH(int,strcmp,(const char *a, const char *b),(a,b),return)
 SDL20_SYM_PASSTHROUGH(int,strncmp,(const char *a, const char *b, size_t c),(a,b,c),return)
 SDL20_SYM_PASSTHROUGH(int,strcasecmp,(const char *a, const char *b),(a,b),return)
 SDL20_SYM_PASSTHROUGH(int,strncasecmp,(const char *a, const char *b, size_t c),(a,b,c),return)
-//SDL20_SYM_PASSTHROUGH(int,sscanf,(const char *text, const char *fmt, ...);
-//SDL20_SYM_PASSTHROUGH(int,snprintf,(char *text, size_t maxlen, const char *fmt, ...);
+SDL20_SYM_VARARGS(int,sscanf,(const char *text, const char *fmt, ...))
+SDL20_SYM_VARARGS(int,snprintf,(char *text, size_t maxlen, const char *fmt, ...))
 SDL20_SYM_PASSTHROUGH(int,vsnprintf,(char *a, size_t b, const char *c, va_list d),(a,b,c,d),return)
 SDL20_SYM_PASSTHROUGH(SDL_iconv_t,iconv_open,(const char *a, const char *b),(a,b),return)
 SDL20_SYM_PASSTHROUGH(int,iconv_close,(SDL_iconv_t a),(a),return)
@@ -234,6 +240,7 @@ SDL20_SYM(int,atoi,(const char *a),(a),return)
 
 #undef SDL20_SYM
 #undef SDL20_SYM_PASSTHROUGH
+#undef SDL20_SYM_VARARGS
 
 /* vi: set ts=4 sw=4 expandtab: */
 

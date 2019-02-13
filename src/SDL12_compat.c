@@ -114,13 +114,7 @@
 #define SDL20_SYM(rc,fn,params,args,ret) \
     typedef rc (SDLCALL *SDL20_##fn##_t) params; \
     static SDL20_##fn##_t SDL20_##fn = NULL;
-#define SDL20_SYM_PASSTHROUGH(rc,fn,params,args,ret) \
-    SDL20_SYM(rc,fn,params,args,ret)
 #include "SDL20_syms.h"
-
-/* this doesn't get handled in SDL20_syms.h because it uses varargs. */
-typedef int (SDLCALL *SDL20_SetError_t)(const char *fmt, ...);
-static SDL20_SetError_t SDL20_SetError = NULL;
 
 /* Things that _should_ be binary compatible pass right through... */
 #define SDL20_SYM_PASSTHROUGH(rc,fn,params,args,ret) \
@@ -491,8 +485,9 @@ LoadSDL20Symbol(const char *fn, int *okay)
     if (*okay)  /* only bother trying if we haven't previously failed. */
     {
         retval = LookupSDL20Sym(fn);
-        if (retval == NULL)
-            *okay = 0;
+if (!retval) { fprintf(stderr, "WARNING: LOAD FAILED: %s\n", fn); }
+//        if (retval == NULL)
+//            *okay = 0;
     }
     return retval;
 }
@@ -501,9 +496,7 @@ static void
 UnloadSDL20(void)
 {
     #define SDL20_SYM(rc,fn,params,args,ret) SDL20_##fn = NULL;
-    #define SDL20_SYM_PASSTHROUGH(rc,fn,params,args,ret) SDL20_SYM(rc,fn,params,args,ret)
     #include "SDL20_syms.h"
-    SDL20_SetError = NULL;
     CloseSDL20Library();
 }
 
@@ -515,9 +508,7 @@ LoadSDL20(void)
     {
         okay = LoadSDL20Library();
         #define SDL20_SYM(rc,fn,params,args,ret) SDL20_##fn = (SDL20_##fn##_t) LoadSDL20Symbol("SDL_" #fn, &okay);
-        #define SDL20_SYM_PASSTHROUGH(rc,fn,params,args,ret) SDL20_SYM(rc,fn,params,args,ret)
         #include "SDL20_syms.h"
-        SDL20_SetError = (SDL20_SetError_t) LoadSDL20Symbol("SDL_SetError", &okay);
         if (!okay)
             UnloadSDL20();
     }
