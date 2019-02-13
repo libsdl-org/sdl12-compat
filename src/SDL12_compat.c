@@ -22,6 +22,7 @@
 /* This file contains functions for backwards compatibility with SDL 1.2 */
 
 // !!! FIXME: clean up code conventions
+// !!! FIXME: grep for VideoWindow20 places that might care if it's NULL
 
 #include "SDL20_include_wrapper.h"
 
@@ -95,6 +96,20 @@
 // !!! IMPLEMENT_ME SDL_WM_ToggleFullScreen
 
 // !!! IMPLEMENT_ME X11_KeyToUnicode
+
+
+#if 0
+#define FIXME(x) do {} while (0)
+#else
+#define FIXME(x) \
+    do { \
+        static SDL_bool seen = SDL_FALSE; \
+        if (!seen) { \
+            fprintf(stderr, "FIXME: %s (%s:%d)\n", x, __FILE__, __LINE__); \
+            seen = SDL_TRUE; \
+        } \
+    } while (0)
+#endif
 
 #define SDL20_SYM(rc,fn,params,args,ret) \
     typedef rc (SDLCALL *SDL20_##fn##_t) params; \
@@ -408,6 +423,7 @@ typedef struct
     SDL_Rect **modes;  /* ptrs to each item in modeslist, for SDL_ListModes() */
 } VideoModeList;
 
+// !!! FIXME: go through all of these.
 static VideoModeList *VideoModes = NULL;
 static int VideoModesCount = 0;
 static SDL12_VideoInfo VideoInfo;
@@ -642,9 +658,10 @@ Init12Video(void)
 DECLSPEC int SDLCALL
 SDL_InitSubSystem(Uint32 sdl12flags)
 {
-    // !!! FIXME: there is never a parachute in SDL2, should we catch segfaults ourselves?
+    FIXME("there is never a parachute in SDL2, should we catch segfaults ourselves?");
 
-    // !!! FIXME: support event thread where it makes sense to do so?
+    FIXME("support event thread where it makes sense to do so?");
+
 	if ( (sdl12flags & SDL12_INIT_EVENTTHREAD) == SDL12_INIT_EVENTTHREAD ) {
 		return SDL20_SetError("OS doesn't support threaded events");
 	}
@@ -667,12 +684,13 @@ SDL_InitSubSystem(Uint32 sdl12flags)
     if (sdl12flags & SDL12_INIT_CDROM)
         CDRomInit = 1;
 
-    // !!! FIXME: do something about SDL12_INIT_EVENTTHREAD
+    FIXME("do something about SDL12_INIT_EVENTTHREAD");
 
     rc = SDL20_Init(sdl20flags);
     if ((rc == 0) && (sdl20flags & SDL_INIT_VIDEO)) {
         if (Init12Video() == -1) {
-            return -1;  /* !!! FIXME: should we deinit other subsystems? */
+            FIXME("should we deinit other subsystems?");
+            return -1;
         }
     }
 
@@ -682,7 +700,7 @@ SDL_InitSubSystem(Uint32 sdl12flags)
 DECLSPEC int SDLCALL
 SDL_Init(Uint32 sdl12flags)
 {
-    // !!! FIXME: what was different in 1.2?
+    FIXME("what was different in 1.2?");
     return SDL_InitSubSystem(sdl12flags);   /* there's no difference betwee Init and InitSubSystem in SDL2. */
 }
 
@@ -705,7 +723,7 @@ InitFlags12To20(const Uint32 flags12, Uint32 *_flags20, Uint32 *_extraflags)
         extraflags |= SDL12_INIT_CDROM;
     }
 
-    // !!! FIXME: do something about SDL12_INIT_EVENTTHREAD
+    FIXME("do something about SDL12_INIT_EVENTTHREAD");
 
     *_flags20 = flags20;
     *_extraflags = extraflags;
@@ -768,12 +786,12 @@ SDL_QuitSubSystem(Uint32 sdl12flags)
         CDRomInit = 0;
     }
 
-    // !!! FIXME: reset a bunch of other global variables too.
+    FIXME("reset a bunch of other global variables too.");
     if (sdl12flags & SDL12_INIT_VIDEO) {
         Quit12Video();
     }
 
-    // !!! FIXME: do something about SDL12_INIT_EVENTTHREAD
+    FIXME("do something about SDL12_INIT_EVENTTHREAD");
     SDL20_QuitSubSystem(sdl20flags);
 
     if ((SDL20_WasInit(0) == 0) && (!CDRomInit)) {
@@ -945,7 +963,7 @@ SDL_PeepEvents(SDL12_Event *events12, int numevents, SDL_eventaction action, Uin
 DECLSPEC int SDLCALL
 SDL_WaitEvent(SDL12_Event *event12)
 {
-    /* !!! FIXME: In 1.2, this only fails (-1) if you haven't SDL_Init()'d. */
+    FIXME("In 1.2, this only fails (-1) if you haven't SDL_Init()'d.");
     while (!SDL_PollEvent(event12))
         SDL20_Delay(10);
     return 1;
@@ -1025,7 +1043,8 @@ EventFilter20to12(void *data, SDL_Event *event20)
                     break;
 
                 case SDL_WINDOWEVENT_RESIZED:
-                case SDL_WINDOWEVENT_SIZE_CHANGED:  // !!! FIXME: what's the difference between RESIZED and SIZE_CHANGED?
+                case SDL_WINDOWEVENT_SIZE_CHANGED:
+                    FIXME("what's the difference between RESIZED and SIZE_CHANGED?");
                     event12.type = SDL12_VIDEORESIZE;
                     event12.resize.w = event20->window.data1;
                     event12.resize.h = event20->window.data2;
@@ -1072,15 +1091,11 @@ EventFilter20to12(void *data, SDL_Event *event20)
         // !!! FIXME: this is sort of a mess to convert.
         //case SDL_SYSWMEVENT:
 
-        // !!! FIXME: write me
-        case SDL_KEYDOWN:
-        case SDL_KEYUP:
-            return 0;
+        case SDL_KEYDOWN: FIXME("write me"); return 0;
+        case SDL_KEYUP: FIXME("write me"); return 0;
 
-        // !!! FIXME: write me
-        case SDL_TEXTEDITING:
-        case SDL_TEXTINPUT:
-            return 0;
+        case SDL_TEXTEDITING: FIXME("write me"); return 0;
+        case SDL_TEXTINPUT: FIXME("write me"); return 0;
 
         case SDL_MOUSEMOTION:
         	event12.type = SDL12_MOUSEMOTION;
@@ -1244,8 +1259,8 @@ Surface20to12(SDL_Surface *surface20)
     format12->Gmask = surface20->format->Gmask;
     format12->Bmask = surface20->format->Bmask;
     format12->Amask = surface20->format->Amask;
-    /* !!! FIXME: format12->colorkey; */
-    /* !!! FIXME: format12->alpha; */
+    FIXME("format12->colorkey");
+    FIXME("format12->alpha");
 
     SDL20_zerop(surface12);
     flags = surface20->flags;
@@ -1259,7 +1274,7 @@ Surface20to12(SDL_Surface *surface20)
     surface12->format = format12;
     surface12->w = surface20->w;
     surface12->h = surface20->h;
-    surface12->pitch = (Uint16) surface20->pitch;  /* !!! FIXME: make sure this fits in a Uint16 */
+    surface12->pitch = (Uint16) surface20->pitch;  FIXME("make sure this fits in a Uint16");
     surface12->pixels = surface20->pixels;
     surface12->offset = 0;
     surface12->surface20 = surface20;
@@ -1626,25 +1641,31 @@ SDL_GetVideoSurface(void)
 DECLSPEC int SDLCALL
 SDL_SetAlpha(SDL12_Surface * surface, Uint32 flag, Uint8 value)
 {
-#error write me
+    FIXME("write me");
+    return SDL20_Unsupported();
 }
 
 DECLSPEC SDL12_Surface * SDLCALL
 SDL_DisplayFormat(SDL12_Surface *surface12)
 {
-#error write me
+    FIXME("write me");
+    SDL20_Unsupported();
+    return NULL;
 }
 
 DECLSPEC SDL12_Surface * SDLCALL
 SDL_DisplayFormatAlpha(SDL12_Surface *surface)
 {
-#error write me
+    FIXME("write me");
+    SDL20_Unsupported();
+    return NULL;
 }
 
 DECLSPEC void SDLCALL
 SDL_UpdateRects(SDL12_Surface * screen12, int numrects, SDL_Rect * rects)
 {
-#error write me
+    FIXME("write me");
+    SDL20_Unsupported();
 }
 
 DECLSPEC void SDLCALL
@@ -1695,7 +1716,8 @@ SDL_WM_GetCaption(const char **title, const char **icon)
 DECLSPEC void SDLCALL
 SDL_WM_SetIcon(SDL_Surface *icon, Uint8 *mask)
 {
-#error write me
+    FIXME("write me");
+    SDL20_Unsupported();
 }
 
 DECLSPEC int SDLCALL
@@ -1708,7 +1730,8 @@ SDL_WM_IconifyWindow(void)
 DECLSPEC int SDLCALL
 SDL_WM_ToggleFullScreen(SDL12_Surface *surface)
 {
-#error write me
+    FIXME("write me");
+    return SDL20_Unsupported();
 }
 
 typedef enum
@@ -1756,21 +1779,24 @@ DECLSPEC int SDLCALL
 SDL_SetPalette(SDL12_Surface *surface12, int flags, const SDL_Color *colors,
                int firstcolor, int ncolors)
 {
-#error write me
+    FIXME("write me");
+    return SDL20_Unsupported();
 }
 
 DECLSPEC int SDLCALL
 SDL_SetColors(SDL12_Surface *surface12, const SDL_Color * colors, int firstcolor,
               int ncolors)
 {
-#error write me
+    FIXME("write me");
+    return SDL20_Unsupported();
 }
 
 DECLSPEC int SDLCALL
 SDL_GetWMInfo(SDL_SysWMinfo * info)
 {
-#error write me
-    return SDL_GetWindowWMInfo(VideoWindow20, info);
+    FIXME("write me");
+    //return SDL20_GetWindowWMInfo(VideoWindow20, info);
+    return SDL20_Unsupported();
 }
 
 struct private_yuvhwdata
@@ -1783,31 +1809,35 @@ struct private_yuvhwdata
 DECLSPEC SDL_Overlay * SDLCALL
 SDL_CreateYUVOverlay(int w, int h, Uint32 format, SDL12_Surface *display)
 {
-#error write me
+    FIXME("write me");
+    SDL20_Unsupported();
+    return NULL;
 }
 
 DECLSPEC int SDLCALL
 SDL_LockYUVOverlay(SDL_Overlay * overlay)
 {
-#error write me
+    FIXME("write me");
+    return SDL20_Unsupported();
 }
 
 DECLSPEC void SDLCALL
 SDL_UnlockYUVOverlay(SDL_Overlay * overlay)
 {
-#error write me
+    FIXME("write me");
 }
 
 DECLSPEC int SDLCALL
 SDL_DisplayYUVOverlay(SDL_Overlay * overlay, SDL_Rect * dstrect)
 {
-#error write me
+    FIXME("write me");
+    return SDL20_Unsupported();
 }
 
 DECLSPEC void SDLCALL
 SDL_FreeYUVOverlay(SDL_Overlay * overlay)
 {
-#error write me
+    FIXME("write me");
 }
 
 DECLSPEC int SDLCALL
@@ -1820,7 +1850,7 @@ SDL_GL_SetAttribute(SDL12_GLattr attr, int value)
     if (attr == SDL12_GL_SWAP_CONTROL)
     {
         SwapInterval = value;
-#error Actually set swap interval somewhere.
+        FIXME("Actually set swap interval somewhere");
         return 0;
     }
 
@@ -1906,7 +1936,8 @@ SDL_GetKeyRepeat(int *delay, int *interval)
 DECLSPEC int SDLCALL
 SDL_EnableUNICODE(int enable)
 {
-#error write me
+    FIXME("write me");
+    return SDL20_Unsupported();
 }
 
 static Uint32
@@ -1965,7 +1996,8 @@ typedef int SDL12_CDstatus;  /* close enough.  :) */
 DECLSPEC int SDLCALL
 SDL_CDNumDrives(void)
 {
-    return 0;  /* !!! FIXME: should return -1 without SDL_INIT_CDROM */
+    FIXME("should return -1 without SDL_INIT_CDROM");
+    return 0;
 }
 
 DECLSPEC const char *SDLCALL SDL_CDName(int drive) { SDL20_Unsupported(); return NULL; }
@@ -2006,10 +2038,9 @@ SDL_mutexV(SDL_mutex *mutex)
     return SDL20_UnlockMutex(mutex);
 }
 
-
-/* !!! FIXME: Removed from 2.0; do nothing. We can't even report failure. */
 DECLSPEC void SDLCALL SDL_KillThread(SDL_Thread *thread)
 {
+    FIXME("Removed from 2.0; do nothing. We can't even report failure.");
     fprintf(stderr,
         "WARNING: this app used SDL_KillThread(), an unforgivable curse.\n"
         "This program should be fixed. No thread was actually harmed.\n");
@@ -2191,7 +2222,7 @@ RWops12to20_size(struct SDL_RWops *rwops20)
 static Sint64 SDLCALL
 RWops12to20_seek(struct SDL_RWops *rwops20, Sint64 offset, int whence)
 {
-    /* !!! FIXME: fail if (offset) is too big */
+    FIXME("fail if (offset) is too big");
     SDL12_RWops *rwops12 = (SDL12_RWops *) rwops20->hidden.unknown.data1;
     return (Sint64) rwops12->seek(rwops12, (int) offset, whence);
 }
@@ -2199,7 +2230,7 @@ RWops12to20_seek(struct SDL_RWops *rwops20, Sint64 offset, int whence)
 static size_t SDLCALL
 RWops12to20_read(struct SDL_RWops *rwops20, void *ptr, size_t size, size_t maxnum)
 {
-    /* !!! FIXME: fail if (size) or (maxnum) is too big */
+    FIXME("fail if (size) or (maxnum) is too big");
     SDL12_RWops *rwops12 = (SDL12_RWops *) rwops20->hidden.unknown.data1;
     return (size_t) rwops12->read(rwops12, ptr, (int) size, (int) maxnum);
 }
@@ -2207,7 +2238,7 @@ RWops12to20_read(struct SDL_RWops *rwops20, void *ptr, size_t size, size_t maxnu
 static size_t SDLCALL
 RWops12to20_write(struct SDL_RWops *rwops20, const void *ptr, size_t size, size_t num)
 {
-    /* !!! FIXME: fail if (size) or (maxnum) is too big */
+    FIXME("fail if (size) or (maxnum) is too big");
     SDL12_RWops *rwops12 = (SDL12_RWops *) rwops20->hidden.unknown.data1;
     return (size_t) rwops12->write(rwops12, ptr, (int) size, (int) num);
 }
@@ -2266,7 +2297,7 @@ SDL_LoadBMP_RW(SDL12_RWops *rwops12, int freerwops12)
 DECLSPEC int SDLCALL
 SDL_SaveBMP_RW(SDL12_Surface *surface12, SDL12_RWops *rwops12, int freerwops12)
 {
-    // !!! FIXME: wrap surface.
+    FIXME("wrap surface");
     SDL_RWops *rwops20 = RWops12to20(rwops12);
     const int retval = SDL20_SaveBMP_RW(surface12->surface20, rwops20, freerwops12);
     if (!freerwops12)  /* free our wrapper if SDL2 didn't close it. */
@@ -2280,7 +2311,7 @@ SDL_LoadWAV_RW(SDL12_RWops *rwops12, int freerwops12,
 {
     SDL_RWops *rwops20 = RWops12to20(rwops12);
     SDL_AudioSpec *retval = SDL20_LoadWAV_RW(rwops20, freerwops12, spec, buf, len);
-    /* !!! FIXME: deal with non-1.2 formats, like float32 ... */
+    FIXME("deal with non-1.2 formats, like float32");
     if (!freerwops12)  /* free our wrapper if SDL2 didn't close it. */
         SDL20_FreeRW(rwops20);
     return retval;
