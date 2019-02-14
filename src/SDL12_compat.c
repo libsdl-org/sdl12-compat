@@ -1587,7 +1587,7 @@ SDL_GetCursor(void)
 }
 
 static void
-GetEnvironmentWindowPosition(int w, int h, int *x, int *y)
+GetEnvironmentWindowPosition(int *x, int *y)
 {
     int display = VideoDisplayIndex;
     const char *window = SDL20_getenv("SDL_VIDEO_WINDOW_POS");
@@ -1629,10 +1629,251 @@ SetupScreenSaver(const int flags12)
 }
 
 
+static SDL12_Surface *
+EndVidModeCreate(void)
+{
+    if (VideoTexture20) {
+        SDL20_DestroyTexture(VideoTexture20);
+        VideoTexture20 = NULL;
+    }
+    if (VideoRenderer20) {
+        SDL20_DestroyRenderer(VideoRenderer20);
+        VideoRenderer20 = NULL;
+    }
+    if (VideoGLContext20) {
+        SDL20_GL_MakeCurrent(NULL, NULL);
+        SDL20_GL_DeleteContext(VideoGLContext20);
+        VideoGLContext20 = NULL;
+    }
+    if (VideoWindow20) {
+        SDL20_DestroyWindow(VideoWindow20);
+        VideoWindow20 = NULL;
+    }
+    if (VideoSurface12) {
+        SDL20_free(VideoSurface12->pixels);
+        VideoSurface12->pixels = NULL;
+        SDL_FreeSurface(VideoSurface12);
+        VideoSurface12 = NULL;
+    }
+    if (VideoConvertSurface20) {
+        SDL20_FreeSurface(VideoConvertSurface20);
+        VideoConvertSurface20 = NULL;
+    }
+    return NULL;
+}
+
+
+static SDL12_Surface *
+CreateSurface12WithFormat(const int w, const int h, const Uint32 fmt)
+{
+    Uint32 rmask, gmask, bmask, amask;
+    int bpp;
+    if (!SDL20_PixelFormatEnumToMasks(fmt, &bpp, &rmask, &gmask, &bmask, &amask)) {
+        return NULL;
+    }
+    return SDL_CreateRGBSurface(0, w, h, bpp, rmask, gmask, bmask, amask);
+}
+
+static SDL_Surface *
+CreateNullPixelSurface20(const int width, const int height, const Uint32 fmt)
+{
+    SDL_Surface *surface20 = SDL20_CreateRGBSurfaceWithFormat(0, 0, 0, SDL_BITSPERPIXEL(fmt), fmt);
+    if (surface20) {
+        surface20->flags |= SDL_PREALLOC;
+        surface20->pixels = NULL;
+        surface20->w = width;
+        surface20->h = height;
+        surface20->pitch = 0;
+        SDL20_SetClipRect(surface20, NULL);
+    }
+    return surface20;
+}
+
+
 DECLSPEC SDL12_Surface * SDLCALL
 SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
 {
-#error write me
+    FIXME("currently ignores SDL_WINDOWID, which we could use with SDL_CreateWindowFrom ...?");
+    SDL_DisplayMode dmode;
+    Uint32 fullscreen_flags20 = 0;
+    Uint32 appfmt;
+
+    /* SDL_SetVideoMode() implicitly inits if necessary. */
+    if (SDL20_WasInit(SDL_INIT_VIDEO) == 0) {
+        if (SDL20_Init(SDL_INIT_VIDEO) < 0) {
+            return NULL;
+        }
+    }
+
+    if ((flags12 & SDL12_OPENGLBLIT) == SDL12_OPENGLBLIT) {
+        FIXME("No OPENGLBLIT support at the moment");
+        SDL20_SetError("SDL_OPENGLBLIT is (currently) unsupported");
+        return NULL;
+    }
+
+    FIXME("handle SDL_ANYFORMAT");
+
+    if ((width < 0) || (height < 0)) {
+        SDL20_SetError("Invalid width or height");
+        return NULL;
+    }
+
+    FIXME("There's an environment variable to choose a display");
+    if (SDL20_GetCurrentDisplayMode(0, &dmode) < 0) {
+        return NULL;
+    }
+
+    if (width == 0) {
+        width = dmode.w;
+    }
+
+    if (height == 0) {
+        height = dmode.h;
+    }
+
+    if (bpp == 0) {
+        bpp = SDL_BITSPERPIXEL(dmode.format);
+    }
+
+    switch (bpp) {
+        case  8: appfmt = SDL_PIXELFORMAT_INDEX8; break;
+        case 16: appfmt = SDL_PIXELFORMAT_RGB565; FIXME("bgr instead of rgb?"); break;
+        case 24: appfmt = SDL_PIXELFORMAT_RGB24; FIXME("bgr instead of rgb?"); break;
+        case 32: appfmt = SDL_PIXELFORMAT_ARGB8888; FIXME("bgr instead of rgb?"); break;
+        default: SDL20_SetError("Unsupported bits-per-pixel"); return NULL;
+    }
+
+    SDL_assert((VideoSurface12 != NULL) == (VideoWindow20 != NULL));
+
+    FIXME("don't do anything if the window's dimensions, etc haven't changed.");
+    FIXME("we need to preserve VideoSurface12 (but not its pixels), I think...");
+
+    if ( VideoSurface12 && ((VideoSurface12->flags & SDL12_OPENGL) != (flags12 & SDL12_OPENGL)) ) {
+        EndVidModeCreate();  /* rebuild the window if moving to/from a GL context */
+    } else if ( VideoSurface12 && (VideoSurface12->surface20->format->format != appfmt)) {
+        EndVidModeCreate();  /* rebuild the window if changing pixel format */
+    } else if (VideoGLContext20) {
+        /* SDL 1.2 (infuriatingly!) destroys the GL context on each resize, so we will too */
+        SDL20_GL_MakeCurrent(NULL, NULL);
+        SDL20_GL_DeleteContext(VideoGLContext20);
+        VideoGLContext20 = NULL;
+    }
+
+    if (flags12 & SDL12_FULLSCREEN) {
+        // OpenGL tries to force the real resolution requested, but for
+        //  software rendering, we're just going to push it off onto the
+        //  GPU, so use FULLSCREEN_DESKTOP and logical scaling there.
+        FIXME("OpenGL will still expect letterboxing and centering if it didn't get an exact resolution match.");
+        if (flags12 & SDL12_OPENGL) {
+            fullscreen_flags20 |= SDL_WINDOW_FULLSCREEN;
+        } else {
+            fullscreen_flags20 |= SDL_WINDOW_FULLSCREEN_DESKTOP;
+        }
+    }
+
+    if (!VideoWindow20) {  /* create it */
+        int x = SDL_WINDOWPOS_UNDEFINED, y = SDL_WINDOWPOS_UNDEFINED;
+        Uint32 flags20 = fullscreen_flags20;
+        if (flags12 & SDL12_OPENGL) { flags20 |= SDL_WINDOW_OPENGL; }
+        if (flags12 & SDL12_RESIZABLE) { flags20 |= SDL_WINDOW_RESIZABLE; }
+        if (flags12 & SDL12_NOFRAME) { flags20 |= SDL_WINDOW_BORDERLESS; }
+
+        /* most platforms didn't check these environment variables, but the major
+           ones did (x11, windib, quartz), so we'll just offer it everywhere. */
+        GetEnvironmentWindowPosition(&x, &y);
+
+        VideoWindow20 = SDL20_CreateWindow(WindowTitle, x, y, width, height, flags20);
+        if (!VideoWindow20) {
+            return EndVidModeCreate();
+        }
+    } else {  /* resize it */
+        SDL20_SetWindowSize(VideoWindow20, width, height);
+        SDL20_SetWindowFullscreen(VideoWindow20, fullscreen_flags20);
+        SDL20_SetWindowBordered(VideoWindow20, (flags12 & SDL12_NOFRAME) ? SDL_FALSE : SDL_TRUE);
+        SDL20_SetWindowResizable(VideoWindow20, (flags12 & SDL12_RESIZABLE) ? SDL_TRUE : SDL_FALSE);
+    }
+
+    if (VideoSurface12) {
+        SDL20_free(VideoSurface12->pixels);
+    } else {
+        VideoSurface12 = CreateSurface12WithFormat(0, 0, appfmt);
+        if (!VideoSurface12) {
+            return EndVidModeCreate();
+        }
+    }
+
+    VideoSurface12->surface20->flags |= SDL_PREALLOC;
+    VideoSurface12->flags |= SDL12_PREALLOC;
+    VideoSurface12->pixels = VideoSurface12->surface20->pixels = NULL;
+    VideoSurface12->w = VideoSurface12->surface20->w = width;
+    VideoSurface12->h = VideoSurface12->surface20->h = height;
+    VideoSurface12->pitch = VideoSurface12->surface20->pitch = width * SDL_BYTESPERPIXEL(appfmt);
+    SDL_SetClipRect(VideoSurface12, NULL);
+
+    if (flags12 & SDL12_OPENGL) {
+        SDL_assert(!VideoTexture20);  /* either a new window or we destroyed all this */
+        SDL_assert(!VideoRenderer20);
+        VideoGLContext20 = SDL20_GL_CreateContext(VideoWindow20);
+        if (!VideoGLContext20) {
+            return EndVidModeCreate();
+        }
+
+        VideoSurface12->flags |= SDL12_OPENGL;
+    } else {
+        /* always use a renderer for non-OpenGL windows. */
+        SDL_RendererInfo rinfo;
+        SDL_assert(!VideoGLContext20);  /* either a new window or we destroyed all this */
+        if (!VideoRenderer20) {
+            VideoRenderer20 = SDL20_CreateRenderer(VideoWindow20, -1, 0);
+            if (!VideoRenderer20) {
+                return EndVidModeCreate();
+            }
+        }
+
+        SDL20_RenderSetLogicalSize(VideoRenderer20, width, height);
+        SDL20_SetRenderDrawColor(VideoRenderer20, 0, 0, 0, 255);
+        SDL20_RenderClear(VideoRenderer20);
+        SDL20_RenderPresent(VideoRenderer20);
+        SDL20_SetRenderDrawColor(VideoRenderer20, 255, 255, 255, 255);
+
+        if (SDL20_GetRendererInfo(VideoRenderer20, &rinfo) < 0) {
+            return EndVidModeCreate();
+        }
+
+        if (VideoTexture20) {
+            SDL20_DestroyTexture(VideoTexture20);
+        }
+
+        if (VideoConvertSurface20) {
+            SDL20_FreeSurface(VideoConvertSurface20);
+            VideoConvertSurface20 = NULL;
+        }
+
+        VideoTexture20 = SDL20_CreateTexture(VideoRenderer20, rinfo.texture_formats[0], SDL_TEXTUREACCESS_STREAMING, width, height);
+        if (!VideoTexture20) {
+            return EndVidModeCreate();
+        }
+
+        if (rinfo.texture_formats[0] != appfmt) {
+            /* need to convert between app's format and texture format */
+            VideoConvertSurface20 = CreateNullPixelSurface20(width, height, rinfo.texture_formats[0]);
+            if (!VideoConvertSurface20) {
+                return EndVidModeCreate();
+            }
+        }
+
+        VideoSurface12->flags &= ~SDL12_OPENGL;
+        VideoSurface12->surface20->pixels = SDL20_malloc(height * VideoSurface12->pitch);
+        VideoSurface12->pixels = VideoSurface12->surface20->pixels;
+        if (!VideoSurface12->pixels) {
+            SDL20_OutOfMemory();
+            return EndVidModeCreate();
+        }
+    }
+
+    FIXME("setup screen saver");
+
+    return VideoSurface12;
 }
 
 DECLSPEC SDL12_Surface * SDLCALL
@@ -1702,7 +1943,9 @@ SDL_WM_SetCaption(const char *title, const char *icon)
     }
     WindowTitle = title ? SDL_strdup(title) : NULL;
     WindowIconTitle = icon ? SDL_strdup(icon) : NULL;
-    SDL20_SetWindowTitle(VideoWindow20, WindowTitle);
+    if (VideoWindow20) {
+        SDL20_SetWindowTitle(VideoWindow20, WindowTitle);
+    }
 }
 
 DECLSPEC void SDLCALL
