@@ -537,10 +537,10 @@ SDL_Linked_Version(void)
 static int
 GetVideoDisplay()
 {
-    // !!! FIXME: cache this value during SDL_Init() so it doesn't change.
-    const char *variable = SDL_getenv("SDL_VIDEO_FULLSCREEN_DISPLAY");
+    FIXME("cache this value during SDL_Init() so it doesn't change.");
+    const char *variable = SDL20_getenv("SDL_VIDEO_FULLSCREEN_DISPLAY");
     if ( !variable ) {
-        variable = SDL_getenv("SDL_VIDEO_FULLSCREEN_HEAD");
+        variable = SDL20_getenv("SDL_VIDEO_FULLSCREEN_HEAD");
     }
     if ( variable ) {
         return SDL20_atoi(variable);
@@ -1590,16 +1590,16 @@ static void
 GetEnvironmentWindowPosition(int w, int h, int *x, int *y)
 {
     int display = VideoDisplayIndex;
-    const char *window = SDL_getenv("SDL_VIDEO_WINDOW_POS");
-    const char *center = SDL_getenv("SDL_VIDEO_CENTERED");
+    const char *window = SDL20_getenv("SDL_VIDEO_WINDOW_POS");
+    const char *center = SDL20_getenv("SDL_VIDEO_CENTERED");
     if (window) {
-        if (SDL_sscanf(window, "%d,%d", x, y) == 2) {
+        if (SDL20_strcmp(window, "center") == 0) {
+            center = window;
+        } else if (SDL20_sscanf(window, "%d,%d", x, y) == 2) {
             return;
         }
-        if (SDL_strcmp(window, "center") == 0) {
-            center = window;
-        }
     }
+
     if (center) {
         *x = SDL_WINDOWPOS_CENTERED_DISPLAY(display);
         *y = SDL_WINDOWPOS_CENTERED_DISPLAY(display);
@@ -1613,7 +1613,7 @@ SetupScreenSaver(const int flags12)
     SDL_bool allow_screensaver;
 
     /* Allow environment override of screensaver disable */
-    env = SDL_getenv("SDL_VIDEO_ALLOW_SCREENSAVER");
+    env = SDL20_getenv("SDL_VIDEO_ALLOW_SCREENSAVER");
     if (env) {
         allow_screensaver = SDL20_atoi(env) ? SDL_TRUE : SDL_FALSE;
     } else if (flags12 & SDL12_FULLSCREEN) {
