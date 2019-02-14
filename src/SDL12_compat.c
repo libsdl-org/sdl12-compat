@@ -420,23 +420,21 @@ typedef struct
 // !!! FIXME: go through all of these.
 static VideoModeList *VideoModes = NULL;
 static int VideoModesCount = 0;
-static SDL12_VideoInfo VideoInfo;
+static SDL12_VideoInfo VideoInfo12;
 static SDL_Window *VideoWindow20 = NULL;
-static SDL12_Surface *WindowSurface = NULL;
-static SDL12_Surface *VideoSurface = NULL;
-static SDL12_Surface *ShadowSurface = NULL;
-static SDL12_Surface *PublicSurface = NULL;
-static SDL_GLContext *VideoContext = NULL;
-static Uint32 VideoFlags = 0;
-static SDL_Rect VideoViewport;
+static SDL_Renderer *VideoRenderer20 = NULL;
+static SDL_Texture *VideoTexture20 = NULL;
+static SDL12_Surface *VideoSurface12 = NULL;
+static SDL_Surface *VideoConvertSurface20 = NULL;
+static SDL_GLContext *VideoGLContext20 = NULL;
 static char *WindowTitle = NULL;
 static char *WindowIconTitle = NULL;
-static SDL_Surface *VideoIcon;
+static SDL12_Surface *VideoIcon12;
 static int EnabledUnicode = 0;
 static int VideoDisplayIndex = 0;
 static int CDRomInit = 0;
 static SDL12_EventFilter EventFilter12 = NULL;
-static SDL12_Cursor *CurrentCursor = NULL;
+static SDL12_Cursor *CurrentCursor12 = NULL;
 static Uint8 EventStates[SDL12_NUMEVENTS];
 static int SwapInterval = 0;
 
@@ -757,12 +755,12 @@ Quit12Video(void)
     }
     SDL20_free(VideoModes);
 
-    SDL20_FreeFormat(VideoInfo.vfmt);
-    SDL20_zero(VideoInfo);
+    SDL20_FreeFormat(VideoInfo12.vfmt);
+    SDL20_zero(VideoInfo12);
 
     EventFilter12 = NULL;
     EventQueueAvailable = EventQueueHead = EventQueueTail = NULL;
-    CurrentCursor = NULL;
+    CurrentCursor12 = NULL;
     VideoModes = NULL;
     VideoModesCount = 0;
 }
@@ -1424,17 +1422,17 @@ SDL_GetVideoInfo(void)
 {
     SDL_DisplayMode mode;
 
-    // !!! FIXME: calculate this in Init12Video(), then this just does: return VideoInfo.vfmt ? &VideoInfo : NULL;
+    FIXME("calculate this in Init12Video(), then this just does: return VideoInfo.vfmt ? &VideoInfo : NULL;");
 
-    if (!VideoInfo.vfmt && SDL20_GetDesktopDisplayMode(VideoDisplayIndex, &mode) == 0) {
-        VideoInfo.vfmt = SDL20_AllocFormat(mode.format);
-        VideoInfo.current_w = mode.w;
-        VideoInfo.current_h = mode.h;
-        // !!! FIXME
-        //VideoInfo.wm_available = 1;
-        //VideoInfo.video_mem = 1024 * 256;
+    if (!VideoInfo12.vfmt && SDL20_GetDesktopDisplayMode(VideoDisplayIndex, &mode) == 0) {
+        VideoInfo12.vfmt = SDL20_AllocFormat(mode.format);
+        VideoInfo12.current_w = mode.w;
+        VideoInfo12.current_h = mode.h;
+        FIXME("vidinfo details commented out");
+        //VideoInfo12.wm_available = 1;
+        //VideoInfo12.video_mem = 1024 * 256;
     }
-    return &VideoInfo;
+    return &VideoInfo12;
 }
 
 DECLSPEC int SDLCALL
@@ -1478,7 +1476,7 @@ SDL_ListModes(const SDL12_PixelFormat *format12, Uint32 flags)
         return NULL;
     }
 
-    if ((!format12) && (!VideoInfo.vfmt)) {
+    if ((!format12) && (!VideoInfo12.vfmt)) {
         SDL20_SetError("No pixel format specified");
         return NULL;
     }
@@ -1490,7 +1488,7 @@ SDL_ListModes(const SDL12_PixelFormat *format12, Uint32 flags)
     if (format12) {
         fmt = SDL20_MasksToPixelFormatEnum(format12->BitsPerPixel, format12->Rmask, format12->Gmask, format12->Bmask, format12->Amask);
     } else {
-        fmt = VideoInfo.vfmt->format;
+        fmt = VideoInfo12.vfmt->format;
     }
 
     for (i = 0; i < VideoModesCount; i++) {
@@ -1564,14 +1562,14 @@ failed:
 DECLSPEC void SDLCALL
 SDL_SetCursor(SDL12_Cursor *cursor)
 {
-    CurrentCursor = cursor;
+    CurrentCursor12 = cursor;
     SDL20_SetCursor(cursor ? cursor->wm_cursor : NULL);
 }
 
 DECLSPEC SDL12_Cursor * SDLCALL
 SDL_GetCursor(void)
 {
-    return CurrentCursor;
+    return CurrentCursor12;
 }
 
 static void
@@ -1626,7 +1624,7 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
 DECLSPEC SDL12_Surface * SDLCALL
 SDL_GetVideoSurface(void)
 {
-#error write me
+    return VideoSurface12;
 }
 
 DECLSPEC int SDLCALL
