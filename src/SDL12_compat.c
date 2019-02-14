@@ -534,6 +534,50 @@ SDL_Linked_Version(void)
     return &version;
 }
 
+DECLSPEC int SDLCALL
+SDL_sscanf(const char *text, const char *fmt, ...)
+{
+    int retval;
+    va_list ap;
+    va_start(ap, fmt);
+    retval = (int) SDL20_sscanf(text, fmt, ap);
+    va_end(ap);
+    return retval;
+}
+
+DECLSPEC int SDLCALL
+SDL_snprintf(char *text, size_t maxlen, const char *fmt, ...)
+{
+    int retval;
+    va_list ap;
+    va_start(ap, fmt);
+    retval = (int) SDL20_vsnprintf(text, maxlen, fmt, ap);
+    va_end(ap);
+    return retval;
+}
+
+DECLSPEC SDL_bool SDLCALL
+SDL_HasMMXExt(void)
+{
+    /* this isn't accurate, but SDL2 doesn't have this for some reason.
+        MMXExt is available in all SSE1 machines, except early Athlon chips,
+        so we'll just say it's available if they have SSE1. Oh well. */
+    return SDL20_HasSSE();
+}
+
+DECLSPEC SDL_bool SDLCALL
+SDL_Has3DNowExt(void)
+{
+    FIXME("check this");
+    return SDL20_HasSSE();
+}
+
+DECLSPEC int SDLCALL SDL_JoystickOpened(int device_index)
+{
+    FIXME("write me");
+    return 0;
+}
+
 static int
 GetVideoDisplay()
 {
@@ -836,9 +880,9 @@ SDL_SetError(const char *fmt, ...)
 DECLSPEC const char * SDLCALL
 SDL_GetError(void)
 {
-    if (!Loaded_SDL20)
+    if (SDL20_GetError == NULL)
     {
-        static const char noload_errstr[] = "Failed to load SDL 2.0 shared library";
+        static const char noload_errstr[] = "The SDL 2.0 library that the 1.2 compatibility layer needs isn't loaded";
         return noload_errstr;
     }
     return SDL20_GetError();
