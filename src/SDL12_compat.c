@@ -719,6 +719,11 @@ SDL_InitSubSystem(Uint32 sdl12flags)
     if (!LoadSDL20())
         return -1;
 
+#ifdef __MACOSX__
+    extern void sdl12_compat_macos_init(void);
+    sdl12_compat_macos_init();
+#endif
+
     #define SETFLAG(flag) if (sdl12flags & SDL12_INIT_##flag) sdl20flags |= SDL_INIT_##flag
     SETFLAG(TIMER);
     SETFLAG(AUDIO);
