@@ -187,6 +187,20 @@ typedef struct SDL12_Surface
     int refcount;
 } SDL12_Surface;
 
+typedef struct SDL12_Overlay
+{
+    Uint32 format;
+    int w;
+    int h;
+    int planes;
+    Uint16 *pitches;
+    Uint8 **pixels;
+    void *hwfuncs;
+    void *hwdata;
+    Uint32 hw_overlay :1;
+    Uint32 UnusedBits :31;
+} SDL12_Overlay;
+
 typedef struct
 {
     Uint32 hw_available :1;
@@ -1788,14 +1802,7 @@ SDL_GetWMInfo(SDL_SysWMinfo * info)
     return SDL20_Unsupported();
 }
 
-struct private_yuvhwdata
-{
-    SDL_SW_YUVTexture *texture;
-    SDL_Surface *display;
-    Uint32 display_format;
-};
-
-DECLSPEC SDL_Overlay * SDLCALL
+DECLSPEC SDL12_Overlay * SDLCALL
 SDL_CreateYUVOverlay(int w, int h, Uint32 format, SDL12_Surface *display)
 {
     FIXME("write me");
@@ -1804,27 +1811,27 @@ SDL_CreateYUVOverlay(int w, int h, Uint32 format, SDL12_Surface *display)
 }
 
 DECLSPEC int SDLCALL
-SDL_LockYUVOverlay(SDL_Overlay * overlay)
+SDL_LockYUVOverlay(SDL12_Overlay * overlay)
 {
     FIXME("write me");
     return SDL20_Unsupported();
 }
 
 DECLSPEC void SDLCALL
-SDL_UnlockYUVOverlay(SDL_Overlay * overlay)
+SDL_UnlockYUVOverlay(SDL12_Overlay * overlay)
 {
     FIXME("write me");
 }
 
 DECLSPEC int SDLCALL
-SDL_DisplayYUVOverlay(SDL_Overlay * overlay, SDL_Rect * dstrect)
+SDL_DisplayYUVOverlay(SDL12_Overlay * overlay, SDL_Rect * dstrect)
 {
     FIXME("write me");
     return SDL20_Unsupported();
 }
 
 DECLSPEC void SDLCALL
-SDL_FreeYUVOverlay(SDL_Overlay * overlay)
+SDL_FreeYUVOverlay(SDL12_Overlay * overlay)
 {
     FIXME("write me");
 }
