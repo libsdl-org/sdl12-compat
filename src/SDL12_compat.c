@@ -97,6 +97,8 @@
 
 // !!! IMPLEMENT_ME X11_KeyToUnicode
 
+#define SDL_BlitSurface SDL_UpperBlit
+
 
 #if 0
 #define FIXME(x) do {} while (0)
@@ -1929,6 +1931,18 @@ DECLSPEC SDL12_Surface * SDLCALL
 SDL_GetVideoSurface(void)
 {
     return VideoSurface12;
+}
+
+DECLSPEC int SDLCALL
+SDL_UpperBlit(SDL12_Surface *src, SDL_Rect *srcrect, SDL12_Surface *dst, SDL_Rect *dstrect)
+{
+    return SDL20_UpperBlit(src->surface20, srcrect, dst->surface20, dstrect);
+}
+
+DECLSPEC int SDLCALL
+SDL_LowerBlit(SDL12_Surface *src, SDL_Rect *srcrect, SDL12_Surface *dst, SDL_Rect *dstrect)
+{
+    return SDL20_LowerBlit(src->surface20, srcrect, dst->surface20, dstrect);
 }
 
 DECLSPEC int SDLCALL
