@@ -33,7 +33,7 @@
 
 void sdl12_compat_macos_init(void)
 {
-    [[NSApp sharedApplication] setActivationPolicy:NSApplicationActivationPolicyRegular];
+    [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
 }
 #endif
 
