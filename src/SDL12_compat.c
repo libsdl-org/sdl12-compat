@@ -1928,6 +1928,18 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
             SDL20_OutOfMemory();
             return EndVidModeCreate();
         }
+
+        /* fill in the same default palette that SDL 1.2 does... */
+        if (VideoSurface12->format->BitsPerPixel == 8) {
+            int i;
+            SDL_Color *color = VideoSurface12->format->palette->colors;
+            for (i = 0; i < 256; i++, color++) {
+                { const int x = i & 0xe0; color->r = x >> 3 | x >> 6; }
+                { const int x = (i << 3) & 0xe0; color->g = x >> 3 | x >> 6; }
+                { const int x = (i & 0x3) | (i & 0x3 << 2); color->b = x | x << 4; }
+                color->a = 255;
+            }
+        }
     }
 
     FIXME("setup screen saver");
