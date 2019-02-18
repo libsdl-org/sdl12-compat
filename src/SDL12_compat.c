@@ -1408,12 +1408,13 @@ SDL_SetClipRect(SDL12_Surface *surface12, const SDL_Rect *rect)
 DECLSPEC int SDLCALL
 SDL_FillRect(SDL12_Surface *dst, SDL_Rect *dstrect, Uint32 color)
 {
-    const SDL_Rect orig_dstrect = *dstrect;
-    const int retval = SDL20_FillRect(dst->surface20, &orig_dstrect, color);
+    const int retval = SDL20_FillRect(dst->surface20, dstrect, color);
     if (retval != -1)
     {
-        if (dstrect)  /* 1.2 stores the clip intersection in dstrect */
+        if (dstrect) {  /* 1.2 stores the clip intersection in dstrect */
+            const SDL_Rect orig_dstrect = *dstrect;
             SDL20_IntersectRect(&orig_dstrect, &dst->clip_rect, dstrect);
+        }
     }
     return retval;
 }
