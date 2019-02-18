@@ -1316,6 +1316,9 @@ Surface20to12(SDL_Surface *surface20)
 
     SDL20_zerop(surface12);
     flags = surface20->flags;
+    #ifdef SDL_SIMD_ALIGNED
+    flags &= ~SDL_SIMD_ALIGNED;  /* we don't need to map this to 1.2 */
+    #endif
     #define MAPSURFACEFLAGS(fl) { if (surface20->flags & SDL_##fl) { surface12->flags |= SDL12_##fl; flags &= ~SDL_##fl; } }
     MAPSURFACEFLAGS(PREALLOC);
     MAPSURFACEFLAGS(RLEACCEL);
