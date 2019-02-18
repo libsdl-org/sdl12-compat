@@ -50,10 +50,8 @@
 // !!! IMPLEMENT_ME SDL_CDResume
 // !!! IMPLEMENT_ME SDL_CDStatus
 // !!! IMPLEMENT_ME SDL_CDStop
-// !!! IMPLEMENT_ME SDL_ConvertSurface
 // !!! IMPLEMENT_ME SDL_CreateYUVOverlay
 
-// !!! IMPLEMENT_ME SDL_DisplayFormat
 // !!! IMPLEMENT_ME SDL_DisplayFormatAlpha
 // !!! IMPLEMENT_ME SDL_DisplayYUVOverlay
 // !!! IMPLEMENT_ME SDL_EnableKeyRepeat
@@ -1953,11 +1951,32 @@ SDL_SetAlpha(SDL12_Surface * surface, Uint32 flag, Uint8 value)
 }
 
 DECLSPEC SDL12_Surface * SDLCALL
+SDL_ConvertSurface(SDL12_Surface *src12, const SDL12_PixelFormat *format12, Uint32 flags12)
+{
+    Uint32 flags20 = 0;
+    SDL_PixelFormat format20;
+    SDL_Palette palette20;
+    SDL_Surface *surface20;
+    SDL12_Surface *retval = NULL;
+
+    if (flags12 & SDL12_PREALLOC) flags20 |= SDL_PREALLOC;
+    if (flags12 & SDL12_RLEACCEL) flags20 |= SDL_RLEACCEL;
+
+    surface20 = SDL20_ConvertSurface(src12->surface20, PixelFormat12to20(&format20, &palette20, format12), flags20);
+    if (surface20) {
+        retval = Surface20to12(surface20);
+        if (!retval) {
+            SDL20_FreeSurface(surface20);
+        }
+    }
+    return retval;
+}
+
+DECLSPEC SDL12_Surface * SDLCALL
 SDL_DisplayFormat(SDL12_Surface *surface12)
 {
-    FIXME("write me");
-    SDL20_Unsupported();
-    return NULL;
+    const Uint32 flags = surface12->flags & (SDL12_SRCCOLORKEY|SDL12_SRCALPHA|SDL12_RLEACCELOK);
+    return SDL_ConvertSurface(surface12, VideoSurface12->format, flags);
 }
 
 DECLSPEC SDL12_Surface * SDLCALL

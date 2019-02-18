@@ -85,6 +85,7 @@
 #define SDL_LoadWAV_RW IGNORE_THIS_VERSION_OF_SDL_LoadWAV_RW
 #define SDL_UpperBlit IGNORE_THIS_VERSION_OF_SDL_UpperBlit
 #define SDL_LowerBlit IGNORE_THIS_VERSION_OF_SDL_LowerBlit
+#define SDL_ConvertSurface IGNORE_THIS_VERSION_OF_SDL_ConvertSurface
 
 #define BUILD_SDL 1
 #include "SDL.h"
@@ -147,6 +148,7 @@
 #undef SDL_LoadWAV_RW
 #undef SDL_UpperBlit
 #undef SDL_LowerBlit
+#undef SDL_ConvertSurface
 
 #ifdef SDL_BlitSurface
 #undef SDL_BlitSurface
