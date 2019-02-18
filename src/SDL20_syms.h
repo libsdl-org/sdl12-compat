@@ -52,7 +52,7 @@ SDL20_SYM(const char *,GetCurrentVideoDriver,(void),(),return)
 
 SDL20_SYM(SDL_assert_state,ReportAssertion,(SDL_assert_data *a,const char *b,const char *c, int d),(a,b,c,d),return)
 
-SDL20_SYM_PASSTHROUGH(void,PumpEvents,(void),(),)
+SDL20_SYM(void,PumpEvents,(void),(),)
 SDL20_SYM(void,SetEventFilter,(SDL_EventFilter a, void *b),(a,b),)
 
 SDL20_SYM(int,GetNumDisplayModes,(int a),(a),return)

@@ -441,6 +441,8 @@ static SDL_Texture *VideoTexture20 = NULL;
 static SDL12_Surface *VideoSurface12 = NULL;
 static SDL_Surface *VideoConvertSurface20 = NULL;
 static SDL_GLContext *VideoGLContext20 = NULL;
+static int VideoNumDirtyRects = 0;
+static SDL_Rect VideoDirtyRects[16];
 static char *WindowTitle = NULL;
 static char *WindowIconTitle = NULL;
 static SDL12_Surface *VideoIcon12;
@@ -920,12 +922,25 @@ SDL_VideoDriverName(char *namebuf, int maxlen)
     return GetDriverName(SDL20_GetCurrentVideoDriver(), namebuf, maxlen);
 }
 
+static void PresentScreen(void);
+
+DECLSPEC void SDLCALL
+SDL_PumpEvents(void)
+{
+    /* catch things that want to do dirty rectangles but ignore DOUBLEBUF.
+       Since we have to compose the whole scene at once, catch it in here. */
+    if (VideoSurface12 && VideoNumDirtyRects) {
+        PresentScreen();
+    }
+    SDL20_PumpEvents();
+}
+
 DECLSPEC int SDLCALL
 SDL_PollEvent(SDL12_Event *event12)
 {
     EventQueueType *next;
 
-    SDL20_PumpEvents();  /* this will run our filter and build our 1.2 queue. */
+    SDL_PumpEvents();  /* this will run our filter and build our 1.2 queue. */
 
     if (EventQueueHead == NULL)
         return 0;  /* no events at the moment. */
@@ -1855,6 +1870,8 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
         }
     }
 
+    VideoNumDirtyRects = 0;
+
     VideoSurface12->surface20->flags |= SDL_PREALLOC;
     VideoSurface12->flags |= SDL12_PREALLOC;
     VideoSurface12->pixels = VideoSurface12->surface20->pixels = NULL;
@@ -2009,11 +2026,78 @@ SDL_DisplayFormatAlpha(SDL12_Surface *surface)
     return NULL;
 }
 
-DECLSPEC void SDLCALL
-SDL_UpdateRects(SDL12_Surface * screen12, int numrects, SDL_Rect * rects)
+static void
+PresentScreen(void)
 {
-    FIXME("write me");
-    SDL20_Unsupported();
+    void *pixels = NULL;
+    int pitch = 0;
+    int i;
+
+    SDL_assert(VideoSurface12 != NULL);
+    SDL_assert(VideoNumDirtyRects > 0);  /* only called internally from places that add rects */
+    SDL_assert(VideoNumDirtyRects <= SDL_arraysize(VideoDirtyRects));
+
+    FIXME("Maybe lock a subset of the texture if only one dirty rectangle?");
+
+    if (SDL20_LockTexture(VideoTexture20, NULL, &pixels, &pitch) < 0) {
+        return;  /* oh well */
+    }
+
+    FIXME("Maybe lock texture always, until present, if no conversion needed?");
+    VideoConvertSurface20->pixels = pixels;
+    VideoConvertSurface20->pitch = pitch;
+
+    for (i = 0; i < VideoNumDirtyRects; i++) {
+        SDL20_UpperBlit(VideoSurface12->surface20, &VideoDirtyRects[i], VideoConvertSurface20, &VideoDirtyRects[i]);
+    }
+
+    VideoConvertSurface20->pixels = NULL;
+    VideoConvertSurface20->pitch = 0;
+    VideoNumDirtyRects = 0;
+
+    SDL20_UnlockTexture(VideoTexture20);
+    SDL20_RenderCopy(VideoRenderer20, VideoTexture20, NULL, NULL);
+    SDL20_RenderPresent(VideoRenderer20);
+}
+
+static void
+AddDirtyRect(const SDL_Rect *r)
+{
+    const int sw = VideoSurface12->w;
+    const int sh = VideoSurface12->h;
+    FIXME("Clip against the surface geometry");
+    if (r == NULL) {
+        VideoNumDirtyRects = -1;  /* NULL == "replace whole screen" */
+    } else if ((r->x <= 0) && (r->y <= 0) && (r->w >= VideoSurface12->w) && (r->h >= VideoSurface12->h)) {
+        VideoNumDirtyRects = -1;  /* this rect covers whole screen */
+    } else if (VideoNumDirtyRects >= SDL_arraysize(VideoDirtyRects)) {
+        VideoNumDirtyRects = -1;  /* too many rects, just do it all */
+    } else if ((r->x >= sw) || (r->y >= sh)) {
+        return;  /* nothing to do */
+    } else if (VideoNumDirtyRects >= 0) {
+        FIXME("Clip against other rectangles?");
+        SDL_memcpy(&VideoDirtyRects[VideoNumDirtyRects], r, sizeof (*r));
+        VideoNumDirtyRects++;
+    }
+}
+
+DECLSPEC void SDLCALL
+SDL_UpdateRects(SDL12_Surface *surface12, int numrects, SDL_Rect *rects)
+{
+    int i;
+
+    /* strangely, SDL 1.2 doesn't check if surface12 is NULL before touching it */
+    /* (UpdateRect, singular, does...) */
+    if (surface12->flags & SDL12_OPENGL) {
+        SDL20_SetError("Use SDL_GL_SwapBuffers() on OpenGL surfaces");
+        return;
+    }
+
+    if (surface12 == VideoSurface12) {
+        for (i = 0; i < numrects; i++) {
+            AddDirtyRect(&rects[i]);
+        }
+    }
 }
 
 DECLSPEC void SDLCALL
@@ -2030,9 +2114,17 @@ SDL_UpdateRect(SDL12_Surface *screen12, Sint32 x, Sint32 y, Uint32 w, Uint32 h)
 }
 
 DECLSPEC int SDLCALL
-SDL_Flip(SDL12_Surface *screen12)
+SDL_Flip(SDL12_Surface *surface12)
 {
-    SDL_UpdateRect(screen12, 0, 0, 0, 0);
+    if (surface12->flags & SDL12_OPENGL) {
+        return SDL20_SetError("Use SDL_GL_SwapBuffers() on OpenGL surfaces");
+    }
+
+    if (surface12 == VideoSurface12) {
+        AddDirtyRect(NULL);
+        PresentScreen();
+    }
+
     return 0;
 }
 
