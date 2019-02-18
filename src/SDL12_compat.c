@@ -1877,10 +1877,16 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
         SDL_RendererInfo rinfo;
         SDL_assert(!VideoGLContext20);  /* either a new window or we destroyed all this */
         if (!VideoRenderer20) {
+            VideoRenderer20 = SDL20_CreateRenderer(VideoWindow20, -1, SDL_RENDERER_ACCELERATED|SDL_RENDERER_PRESENTVSYNC);
+        }
+        if (!VideoRenderer20) {
+            VideoRenderer20 = SDL20_CreateRenderer(VideoWindow20, -1, SDL_RENDERER_PRESENTVSYNC);
+        }
+        if (!VideoRenderer20) {
             VideoRenderer20 = SDL20_CreateRenderer(VideoWindow20, -1, 0);
-            if (!VideoRenderer20) {
-                return EndVidModeCreate();
-            }
+        }
+        if (!VideoRenderer20) {
+            return EndVidModeCreate();
         }
 
         SDL20_RenderSetLogicalSize(VideoRenderer20, width, height);
