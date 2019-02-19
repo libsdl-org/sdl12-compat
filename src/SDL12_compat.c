@@ -142,6 +142,14 @@
 #define SDL12_INIT_EVENTTHREAD 0x01000000
 #define SDL12_INIT_EVERYTHING  0x0000FFFF
 
+typedef struct SDL12_Rect
+{
+    Sint16 x;
+    Sint16 y;
+    Uint16 w;
+    Uint16 h;
+} SDL12_Rect;
+
 typedef struct SDL12_Palette
 {
     int       ncolors;
@@ -179,7 +187,7 @@ typedef struct SDL12_Surface
     void *pixels;
     int offset;
     SDL_Surface *surface20; /* the real SDL 1.2 has an opaque pointer to a platform-specific thing here named "hwdata". */
-    SDL_Rect clip_rect;
+    SDL12_Rect clip_rect;
     Uint32 unused1;
     Uint32 locked;
     void *blitmap;
@@ -392,7 +400,7 @@ typedef SDL_TimerCallback SDL12_NewTimerCallback;
 
 typedef struct
 {
-    SDL_Rect area;
+    SDL12_Rect area;
     Sint16 hot_x;
     Sint16 hot_y;
     Uint8 *data;
@@ -427,8 +435,8 @@ typedef enum
 typedef struct
 {
     Uint32 format;
-    SDL_Rect *modeslist;
-    SDL_Rect **modes;  /* ptrs to each item in modeslist, for SDL_ListModes() */
+    SDL12_Rect *modeslist12;
+    SDL12_Rect **modes12;  /* ptrs to each item in modeslist, for SDL_ListModes() */
 } VideoModeList;
 
 // !!! FIXME: go through all of these.
@@ -619,7 +627,7 @@ Init12VidModes(void)
 
         if (!vmode || (mode.format != vmode->format)) {  // SDL20_GetDisplayMode() sorts on bpp first. We know when to change arrays.
             if (VideoModesCount > 0) {
-                VideoModes[VideoModesCount-1].modes[num_modes] = NULL;
+                VideoModes[VideoModesCount-1].modes12[num_modes] = NULL;
             }
             ptr = (VideoModeList *) SDL20_realloc(VideoModes, sizeof (VideoModeList) * (VideoModesCount+1));
             if (!ptr) {
@@ -628,15 +636,15 @@ Init12VidModes(void)
             VideoModes = (VideoModeList *) ptr;
             vmode = &VideoModes[VideoModesCount];
             vmode->format = mode.format;
-            vmode->modeslist = NULL;
-            vmode->modes = NULL;
+            vmode->modeslist12 = NULL;
+            vmode->modes12 = NULL;
             VideoModesCount++;
             num_modes = 0;
         }
 
         /* make sure we don't have this one already (with a different refresh rate, etc). */
         for (j = 0; j < num_modes; j++) {
-            if ((vmode->modeslist[j].w == mode.w) && (vmode->modeslist[j].h == mode.h)) {
+            if ((vmode->modeslist12[j].w == mode.w) && (vmode->modeslist12[j].h == mode.h)) {
                 break;
             }
         }
@@ -645,30 +653,32 @@ Init12VidModes(void)
             continue;  /* already have this one. */
         }
 
-        ptr = SDL20_realloc(vmode->modes, sizeof (SDL_Rect *) * (num_modes + 2));
+        FIXME("Make sure mode dimensions fit in 16-bits for SDL12_Rect");
+
+        ptr = SDL20_realloc(vmode->modes12, sizeof (SDL12_Rect *) * (num_modes + 2));
         if (ptr == NULL) {
             return SDL20_OutOfMemory();
         }
-        vmode->modes = (SDL_Rect **) ptr;
+        vmode->modes12 = (SDL12_Rect **) ptr;
 
-        ptr = SDL20_realloc(vmode->modeslist, sizeof (SDL_Rect) * (num_modes + 1));
+        ptr = SDL20_realloc(vmode->modeslist12, sizeof (SDL12_Rect) * (num_modes + 1));
         if (ptr == NULL) {
             return SDL20_OutOfMemory();
         }
-        vmode->modeslist = (SDL_Rect *) ptr;
+        vmode->modeslist12 = (SDL12_Rect *) ptr;
 
-        vmode->modeslist[num_modes].x = 0;
-        vmode->modeslist[num_modes].y = 0;
-        vmode->modeslist[num_modes].w = mode.w;
-        vmode->modeslist[num_modes].h = mode.h;
+        vmode->modeslist12[num_modes].x = 0;
+        vmode->modeslist12[num_modes].y = 0;
+        vmode->modeslist12[num_modes].w = mode.w;
+        vmode->modeslist12[num_modes].h = mode.h;
 
-        vmode->modes[num_modes] = &vmode->modeslist[num_modes];
+        vmode->modes12[num_modes] = &vmode->modeslist12[num_modes];
 
         num_modes++;
     }
 
     if (VideoModesCount > 0) {
-        VideoModes[VideoModesCount-1].modes[num_modes] = NULL;
+        VideoModes[VideoModesCount-1].modes12[num_modes] = NULL;
     }
 
     return 0;
@@ -813,8 +823,8 @@ Quit12Video(void)
     int i;
 
     for (i = 0; i < VideoModesCount; i++) {
-        SDL20_free(VideoModes[i].modeslist);
-        SDL20_free(VideoModes[i].modes);
+        SDL20_free(VideoModes[i].modeslist12);
+        SDL20_free(VideoModes[i].modes12);
     }
     SDL20_free(VideoModes);
 
@@ -1268,6 +1278,26 @@ SDL_GetEventFilter(void)
 }
 
 
+static SDL12_Rect *
+Rect20to12(const SDL_Rect *rect20, SDL12_Rect *rect12)
+{
+    rect12->x = (Sint16) rect20->x;
+    rect12->y = (Sint16) rect20->y;
+    rect12->w = (Uint16) rect20->w;
+    rect12->h = (Uint16) rect20->h;
+    return rect12;
+}
+
+static SDL_Rect *
+Rect12to20(const SDL12_Rect *rect12, SDL_Rect *rect20)
+{
+    rect20->x = (int) rect12->x;
+    rect20->y = (int) rect12->y;
+    rect20->w = (int) rect12->w;
+    rect20->h = (int) rect12->h;
+    return rect20;
+}
+
 static SDL12_Surface *
 Surface20to12(SDL_Surface *surface20)
 {
@@ -1333,7 +1363,7 @@ Surface20to12(SDL_Surface *surface20)
     surface12->pixels = surface20->pixels;
     surface12->offset = 0;
     surface12->surface20 = surface20;
-    SDL20_memcpy(&surface12->clip_rect, &surface20->clip_rect, sizeof (SDL_Rect));
+    Rect20to12(&surface20->clip_rect, &surface12->clip_rect);
     surface12->refcount = surface20->refcount;
 
     return surface12;
@@ -1387,33 +1417,38 @@ SDL_FreeSurface(SDL12_Surface *surface12)
 }
 
 DECLSPEC void SDLCALL
-SDL_GetClipRect(SDL12_Surface *surface12, SDL_Rect *rect)
+SDL_GetClipRect(SDL12_Surface *surface12, SDL12_Rect *rect)
 {
-    if (surface12 && rect)
-	    SDL_memcpy(rect, &surface12->clip_rect, sizeof (SDL_Rect));
+    if (surface12 && rect) {
+        SDL_memcpy(rect, &surface12->clip_rect, sizeof (SDL12_Rect));
+    }
 }
 
 DECLSPEC SDL_bool SDLCALL
-SDL_SetClipRect(SDL12_Surface *surface12, const SDL_Rect *rect)
+SDL_SetClipRect(SDL12_Surface *surface12, const SDL12_Rect *rect12)
 {
     SDL_bool retval = SDL_FALSE;
     if (surface12)
     {
-        retval = SDL20_SetClipRect(surface12->surface20, rect);
-        SDL20_GetClipRect(surface12->surface20, &surface12->clip_rect);
+        SDL_Rect rect20;
+        retval = SDL20_SetClipRect(surface12->surface20, rect12 ? Rect12to20(rect12, &rect20) : NULL);
+        SDL20_GetClipRect(surface12->surface20, &rect20);
+        Rect20to12(&rect20, &surface12->clip_rect);
     }
     return retval;
 }
 
 DECLSPEC int SDLCALL
-SDL_FillRect(SDL12_Surface *dst, SDL_Rect *dstrect, Uint32 color)
+SDL_FillRect(SDL12_Surface *dst, SDL12_Rect *dstrect12, Uint32 color)
 {
-    const int retval = SDL20_FillRect(dst->surface20, dstrect, color);
+    SDL_Rect dstrect20;
+    const int retval = SDL20_FillRect(dst->surface20, dstrect12 ? Rect12to20(dstrect12, &dstrect20) : NULL, color);
     if (retval != -1)
     {
-        if (dstrect) {  /* 1.2 stores the clip intersection in dstrect */
-            const SDL_Rect orig_dstrect = *dstrect;
-            SDL20_IntersectRect(&orig_dstrect, &dst->clip_rect, dstrect);
+        if (dstrect12) {  /* 1.2 stores the clip intersection in dstrect */
+            SDL_Rect intersected20;
+            SDL20_IntersectRect(&dstrect20, &dst->surface20->clip_rect, &intersected20);
+            Rect20to12(&intersected20, dstrect12);
         }
     }
     return retval;
@@ -1533,7 +1568,7 @@ SDL_VideoModeOK(int width, int height, int bpp, Uint32 sdl12flags)
     return actual_bpp;
 }
 
-DECLSPEC SDL_Rect ** SDLCALL
+DECLSPEC SDL12_Rect ** SDLCALL
 SDL_ListModes(const SDL12_PixelFormat *format12, Uint32 flags)
 {
     Uint32 fmt;
@@ -1549,7 +1584,7 @@ SDL_ListModes(const SDL12_PixelFormat *format12, Uint32 flags)
     }
 
     if (!(flags & SDL12_FULLSCREEN)) {
-        return (SDL_Rect **) (-1);  /* any resolution is fine. */
+        return (SDL12_Rect **) (-1);  /* any resolution is fine. */
     }
 
     if (format12) {
@@ -1561,7 +1596,7 @@ SDL_ListModes(const SDL12_PixelFormat *format12, Uint32 flags)
     for (i = 0; i < VideoModesCount; i++) {
         VideoModeList *modes = &VideoModes[i];
         if (modes->format == fmt) {
-            return modes->modes;
+            return modes->modes12;
         }
     }
 
@@ -1955,15 +1990,43 @@ SDL_GetVideoSurface(void)
 }
 
 DECLSPEC int SDLCALL
-SDL_UpperBlit(SDL12_Surface *src, SDL_Rect *srcrect, SDL12_Surface *dst, SDL_Rect *dstrect)
+SDL_UpperBlit(SDL12_Surface *src, SDL12_Rect *srcrect12, SDL12_Surface *dst, SDL12_Rect *dstrect12)
 {
-    return SDL20_UpperBlit(src->surface20, srcrect, dst->surface20, dstrect);
+    SDL_Rect srcrect20, dstrect20;
+    const int retval = SDL20_UpperBlit(src->surface20,
+                                       srcrect12 ? Rect12to20(srcrect12, &srcrect20) : NULL,
+                                       dst->surface20,
+                                       dstrect12 ? Rect12to20(dstrect12, &dstrect20) : NULL);
+
+    if (srcrect12) {
+        Rect20to12(&srcrect20, srcrect12);
+    }
+
+    if (srcrect12) {
+        Rect20to12(&dstrect20, dstrect12);
+    }
+
+    return retval;
 }
 
 DECLSPEC int SDLCALL
-SDL_LowerBlit(SDL12_Surface *src, SDL_Rect *srcrect, SDL12_Surface *dst, SDL_Rect *dstrect)
+SDL_LowerBlit(SDL12_Surface *src, SDL12_Rect *srcrect12, SDL12_Surface *dst, SDL12_Rect *dstrect12)
 {
-    return SDL20_LowerBlit(src->surface20, srcrect, dst->surface20, dstrect);
+    SDL_Rect srcrect20, dstrect20;
+    const int retval = SDL20_LowerBlit(src->surface20,
+                                       srcrect12 ? Rect12to20(srcrect12, &srcrect20) : NULL,
+                                       dst->surface20,
+                                       dstrect12 ? Rect12to20(dstrect12, &dstrect20) : NULL);
+
+    if (srcrect12) {
+        Rect20to12(&srcrect20, srcrect12);
+    }
+
+    if (srcrect12) {
+        Rect20to12(&dstrect20, dstrect12);
+    }
+
+    return retval;
 }
 
 DECLSPEC int SDLCALL
@@ -2035,7 +2098,7 @@ PresentScreen(void)
 }
 
 DECLSPEC void SDLCALL
-SDL_UpdateRects(SDL12_Surface *surface12, int numrects, SDL_Rect *rects)
+SDL_UpdateRects(SDL12_Surface *surface12, int numrects, SDL12_Rect *rects12)
 {
     /* strangely, SDL 1.2 doesn't check if surface12 is NULL before touching it */
     /* (UpdateRect, singular, does...) */
@@ -2051,12 +2114,12 @@ DECLSPEC void SDLCALL
 SDL_UpdateRect(SDL12_Surface *screen12, Sint32 x, Sint32 y, Uint32 w, Uint32 h)
 {
     if (screen12) {
-        SDL_Rect rect;
-        rect.x = (int) x;
-        rect.y = (int) y;
-        rect.w = (int) (w ? w : screen12->w);
-        rect.h = (int) (h ? h : screen12->h);
-        SDL_UpdateRects(screen12, 1, &rect);
+        SDL12_Rect rect12;
+        rect12.x = (Sint16) x;
+        rect12.y = (Sint16) y;
+        rect12.w = (Uint16) (w ? w : screen12->w);
+        rect12.h = (Uint16) (h ? h : screen12->h);
+        SDL_UpdateRects(screen12, 1, &rect12);
     }
 }
 
@@ -2209,7 +2272,7 @@ SDL_UnlockYUVOverlay(SDL12_Overlay * overlay)
 }
 
 DECLSPEC int SDLCALL
-SDL_DisplayYUVOverlay(SDL12_Overlay * overlay, SDL_Rect * dstrect)
+SDL_DisplayYUVOverlay(SDL12_Overlay * overlay, SDL12_Rect * dstrect12)
 {
     FIXME("write me");
     return SDL20_Unsupported();
