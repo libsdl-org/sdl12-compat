@@ -2227,6 +2227,17 @@ SDL_GetAppState(void)
 }
 
 DECLSPEC int SDLCALL
+SDL_SetColorKey(SDL12_Surface *surface12, Uint32 flag12, Uint32 key)
+{
+    const SDL_bool addkey = (flag12 & SDL12_SRCCOLORKEY) ? SDL_TRUE : SDL_FALSE;
+    const int retval = SDL20_SetColorKey(surface12->surface20, addkey, key);
+    if (SDL20_GetColorKey(surface12->surface20, &surface12->format->colorkey) < 0) {
+        surface12->format->colorkey = 0;
+    }
+    return retval;
+}
+
+DECLSPEC int SDLCALL
 SDL_SetPalette(SDL12_Surface *surface12, int flags, const SDL_Color *colors,
                int firstcolor, int ncolors)
 {
