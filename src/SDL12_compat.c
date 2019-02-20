@@ -2037,6 +2037,23 @@ SDL_SetAlpha(SDL12_Surface * surface, Uint32 flag, Uint8 value)
     return SDL20_Unsupported();
 }
 
+DECLSPEC int SDLCALL
+SDL_LockSurface(SDL12_Surface *surface12)
+{
+    const int retval = SDL20_LockSurface(surface12->surface20);
+    surface12->pixels = surface12->surface20->pixels;
+    surface12->pitch = surface12->surface20->pitch;
+    return retval;
+}
+
+DECLSPEC void SDLCALL
+SDL_UnlockSurface(SDL12_Surface *surface12)
+{
+    SDL20_UnlockSurface(surface12->surface20);
+    surface12->pixels = surface12->surface20->pixels;
+    surface12->pitch = surface12->surface20->pitch;
+}
+
 DECLSPEC SDL12_Surface * SDLCALL
 SDL_ConvertSurface(SDL12_Surface *src12, const SDL12_PixelFormat *format12, Uint32 flags12)
 {

@@ -87,6 +87,8 @@
 #define SDL_LowerBlit IGNORE_THIS_VERSION_OF_SDL_LowerBlit
 #define SDL_ConvertSurface IGNORE_THIS_VERSION_OF_SDL_ConvertSurface
 #define SDL_SetColorKey IGNORE_THIS_VERSION_OF_SDL_SetColorKey
+#define SDL_LockSurface IGNORE_THIS_VERSION_OF_SDL_LockSurface
+#define SDL_UnlockSurface IGNORE_THIS_VERSION_OF_SDL_UnlockSurface
 
 #define BUILD_SDL 1
 #include "SDL.h"
@@ -151,6 +153,8 @@
 #undef SDL_LowerBlit
 #undef SDL_ConvertSurface
 #undef SDL_SetColorKey
+#undef SDL_LockSurface
+#undef SDL_UnlockSurface
 
 #ifdef SDL_BlitSurface
 #undef SDL_BlitSurface
