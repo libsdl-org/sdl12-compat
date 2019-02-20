@@ -719,9 +719,9 @@ SDL_InitSubSystem(Uint32 sdl12flags)
 
     FIXME("support event thread where it makes sense to do so?");
 
-	if ( (sdl12flags & SDL12_INIT_EVENTTHREAD) == SDL12_INIT_EVENTTHREAD ) {
-		return SDL20_SetError("OS doesn't support threaded events");
-	}
+    if ( (sdl12flags & SDL12_INIT_EVENTTHREAD) == SDL12_INIT_EVENTTHREAD ) {
+        return SDL20_SetError("OS doesn't support threaded events");
+    }
 
     Uint32 sdl20flags = 0;
     int rc;
@@ -945,6 +945,7 @@ SDL_PollEvent(SDL12_Event *event12)
     EventQueueHead->next = EventQueueAvailable;
     EventQueueAvailable = EventQueueHead;
     EventQueueHead = next;
+
     return 1;
 }
 
