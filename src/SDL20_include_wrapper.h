@@ -89,6 +89,7 @@
 #define SDL_SetColorKey IGNORE_THIS_VERSION_OF_SDL_SetColorKey
 #define SDL_LockSurface IGNORE_THIS_VERSION_OF_SDL_LockSurface
 #define SDL_UnlockSurface IGNORE_THIS_VERSION_OF_SDL_UnlockSurface
+#define SDL_GetKeyName IGNORE_THIS_VERSION_OF_SDL_GetKeyName
 
 #define BUILD_SDL 1
 #include "SDL.h"
@@ -155,6 +156,7 @@
 #undef SDL_SetColorKey
 #undef SDL_LockSurface
 #undef SDL_UnlockSurface
+#undef SDL_GetKeyName
 
 #ifdef SDL_BlitSurface
 #undef SDL_BlitSurface

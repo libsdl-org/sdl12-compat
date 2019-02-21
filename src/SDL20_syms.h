@@ -119,6 +119,9 @@ SDL20_SYM(void,CalculateGammaRamp,(float a, Uint16 *b),(a,b),)
 SDL20_SYM(Uint32,MasksToPixelFormatEnum,(int a,Uint32 b,Uint32 c,Uint32 d,Uint32 e),(a,b,c,d,e),return)
 SDL20_SYM(SDL_bool,PixelFormatEnumToMasks,(Uint32 a,int *b,Uint32 *c,Uint32 *d,Uint32 *e,Uint32 *f),(a,b,c,d,e,f),return)
 
+SDL20_SYM_PASSTHROUGH(void,SetModState,(SDL_Keymod a),(a),)
+SDL20_SYM_PASSTHROUGH(SDL_Keymod,GetModState,(void),(),return)
+
 SDL20_SYM(Uint32,GetMouseState,(int *a, int *b),(a,b),return)
 SDL20_SYM(void,WarpMouseInWindow,(SDL_Window *a, int b, int c),(a,b,c),)
 
