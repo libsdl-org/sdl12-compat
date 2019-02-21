@@ -2600,6 +2600,8 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
         }
     }
 
+    SDL20_RaiseWindow(VideoWindow20);
+
     FIXME("setup screen saver");
 
     return VideoSurface12;
