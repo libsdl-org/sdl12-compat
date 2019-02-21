@@ -1208,6 +1208,9 @@ SDL_PollEvent(SDL12_Event *event12)
     EventQueueHead->next = EventQueueAvailable;
     EventQueueAvailable = EventQueueHead;
     EventQueueHead = next;
+    if (!next) {
+        EventQueueTail = NULL;
+    }
 
     return 1;
 }
