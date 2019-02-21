@@ -772,12 +772,16 @@ static void *
 LoadSDL20Symbol(const char *fn, int *okay)
 {
     void *retval = NULL;
-    if (*okay)  /* only bother trying if we haven't previously failed. */
-    {
+    if (*okay) { /* only bother trying if we haven't previously failed. */
         retval = LookupSDL20Sym(fn);
-if (!retval) { fprintf(stderr, "WARNING: LOAD FAILED: %s\n", fn); }
-//        if (retval == NULL)
-//            *okay = 0;
+        if (retval == NULL) {
+            /* Flip to 1 to warn but maybe work if nothing calls that function, flip to zero to fail out. */
+            #if 0
+            fprintf(stderr, "WARNING: LOAD FAILED: %s\n", fn);
+            #else
+            *okay = 0;
+            #endif
+        }
     }
     return retval;
 }
