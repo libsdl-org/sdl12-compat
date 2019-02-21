@@ -1138,6 +1138,11 @@ SDL_SetError(const char *fmt, ...)
     char *str = NULL;
     size_t len = 0;
     va_list ap;
+
+    if (!LoadSDL20()) {  /* SDL_SetError gets called before init sometimes. */
+        return;
+    }
+
     va_start(ap, fmt);
     len = SDL20_vsnprintf(&ch, 1, fmt, ap);
     va_end(ap);
@@ -2080,12 +2085,17 @@ SDL_FillRect(SDL12_Surface *dst, SDL12_Rect *dstrect12, Uint32 color)
 static SDL_PixelFormat *
 PixelFormat12to20(SDL_PixelFormat *format20, SDL_Palette *palette20, const SDL12_PixelFormat *format12)
 {
-    palette20->ncolors = format12->palette->ncolors;
-    palette20->colors = format12->palette->colors;
-    palette20->version = 1;
-    palette20->refcount = 1;
+    if (format12->palette) {
+        palette20->ncolors = format12->palette->ncolors;
+        palette20->colors = format12->palette->colors;
+        palette20->version = 1;
+        palette20->refcount = 1;
+        format20->palette = palette20;
+    } else {
+        format20->palette = NULL;
+    }
+
     format20->format = SDL20_MasksToPixelFormatEnum(format12->BitsPerPixel, format12->Rmask, format12->Gmask, format12->Bmask, format12->Amask);
-    format20->palette = palette20;
     format20->BitsPerPixel = format12->BitsPerPixel;
     format20->BytesPerPixel = format12->BytesPerPixel;
     format20->Rmask = format12->Rmask;
@@ -2626,7 +2636,7 @@ SDL_UpperBlit(SDL12_Surface *src, SDL12_Rect *srcrect12, SDL12_Surface *dst, SDL
         Rect20to12(&srcrect20, srcrect12);
     }
 
-    if (srcrect12) {
+    if (dstrect12) {
         Rect20to12(&dstrect20, dstrect12);
     }
 
@@ -3245,6 +3255,10 @@ RWops20to12(SDL_RWops *rwops20)
 DECLSPEC SDL12_RWops * SDLCALL
 SDL_RWFromFile(const char *file, const char *mode)
 {
+    if ( !file || !*file || !mode || !*mode ) {
+        SDL_SetError("SDL_RWFromFile(): No file or no mode specified");
+        return NULL;
+    }
     return RWops20to12(SDL20_RWFromFile(file, mode));
 }
 
