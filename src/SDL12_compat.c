@@ -1930,17 +1930,22 @@ Surface20to12(SDL_Surface *surface20)
     if (!surface12)
         goto failed;
 
-    palette12 = (SDL12_Palette *) SDL20_malloc(sizeof (SDL12_Palette));
-    if (!palette12)
-        goto failed;
+    if (surface20->format->palette) {
+        palette12 = (SDL12_Palette *) SDL20_malloc(sizeof (SDL12_Palette));
+        if (!palette12)
+            goto failed;
+    }
 
     format12 = (SDL12_PixelFormat *) SDL20_malloc(sizeof (SDL12_PixelFormat));
     if (!format12)
         goto failed;
 
-    SDL20_zerop(palette12);
-    palette12->ncolors = surface20->format->palette->ncolors;
-    palette12->colors = surface20->format->palette->colors;
+    if (palette12) {
+        SDL20_zerop(palette12);
+        SDL_assert(surface20->format->palette);
+        palette12->ncolors = surface20->format->palette->ncolors;
+        palette12->colors = surface20->format->palette->colors;
+    }
 
     SDL20_zerop(format12);
     format12->palette = palette12;
