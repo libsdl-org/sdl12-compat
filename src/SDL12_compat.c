@@ -702,6 +702,12 @@ typedef struct
     SDL12_Rect **modes12;  /* ptrs to each item in modeslist, for SDL_ListModes() */
 } VideoModeList;
 
+typedef struct
+{
+    int device_index;
+    SDL_Joystick *joystick;
+} JoystickOpenedItem;
+
 // !!! FIXME: go through all of these.
 static VideoModeList *VideoModes = NULL;
 static int VideoModesCount = 0;
@@ -722,6 +728,7 @@ static SDL12_EventFilter EventFilter12 = NULL;
 static SDL12_Cursor *CurrentCursor12 = NULL;
 static Uint8 EventStates[SDL12_NUMEVENTS];
 static int SwapInterval = 0;
+static JoystickOpenedItem JoystickOpenList[16];
 
 // !!! FIXME: need a mutex for the event queue.
 #define SDL12_MAXEVENTS 128
@@ -843,10 +850,93 @@ SDL_Has3DNowExt(void)
     return SDL20_HasSSE();
 }
 
+DECLSPEC SDL_Joystick * SDLCALL
+SDL_JoystickOpen(int device_index)
+{
+    int i;
+    SDL20_LockJoysticks();
+    for (i = 0; i < SDL_arraysize(JoystickOpenList); i++) {
+        if (JoystickOpenList[i].joystick == NULL) {
+            break;
+        }
+    }
+
+    if (i == SDL_arraysize(JoystickOpenList)) {
+        SDL20_UnlockJoysticks();
+        SDL20_SetError("Too many open joysticks");
+        return NULL;
+    }
+
+    JoystickOpenList[i].joystick = SDL20_JoystickOpen(device_index);
+    if (JoystickOpenList[i].joystick) {
+        JoystickOpenList[i].device_index = device_index;
+    }
+
+    SDL20_UnlockJoysticks();
+    return JoystickOpenList[i].joystick;
+}
+
+DECLSPEC void SDLCALL
+SDL_JoystickClose(SDL_Joystick *joystick)
+{
+    int i;
+    SDL20_LockJoysticks();
+    for (i = 0; i < SDL_arraysize(JoystickOpenList); i++) {
+        if (JoystickOpenList[i].joystick == joystick) {
+            break;
+        }
+    }
+
+    if (i < SDL_arraysize(JoystickOpenList)) {
+        JoystickOpenList[i].joystick = NULL;
+    }
+
+    SDL20_UnlockJoysticks();
+
+    SDL20_JoystickClose(joystick);
+}
+
+DECLSPEC const char * SDLCALL
+SDL_JoystickName(int device_index)
+{
+    return SDL20_JoystickNameForIndex(device_index);
+}
+
+DECLSPEC int SDLCALL
+SDL_JoystickIndex(SDL_Joystick *joystick)
+{
+    int i;
+
+    SDL20_LockJoysticks(); {
+        for (i = 0; i < SDL_arraysize(JoystickOpenList); i++) {
+            if (JoystickOpenList[i].joystick == joystick) {
+                break;
+            }
+        }
+
+        if (i < SDL_arraysize(JoystickOpenList)) {
+            SDL20_UnlockJoysticks();
+            return JoystickOpenList[i].device_index;
+        }
+
+    }
+    SDL20_UnlockJoysticks();
+    return SDL20_SetError("Can't find joystick");
+}
+
 DECLSPEC int SDLCALL SDL_JoystickOpened(int device_index)
 {
-    FIXME("write me");
-    return 0;
+    int retval = 0;
+    int i;
+    SDL20_LockJoysticks();
+    for (i = 0; i < SDL_arraysize(JoystickOpenList); i++) {
+        if ((JoystickOpenList[i].joystick) && (JoystickOpenList[i].device_index == device_index)) {
+            retval = 1;
+            break;
+        }
+    }
+    SDL20_UnlockJoysticks();
+    return retval;
 }
 
 static int
