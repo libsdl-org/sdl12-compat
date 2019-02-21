@@ -834,6 +834,17 @@ SDL_snprintf(char *text, size_t maxlen, const char *fmt, ...)
     return retval;
 }
 
+DECLSPEC void * SDLCALL
+SDL_revcpy(void *dst, const void *src, size_t len)
+{
+    /* this doesn't reverse the data...I think this was just a memcpy that
+       was meant to be CPU-cache friendly if you knew you were working with
+       data going backwards in memory, instead of jumping over pages to copy
+       from the start...? Whatever, just do a memcpy here. */
+    return SDL_memcpy(dst, src, len);
+}
+
+
 DECLSPEC SDL_bool SDLCALL
 SDL_HasMMXExt(void)
 {
