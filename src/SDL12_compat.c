@@ -761,7 +761,7 @@ static EventQueueType *EventQueueAvailable = NULL;
     #define SDL20_LIBNAME "libSDL2-2.0.so.0"
     #endif
     static void *Loaded_SDL20 = NULL;
-    #define LoadSDL20Library() ((Loaded_SDL20 = dlopen(SDL20_LIBNAME, RTLD_LOCAL)) != NULL)
+    #define LoadSDL20Library() ((Loaded_SDL20 = dlopen(SDL20_LIBNAME, RTLD_LOCAL|RTLD_NOW)) != NULL)
     #define LookupSDL20Sym(sym) dlsym(Loaded_SDL20, sym)
     #define CloseSDL20Library() { if (Loaded_SDL20) { dlclose(Loaded_SDL20); Loaded_SDL20 = NULL; } }
 #else
