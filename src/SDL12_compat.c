@@ -980,8 +980,11 @@ Init12VidModes(void)
     void *ptr = NULL;
     int i, j;
 
+    if (VideoModesCount > 0) {
+        return 0;  // already did this.
+    }
+
     SDL_assert(VideoModes == NULL);
-    SDL_assert(VideoModesCount == 0);
 
     for (i = 0; i < total; ++i) {
         SDL_DisplayMode mode;
