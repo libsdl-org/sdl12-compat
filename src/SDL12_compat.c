@@ -3055,6 +3055,36 @@ SDL_FreeYUVOverlay(SDL12_Overlay * overlay)
 }
 
 DECLSPEC int SDLCALL
+SDL_GL_LoadLibrary(const char *libname)
+{
+    /* SDL 1.2 would unload the previous library if one was loaded. SDL2
+       reports an error if one is already loaded, and sometimes loads it
+       internally for some video targets, so unloading it probably isn't safe.
+       There really isn't a good reason to be using anything other than the
+       system OpenGL in 2019, so we ignore the error in this case to match 1.2
+       behavior, even if you were going to load a different library this time.
+       Oh well. */
+    const int rc = SDL20_GL_LoadLibrary(libname);
+    if (rc == -1) {
+        const char *err = SDL20_GetError();
+        if (SDL20_strcmp(err, "OpenGL library already loaded") == 0) {
+            return 0;
+        }
+
+        /* reset the actual error. */
+        char *dup = SDL_strdup(err);
+        if (!dup) {
+            SDL20_SetError("Out of memory");
+        } else {
+            SDL20_SetError(dup);
+            SDL_free(dup);
+        }
+    }
+    return rc;
+}
+
+
+DECLSPEC int SDLCALL
 SDL_GL_SetAttribute(SDL12_GLattr attr, int value)
 {
     if (attr >= SDL12_GL_MAX_ATTRIBUTE)
