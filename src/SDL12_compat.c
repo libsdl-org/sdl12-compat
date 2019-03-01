@@ -2114,6 +2114,9 @@ failed:
 DECLSPEC SDL12_Surface * SDLCALL
 SDL_CreateRGBSurface(Uint32 sdl12flags, int width, int height, int depth, Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask)
 {
+    if (depth == 8) {
+        Rmask = Gmask = Bmask = Amask = 0;  // force a paletted surface.
+    }
     SDL_Surface *surface20 = SDL20_CreateRGBSurface(0, width, height, depth, Rmask, Gmask, Bmask, Amask);
     SDL12_Surface *surface12 = Surface20to12(surface20);
     if (!surface12) {
@@ -2128,6 +2131,9 @@ SDL_CreateRGBSurface(Uint32 sdl12flags, int width, int height, int depth, Uint32
 DECLSPEC SDL12_Surface * SDLCALL
 SDL_CreateRGBSurfaceFrom(void *pixels, int width, int height, int depth, int pitch, Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask)
 {
+    if (depth == 8) {
+        Rmask = Gmask = Bmask = Amask = 0;  // force a paletted surface.
+    }
     SDL_Surface *surface20 = SDL20_CreateRGBSurfaceFrom(pixels, width, height, depth, pitch, Rmask, Gmask, Bmask, Amask);
     SDL12_Surface *surface12 = Surface20to12(surface20);
     if (!surface12) {
