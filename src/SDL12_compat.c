@@ -2638,6 +2638,12 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
     VideoSurface12->pitch = VideoSurface12->surface20->pitch = width * SDL_BYTESPERPIXEL(appfmt);
     SDL_SetClipRect(VideoSurface12, NULL);
 
+    if (flags12 & SDL12_FULLSCREEN) {
+        VideoSurface12->flags |= SDL12_FULLSCREEN;
+    } else {
+        VideoSurface12->flags &= ~SDL12_FULLSCREEN;
+    }
+
     if (flags12 & SDL12_OPENGL) {
         SDL_assert(!VideoTexture20);  /* either a new window or we destroyed all this */
         SDL_assert(!VideoRenderer20);
@@ -2940,8 +2946,29 @@ SDL_WM_IconifyWindow(void)
 DECLSPEC int SDLCALL
 SDL_WM_ToggleFullScreen(SDL12_Surface *surface)
 {
-    FIXME("write me");
-    return SDL20_Unsupported();
+    int retval = 0;
+    if (surface == VideoSurface12) {
+        SDL_assert(VideoWindow20);
+        const Uint32 flags20 = SDL20_GetWindowFlags(VideoWindow20);
+        if (flags20 & SDL_WINDOW_FULLSCREEN) {
+            SDL_assert(VideoSurface12->flags & SDL12_FULLSCREEN);
+            retval = (SDL20_SetWindowFullscreen(VideoWindow20, 0) == 0);
+            if (retval) {
+                VideoSurface12->flags &= ~SDL12_FULLSCREEN;
+            }
+        } else {
+            SDL_assert((VideoSurface12->flags & SDL12_FULLSCREEN) == 0);
+            const Uint32 newflags20 = (VideoSurface12->flags & SDL12_OPENGL) ? SDL_WINDOW_FULLSCREEN : SDL_WINDOW_FULLSCREEN_DESKTOP;
+            retval = (SDL20_SetWindowFullscreen(VideoWindow20, newflags20) == 0);
+            if (retval) {
+                VideoSurface12->flags |= SDL12_FULLSCREEN;
+            }
+        }
+        if (retval && VideoRenderer20) {
+            SDL20_RenderSetLogicalSize(VideoRenderer20, VideoSurface12->w, VideoSurface12->h);
+        }
+    }
+    return retval;
 }
 
 typedef enum
