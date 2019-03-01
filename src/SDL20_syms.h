@@ -160,7 +160,7 @@ SDL20_SYM_PASSTHROUGH(int,CondWait,(SDL_cond *a, SDL_mutex *b),(a,b),return)
 SDL20_SYM_PASSTHROUGH(int,CondWaitTimeout,(SDL_cond *a, SDL_mutex *b, Uint32 c),(a,b,c),return)
 
 SDL20_SYM(SDL_AudioSpec *,LoadWAV_RW,(SDL_RWops *a, int b, SDL_AudioSpec *c, Uint8 **d, Uint32 *e),(a,b,c,d,e),return)
-SDL20_SYM_PASSTHROUGH(int,OpenAudio,(SDL_AudioSpec *a, SDL_AudioSpec *b),(a,b),return)
+SDL20_SYM(int,OpenAudio,(SDL_AudioSpec *a, SDL_AudioSpec *b),(a,b),return)
 SDL20_SYM_PASSTHROUGH(SDL_AudioStatus,GetAudioStatus,(void),(),return)
 SDL20_SYM_PASSTHROUGH(void,PauseAudio,(int a),(a),)
 SDL20_SYM_PASSTHROUGH(void,FreeWAV,(Uint8 *a),(a),)

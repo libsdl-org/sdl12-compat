@@ -3638,4 +3638,60 @@ SDL_LoadWAV_RW(SDL12_RWops *rwops12, int freerwops12,
     return retval;
 }
 
+typedef struct
+{
+    void (SDLCALL *app_callback)(void *userdata, Uint8 *stream, int len);
+    void *app_userdata;
+    Uint8 silence;
+} AudioCallbackWrapperData;
+
+static void SDLCALL
+AudioCallbackWrapper(void *userdata, Uint8 *stream, int len)
+{
+    AudioCallbackWrapperData *data = (AudioCallbackWrapperData *) userdata;
+    SDL_memset(stream, data->silence, len);  // SDL2 doesn't clear the stream before calling in here, but 1.2 expects it.
+    data->app_callback(data->app_userdata, stream, len);
+}
+
+
+DECLSPEC int SDLCALL
+SDL_OpenAudio(SDL_AudioSpec *want, SDL_AudioSpec *obtained)
+{
+    // SDL2 uses a NULL callback to mean "we play to use SDL_QueueAudio()"
+    if (want && (want->callback == NULL)) {
+        return SDL20_SetError("Callback can't be NULL");
+    }
+
+    AudioCallbackWrapperData *data = (AudioCallbackWrapperData *) SDL_calloc(1, sizeof (AudioCallbackWrapperData));
+    if (!data) {
+        return SDL20_SetError("Out of memory");
+    }
+    data->app_callback = want->callback;
+    data->app_userdata = want->userdata;
+    want->callback = AudioCallbackWrapper;
+    want->userdata = data;
+
+    FIXME("Don't allow int32 or float32");
+    FIXME("clamp output to mono/stereo");
+    const int retval = SDL20_OpenAudio(want, obtained);
+    want->callback = data->app_callback;
+    want->userdata = data->app_userdata;
+    if (retval == -1) {
+        SDL_free(data);
+    } else {
+        FIXME("memory leak on callback data");
+        if (!obtained) {
+            data->silence = want->silence;
+        } else {
+            data->silence = obtained->silence;
+            obtained->callback = data->app_callback;
+            obtained->userdata = data->app_userdata;
+        }
+    }
+
+    return retval;
+}
+
+
+
 /* vi: set ts=4 sw=4 expandtab: */
