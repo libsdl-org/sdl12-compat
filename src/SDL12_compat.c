@@ -2951,11 +2951,34 @@ typedef enum
     SDL12_GRAB_ON = 1
 } SDL12_GrabMode;
 
+static void
+UpdateRelativeMouseMode(void)
+{
+    // in SDL 1.2, hiding+grabbing the cursor was like SDL2's relative mouse mode.
+    if (VideoWindow20) {
+        const int visible = SDL20_ShowCursor(-1);
+        const SDL_bool grabbed = SDL20_GetWindowGrab(VideoWindow20);
+        SDL20_SetRelativeMouseMode((!visible && grabbed) ? SDL_TRUE : SDL_FALSE);
+    }
+}
+
+DECLSPEC int SDLCALL
+SDL_ShowCursor(int toggle)
+{
+    const int retval = SDL20_ShowCursor(toggle);
+    if (toggle >= 0) {
+        UpdateRelativeMouseMode();
+    }
+    return retval;
+}
+
+
 DECLSPEC SDL12_GrabMode SDLCALL
 SDL_WM_GrabInput(SDL12_GrabMode mode)
 {
     if (mode != SDL12_GRAB_QUERY) {
         SDL20_SetWindowGrab(VideoWindow20, (mode == SDL12_GRAB_ON));
+        UpdateRelativeMouseMode();
     }
     return SDL20_GetWindowGrab(VideoWindow20) ? SDL12_GRAB_ON : SDL12_GRAB_OFF;
 }
