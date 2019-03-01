@@ -939,7 +939,8 @@ SDL_JoystickIndex(SDL_Joystick *joystick)
     return SDL20_SetError("Can't find joystick");
 }
 
-DECLSPEC int SDLCALL SDL_JoystickOpened(int device_index)
+DECLSPEC int SDLCALL
+SDL_JoystickOpened(int device_index)
 {
     int retval = 0;
     int i;
@@ -3334,7 +3335,8 @@ SDL_mutexV(SDL_mutex *mutex)
     return SDL20_UnlockMutex(mutex);
 }
 
-DECLSPEC void SDLCALL SDL_KillThread(SDL_Thread *thread)
+DECLSPEC void SDLCALL
+SDL_KillThread(SDL_Thread *thread)
 {
     FIXME("Removed from 2.0; do nothing. We can't even report failure.");
     fprintf(stderr,
