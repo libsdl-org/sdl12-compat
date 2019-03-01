@@ -2856,11 +2856,26 @@ PresentScreen(void)
     }
 
     FIXME("Maybe lock texture always, until present, if no conversion needed?");
-    VideoConvertSurface20->pixels = pixels;
-    VideoConvertSurface20->pitch = pitch;
-    SDL20_UpperBlit(VideoSurface12->surface20, NULL, VideoConvertSurface20, NULL);
-    VideoConvertSurface20->pixels = NULL;
-    VideoConvertSurface20->pitch = 0;
+    if (VideoConvertSurface20) {
+        VideoConvertSurface20->pixels = pixels;
+        VideoConvertSurface20->pitch = pitch;
+        SDL20_UpperBlit(VideoSurface12->surface20, NULL, VideoConvertSurface20, NULL);
+        VideoConvertSurface20->pixels = NULL;
+        VideoConvertSurface20->pitch = 0;
+    } else if (pitch == VideoSurface12->pitch) {
+        SDL_memcpy(pixels, VideoSurface12->pixels, pitch * VideoSurface12->h);
+    } else {
+        const int srcpitch = VideoSurface12->pitch;
+        const int cpy = SDL_min(srcpitch, pitch);
+        const int h = VideoSurface12->h;
+        char *dst = (char *) pixels;
+        char *src = (char *) VideoSurface12->pixels;
+        for (int i = 0; i < h; i++) {
+            SDL_memcpy(dst, src, cpy);
+            src += srcpitch;
+            dst += pitch;
+        }
+    }
 
     SDL20_UnlockTexture(VideoTexture20);
     SDL20_RenderCopy(VideoRenderer20, VideoTexture20, NULL, NULL);
