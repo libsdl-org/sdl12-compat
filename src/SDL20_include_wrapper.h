@@ -158,6 +158,14 @@
 #undef SDL_UnlockSurface
 #undef SDL_GetKeyName
 
+#ifdef SDL_mutexP
+#undef SDL_mutexP
+#endif
+
+#ifdef SDL_mutexV
+#undef SDL_mutexV
+#endif
+
 #ifdef SDL_BlitSurface
 #undef SDL_BlitSurface
 #endif
