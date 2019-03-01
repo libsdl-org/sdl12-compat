@@ -2838,11 +2838,9 @@ SDL_DisplayFormat(SDL12_Surface *surface12)
 }
 
 DECLSPEC SDL12_Surface * SDLCALL
-SDL_DisplayFormatAlpha(SDL12_Surface *surface)
+SDL_DisplayFormatAlpha(SDL12_Surface *surface12)
 {
-    FIXME("write me");
-    SDL20_Unsupported();
-    return NULL;
+    return SDL_DisplayFormat(surface12);
 }
 
 static void
