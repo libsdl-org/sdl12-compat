@@ -1314,8 +1314,9 @@ SDL_PollEvent(SDL12_Event *event12)
 
     SDL_PumpEvents();  /* this will run our filter and build our 1.2 queue. */
 
-    if (EventQueueHead == NULL)
+    if (EventQueueHead == NULL) {
         return 0;  /* no events at the moment. */
+    }
 
     SDL_memcpy(event12, &EventQueueHead->event12, sizeof (SDL12_Event));
     next = EventQueueHead->next;
@@ -1333,17 +1334,21 @@ DECLSPEC int SDLCALL
 SDL_PushEvent(SDL12_Event *event12)
 {
     EventQueueType *item = EventQueueAvailable;
-    if (item == NULL)
+    if (item == NULL) {
         return -1;  /* no space available at the moment. */
+    }
 
     EventQueueAvailable = item->next;
-    if (EventQueueTail)
+    if (EventQueueTail) {
         EventQueueTail->next = item;
-    else
+        EventQueueTail = item;
+    } else {
         EventQueueHead = EventQueueTail = item;
+    }
     item->next = NULL;
 
     SDL_memcpy(&item->event12, event12, sizeof (SDL12_Event));
+
     return 0;
 }
 
