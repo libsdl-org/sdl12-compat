@@ -3176,12 +3176,12 @@ SDL_GL_LoadLibrary(const char *libname)
         }
 
         /* reset the actual error. */
-        char *dup = SDL_strdup(err);
+        char *dup = SDL20_strdup(err);
         if (!dup) {
-            SDL20_SetError("Out of memory");
+            SDL20_OutOfMemory();
         } else {
             SDL20_SetError(dup);
-            SDL_free(dup);
+            SDL20_free(dup);
         }
     }
     return rc;
@@ -3696,9 +3696,9 @@ SDL_OpenAudio(SDL_AudioSpec *want, SDL_AudioSpec *obtained)
         return SDL20_SetError("Callback can't be NULL");
     }
 
-    AudioCallbackWrapperData *data = (AudioCallbackWrapperData *) SDL_calloc(1, sizeof (AudioCallbackWrapperData));
+    AudioCallbackWrapperData *data = (AudioCallbackWrapperData *) SDL20_calloc(1, sizeof (AudioCallbackWrapperData));
     if (!data) {
-        return SDL20_SetError("Out of memory");
+        return SDL20_OutOfMemory();
     }
     data->app_callback = want->callback;
     data->app_userdata = want->userdata;
@@ -3711,7 +3711,7 @@ SDL_OpenAudio(SDL_AudioSpec *want, SDL_AudioSpec *obtained)
     want->callback = data->app_callback;
     want->userdata = data->app_userdata;
     if (retval == -1) {
-        SDL_free(data);
+        SDL20_free(data);
     } else {
         FIXME("memory leak on callback data");
         if (!obtained) {
