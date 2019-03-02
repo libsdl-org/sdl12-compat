@@ -97,7 +97,6 @@
 
 #define SDL_BlitSurface SDL_UpperBlit
 
-
 #if 0
 #define FIXME(x) do {} while (0)
 #else
@@ -105,7 +104,7 @@
     do { \
         static SDL_bool seen = SDL_FALSE; \
         if (!seen) { \
-            fprintf(stderr, "FIXME: %s (%s:%d)\n", x, __FILE__, __LINE__); \
+            fprintf(stderr, "FIXME: %s (%s, %s:%d)\n", x, __FUNCTION__, __FILE__, __LINE__); \
             seen = SDL_TRUE; \
         } \
     } while (0)
