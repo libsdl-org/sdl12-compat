@@ -716,6 +716,7 @@ static SDL_Window *VideoWindow20 = NULL;
 static SDL_Renderer *VideoRenderer20 = NULL;
 static SDL_Texture *VideoTexture20 = NULL;
 static SDL12_Surface *VideoSurface12 = NULL;
+static SDL_bool VideoSurfaceUpdated = SDL_FALSE;
 static SDL_Surface *VideoConvertSurface20 = NULL;
 static SDL_GLContext *VideoGLContext20 = NULL;
 static char *WindowTitle = NULL;
@@ -1312,7 +1313,7 @@ SDL_PollEvent(SDL12_Event *event12)
 {
     EventQueueType *next;
 
-    SDL20_PumpEvents();  /* this will run our filter and build our 1.2 queue. */
+    SDL_PumpEvents();  /* this will run our filter and build our 1.2 queue. */
 
     if (EventQueueHead == NULL)
         return 0;  /* no events at the moment. */
@@ -2735,6 +2736,8 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
 
     FIXME("setup screen saver");
 
+    VideoSurfaceUpdated = SDL_FALSE;
+
     return VideoSurface12;
 }
 
@@ -2880,6 +2883,7 @@ PresentScreen(void)
     SDL20_UnlockTexture(VideoTexture20);
     SDL20_RenderCopy(VideoRenderer20, VideoTexture20, NULL, NULL);
     SDL20_RenderPresent(VideoRenderer20);
+    VideoSurfaceUpdated = SDL_FALSE;
 }
 
 DECLSPEC void SDLCALL
@@ -2892,7 +2896,26 @@ SDL_UpdateRects(SDL12_Surface *surface12, int numrects, SDL12_Rect *rects12)
         return;
     }
 
-    /* everything else is marked SDL12_DOUBLEBUF and is a no-op here. */
+    // everything else is marked SDL12_DOUBLEBUF and SHOULD BE a no-op here,
+    //  but in practice most apps never got a double-buffered surface and
+    //  don't handle it correctly, so we have to work around it.
+    if (surface12 == VideoSurface12) {
+        SDL_bool whole_screen = SDL_FALSE;
+        if (numrects == 1) {
+            const SDL12_Rect *r = rects12;
+            if (!r->x && !r->y && !r->w && !r->h) {
+                whole_screen = SDL_TRUE;
+            } else if (!r->x && !r->y && (r->w == surface12->w) && (r->h == surface12->h)) {
+                whole_screen = SDL_TRUE;
+            }
+        }
+                
+        if (whole_screen) {  
+            PresentScreen();  // flip it now.
+        } else {
+            VideoSurfaceUpdated = SDL_TRUE;  // flip it later.
+        }
+    }
 }
 
 DECLSPEC void SDLCALL
@@ -2920,6 +2943,18 @@ SDL_Flip(SDL12_Surface *surface12)
     }
 
     return 0;
+}
+
+DECLSPEC void SDLCALL
+SDL_PumpEvents(void)
+{
+    // If the app is doing dirty rectangles, we set a flag and present the
+    //  screen surface when they pump for new events, which we consider a
+    //  sign that they are done rendering for the current frame.
+    if (VideoSurfaceUpdated) {
+        PresentScreen();
+    }
+    SDL20_PumpEvents();
 }
 
 DECLSPEC void SDLCALL
