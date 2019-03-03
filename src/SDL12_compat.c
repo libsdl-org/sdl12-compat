@@ -141,6 +141,9 @@
 #define SDL12_INIT_EVENTTHREAD 0x01000000
 #define SDL12_INIT_EVERYTHING  0x0000FFFF
 
+#define SDL12_LOGPAL 1
+#define SDL12_PHYSPAL 2
+
 typedef struct SDL12_Rect
 {
     Sint16 x;
@@ -2082,8 +2085,23 @@ Surface20to12(SDL_Surface *surface20)
     format12->Gmask = surface20->format->Gmask;
     format12->Bmask = surface20->format->Bmask;
     format12->Amask = surface20->format->Amask;
-    FIXME("format12->colorkey");
-    FIXME("format12->alpha");
+
+    if (SDL20_HasColorKey(surface20)) {
+        if (SDL20_GetColorKey(surface20, &format12->colorkey) == -1) {
+            format12->colorkey = 0;
+        } else {
+            surface12->flags |= SDL12_SRCCOLORKEY;
+        }
+    }
+
+    if (SDL20_GetSurfaceAlphaMod(surface20, &format12->alpha) == -1) {
+        format12->alpha = 255;
+    }
+
+    if (format12->alpha != 255) {
+        surface12->flags |= SDL12_SRCALPHA;
+    }
+
 
     SDL20_zerop(surface12);
     flags = surface20->flags;
@@ -2116,37 +2134,132 @@ failed:
     return NULL;
 }
 
-DECLSPEC SDL12_Surface * SDLCALL
-SDL_CreateRGBSurface(Uint32 sdl12flags, int width, int height, int depth, Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask)
+static void
+SetPalette12ForMasks(SDL12_Surface *surface12, const Uint32 Rmask, const Uint32 Gmask, const Uint32 Bmask)
 {
-    if (depth == 8) {
-        Rmask = Gmask = Bmask = Amask = 0;  // force a paletted surface.
+    SDL12_PixelFormat *format12 = surface12->format;
+    if (format12->palette && (Rmask || Bmask || Gmask)) {
+        #define LOSSMASKSHIFTSETUP(t) { \
+            format12->t##shift = 0; \
+            format12->t##loss = 8; \
+            if (t##mask) { \
+                Uint32 mask; \
+                for (mask = t##mask; !(mask & 1); mask >>= 1) { \
+                    format12->t##shift++; \
+                } \
+                while (mask & 1) { \
+                    format12->t##loss--; \
+                    mask >>= 1; \
+                } \
+            } \
+            format12->t##mask = t##mask; \
+        }
+        LOSSMASKSHIFTSETUP(R);
+        LOSSMASKSHIFTSETUP(G);
+        LOSSMASKSHIFTSETUP(B);
+        #undef LOSSMASSSHIFTSETUP
+        format12->Amask = 0;
+        format12->Ashift = 0;
+        format12->Aloss = 8;
+
+        #define MASKSETUP(t) \
+            int t##w = 0, t##m = 0; \
+            if (t##mask) { \
+            t##w = 8 - format12->t##loss; \
+            for (int i = format12->t##loss; i > 0; i -= t##w) { \
+                t##m |= 1 << i; \
+            } \
+        }
+        MASKSETUP(R);
+        MASKSETUP(G);
+        MASKSETUP(B);
+        #undef MASKSETUP
+
+        const int ncolors = format12->palette->ncolors;
+        SDL_Color *color = format12->palette->colors;
+        for (int i = 0; i < ncolors; i++, color++) {
+            #define SETCOLOR(T, t) { \
+                const int x = (i & T##mask) >> format12->T##shift; \
+                color->t = (x << format12->T##loss) | ((x * T##m) >> T##w); \
+            }
+            SETCOLOR(R, r);
+            SETCOLOR(G, g);
+            SETCOLOR(B, b);
+            #undef SETCOLOR
+            color->a = 255;
+        }
+
+        SDL_PixelFormat *format20 = surface12->surface20->format;
+        #define UPDATEFMT20(t) \
+            format20->t##mask = format12->t##mask; \
+            format20->t##loss = format12->t##loss; \
+            format20->t##shift = format12->t##shift;
+        UPDATEFMT20(R);
+        UPDATEFMT20(G);
+        UPDATEFMT20(B);
+        UPDATEFMT20(A);
+        #undef UPDATEFMT20
     }
-    SDL_Surface *surface20 = SDL20_CreateRGBSurface(0, width, height, depth, Rmask, Gmask, Bmask, Amask);
+}
+
+DECLSPEC SDL12_Surface * SDLCALL
+SDL_CreateRGBSurface(Uint32 flags12, int width, int height, int depth, Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask)
+{
+    // SDL 1.2 checks this.
+    if ((width >= 16384) || (height >= 65536)) {
+        SDL20_SetError("Width or height is too large");
+        return NULL;
+    }
+
+    SDL_Surface *surface20;
+    if (depth == 8) {  // don't pass masks to SDL2 for 8-bit surfaces, it'll cause problems.
+        surface20 = SDL20_CreateRGBSurface(0, width, height, depth, 0, 0, 0, 0);
+    } else {
+        surface20 = SDL20_CreateRGBSurface(0, width, height, depth, Rmask, Gmask, Bmask, Amask);
+    }
+
+    SDL20_SetSurfaceBlendMode(surface20, SDL_BLENDMODE_BLEND);
+
     SDL12_Surface *surface12 = Surface20to12(surface20);
     if (!surface12) {
         SDL20_FreeSurface(surface20);
         return NULL;
     }
 
-    SDL_assert(surface12->flags == 0);  // shouldn't have prealloc, rleaccel, or dontfree.
+    SDL_assert((surface12->flags & ~(SDL12_SRCCOLORKEY|SDL12_SRCALPHA)) == 0);  // shouldn't have prealloc, rleaccel, or dontfree.
+
+    SetPalette12ForMasks(surface12, Rmask, Gmask, Bmask);
+
     return surface12;
 }
 
 DECLSPEC SDL12_Surface * SDLCALL
 SDL_CreateRGBSurfaceFrom(void *pixels, int width, int height, int depth, int pitch, Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask)
 {
-    if (depth == 8) {
-        Rmask = Gmask = Bmask = Amask = 0;  // force a paletted surface.
+    if ((width >= 16384) || (height >= 65536)) {
+        SDL20_SetError("Width or height is too large");
+        return NULL;
     }
-    SDL_Surface *surface20 = SDL20_CreateRGBSurfaceFrom(pixels, width, height, depth, pitch, Rmask, Gmask, Bmask, Amask);
+
+    SDL_Surface *surface20;
+    if (depth == 8) {  // don't pass masks to SDL2 for 8-bit surfaces, it'll cause problems.
+        surface20 = SDL20_CreateRGBSurfaceFrom(pixels, width, height, depth, pitch, 0, 0, 0, 0);
+    } else {
+        surface20 = SDL20_CreateRGBSurfaceFrom(pixels, width, height, depth, pitch, Rmask, Gmask, Bmask, Amask);
+    }
+
+    SDL20_SetSurfaceBlendMode(surface20, SDL_BLENDMODE_BLEND);
+
     SDL12_Surface *surface12 = Surface20to12(surface20);
     if (!surface12) {
         SDL20_FreeSurface(surface20);
         return NULL;
     }
 
-    SDL_assert(surface12->flags == SDL12_PREALLOC);  // should _only_ have prealloc.
+    SDL_assert((surface12->flags & ~(SDL12_SRCCOLORKEY|SDL12_SRCALPHA)) == SDL12_PREALLOC);  // should _only_ have prealloc.
+
+    SetPalette12ForMasks(surface12, Rmask, Gmask, Bmask);
+
     return surface12;
 }
 
@@ -2792,10 +2905,21 @@ SDL_LowerBlit(SDL12_Surface *src, SDL12_Rect *srcrect12, SDL12_Surface *dst, SDL
 }
 
 DECLSPEC int SDLCALL
-SDL_SetAlpha(SDL12_Surface * surface, Uint32 flag, Uint8 value)
+SDL_SetAlpha(SDL12_Surface *surface12, Uint32 flags12, Uint8 value)
 {
-    FIXME("write me");
-    return SDL20_Unsupported();
+    const SDL_bool addkey = (flags12 & SDL12_SRCALPHA) ? SDL_TRUE : SDL_FALSE;
+    const int retval = SDL20_SetSurfaceAlphaMod(surface12->surface20, addkey ? value : 255);
+    if (SDL20_GetSurfaceAlphaMod(surface12->surface20, &surface12->format->alpha) < 0) {
+        surface12->format->alpha = 255;
+    }
+
+    if (surface12->format->alpha != 255) {
+        surface12->flags |= SDL12_SRCALPHA;
+    } else {
+        surface12->flags &= ~SDL12_SRCALPHA;
+    }
+
+    return retval;
 }
 
 DECLSPEC int SDLCALL
@@ -3102,6 +3226,13 @@ SDL_SetColorKey(SDL12_Surface *surface12, Uint32 flag12, Uint32 key)
     if (SDL20_GetColorKey(surface12->surface20, &surface12->format->colorkey) < 0) {
         surface12->format->colorkey = 0;
     }
+
+    if (addkey) {
+        surface12->flags |= SDL12_SRCCOLORKEY;
+    } else {
+        surface12->flags &= ~SDL12_SRCCOLORKEY;
+    }
+
     return retval;
 }
 
@@ -3109,16 +3240,47 @@ DECLSPEC int SDLCALL
 SDL_SetPalette(SDL12_Surface *surface12, int flags, const SDL_Color *colors,
                int firstcolor, int ncolors)
 {
-    FIXME("write me");
-    return SDL20_Unsupported();
+    if (!surface12) {
+        return 0;  // not an error, a no-op.
+    }
+
+    SDL12_Palette *palette12 = surface12->format->palette;
+    if (!palette12) {
+        return 0;  // not an error, a no-op.
+    }
+
+    SDL_Palette *palette20 = surface12->surface20->format->palette;
+    SDL_assert(palette20 != NULL);
+
+    // we need to force the "unused" field to 255, since it's "alpha" in SDL2.
+    SDL_Color *opaquecolors = (SDL_Color *) SDL20_malloc(sizeof (SDL_Color) * ncolors);
+    if (!opaquecolors) {
+        return SDL20_OutOfMemory();
+    }
+
+    // don't SDL_memcpy in case the 'a' field is uninitialized and upsets
+    //  memory tools like Valgrind.
+    for (int i = 0; i < ncolors; i++) {
+        opaquecolors[i].r = colors[i].r;
+        opaquecolors[i].g = colors[i].g;
+        opaquecolors[i].b = colors[i].b;
+        opaquecolors[i].a = 255;
+    }
+
+    const int retval = SDL20_SetPaletteColors(palette20, opaquecolors, firstcolor, ncolors);
+    SDL20_free(opaquecolors);
+
+    // in case this pointer changed...
+    palette12->colors = palette20->colors;
+
+    return retval;
 }
 
 DECLSPEC int SDLCALL
 SDL_SetColors(SDL12_Surface *surface12, const SDL_Color * colors, int firstcolor,
               int ncolors)
 {
-    FIXME("write me");
-    return SDL20_Unsupported();
+    return SDL_SetPalette(surface12, SDL12_LOGPAL | SDL12_PHYSPAL, colors, firstcolor, ncolors);
 }
 
 DECLSPEC int SDLCALL
