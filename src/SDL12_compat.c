@@ -718,7 +718,8 @@ static SDL_Window *VideoWindow20 = NULL;
 static SDL_Renderer *VideoRenderer20 = NULL;
 static SDL_Texture *VideoTexture20 = NULL;
 static SDL12_Surface *VideoSurface12 = NULL;
-static SDL_bool VideoSurfaceUpdated = SDL_FALSE;
+static Uint32 VideoSurfacePresentTicks = 0;
+static Uint32 VideoSurfaceLastPresentTicks = 0;
 static SDL_Surface *VideoConvertSurface20 = NULL;
 static SDL_GLContext *VideoGLContext20 = NULL;
 static char *WindowTitle = NULL;
@@ -2855,7 +2856,8 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
 
     FIXME("setup screen saver");
 
-    VideoSurfaceUpdated = SDL_FALSE;
+    VideoSurfacePresentTicks = 0;
+    VideoSurfaceLastPresentTicks = 0;
 
     return VideoSurface12;
 }
@@ -3118,7 +3120,8 @@ PresentScreen(void)
     SDL20_UnlockTexture(VideoTexture20);
     SDL20_RenderCopy(VideoRenderer20, VideoTexture20, NULL, NULL);
     SDL20_RenderPresent(VideoRenderer20);
-    VideoSurfaceUpdated = SDL_FALSE;
+    VideoSurfaceLastPresentTicks = SDL20_GetTicks();
+    VideoSurfacePresentTicks = 0;
 }
 
 DECLSPEC void SDLCALL
@@ -3148,7 +3151,7 @@ SDL_UpdateRects(SDL12_Surface *surface12, int numrects, SDL12_Rect *rects12)
         if (whole_screen) {  
             PresentScreen();  // flip it now.
         } else {
-            VideoSurfaceUpdated = SDL_TRUE;  // flip it later.
+            VideoSurfacePresentTicks = VideoSurfaceLastPresentTicks + 15;  // flip it later.
         }
     }
 }
@@ -3184,9 +3187,10 @@ DECLSPEC void SDLCALL
 SDL_PumpEvents(void)
 {
     // If the app is doing dirty rectangles, we set a flag and present the
-    //  screen surface when they pump for new events, which we consider a
-    //  sign that they are done rendering for the current frame.
-    if (VideoSurfaceUpdated) {
+    //  screen surface when they pump for new events if we're close to 60Hz,
+    //  which we consider a sign that they are done rendering for the current
+    //  frame and it would make sense to send it to the screen.
+    if (VideoSurfacePresentTicks && SDL_TICKS_PASSED(SDL20_GetTicks(), VideoSurfacePresentTicks)) {
         PresentScreen();
     }
     SDL20_PumpEvents();
