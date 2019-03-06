@@ -719,6 +719,8 @@ typedef struct
 static VideoModeList *VideoModes = NULL;
 static int VideoModesCount = 0;
 static SDL12_VideoInfo VideoInfo12;
+static SDL_bool VideoWindowGrabbed = SDL_FALSE;
+static SDL_bool VideoCursorHidden = SDL_FALSE;
 static SDL_Window *VideoWindow20 = NULL;
 static SDL_Renderer *VideoRenderer20 = NULL;
 static SDL_Texture *VideoTexture20 = NULL;
@@ -1084,6 +1086,10 @@ Init12Video(void)
 
     VideoDisplayIndex = GetVideoDisplay();
     SwapInterval = 0;
+
+    VideoWindowGrabbed = SDL_FALSE;
+    VideoCursorHidden = SDL_FALSE;
+    SDL20_ShowCursor(1);
 
     if (Init12VidModes() == -1) {
         return -1;
@@ -3325,18 +3331,22 @@ UpdateRelativeMouseMode(void)
 {
     // in SDL 1.2, hiding+grabbing the cursor was like SDL2's relative mouse mode.
     if (VideoWindow20) {
-        const int visible = SDL20_ShowCursor(-1);
-        const SDL_bool grabbed = SDL20_GetWindowGrab(VideoWindow20);
-        SDL20_SetRelativeMouseMode((!visible && grabbed) ? SDL_TRUE : SDL_FALSE);
+        SDL20_SetRelativeMouseMode((VideoWindowGrabbed && VideoCursorHidden) ? SDL_TRUE : SDL_FALSE);
     }
 }
 
 DECLSPEC int SDLCALL
 SDL_ShowCursor(int toggle)
 {
-    const int retval = SDL20_ShowCursor(toggle);
+    const int retval = VideoCursorHidden ? 0 : 1;
+
     if (toggle >= 0) {
-        UpdateRelativeMouseMode();
+        const SDL_bool wanthide = (toggle == 0) ? SDL_TRUE : SDL_FALSE;
+        if (VideoCursorHidden != wanthide) {
+            SDL20_ShowCursor(wanthide ? 0 : 1);
+            VideoCursorHidden = wanthide;
+            UpdateRelativeMouseMode();
+        }
     }
     return retval;
 }
@@ -3346,10 +3356,14 @@ DECLSPEC SDL12_GrabMode SDLCALL
 SDL_WM_GrabInput(SDL12_GrabMode mode)
 {
     if (mode != SDL12_GRAB_QUERY) {
-        SDL20_SetWindowGrab(VideoWindow20, (mode == SDL12_GRAB_ON));
-        UpdateRelativeMouseMode();
+        const SDL_bool wantgrab = (mode == SDL12_GRAB_ON) ? SDL_TRUE : SDL_FALSE;
+        if (VideoWindowGrabbed != wantgrab) {
+            SDL20_SetWindowGrab(VideoWindow20, wantgrab);
+            VideoWindowGrabbed = wantgrab;
+            UpdateRelativeMouseMode();
+        }
     }
-    return SDL20_GetWindowGrab(VideoWindow20) ? SDL12_GRAB_ON : SDL12_GRAB_OFF;
+    return VideoWindowGrabbed ? SDL12_GRAB_ON : SDL12_GRAB_OFF;
 }
 
 DECLSPEC void SDLCALL
