@@ -2099,10 +2099,10 @@ Surface20to12(SDL_Surface *surface20)
         format12->alpha = 255;
     }
 
-    if (format12->alpha != 255) {
+    SDL_BlendMode blendmode = SDL_BLENDMODE_NONE;
+    if ((SDL20_GetSurfaceBlendMode(surface20, &blendmode) == 0) && (blendmode == SDL_BLENDMODE_BLEND)) {
         surface12->flags |= SDL12_SRCALPHA;
     }
-
 
     SDL20_zerop(surface12);
     flags = surface20->flags;
@@ -2219,8 +2219,6 @@ SDL_CreateRGBSurface(Uint32 flags12, int width, int height, int depth, Uint32 Rm
         surface20 = SDL20_CreateRGBSurface(0, width, height, depth, Rmask, Gmask, Bmask, Amask);
     }
 
-    SDL20_SetSurfaceBlendMode(surface20, SDL_BLENDMODE_BLEND);
-
     SDL12_Surface *surface12 = Surface20to12(surface20);
     if (!surface12) {
         SDL20_FreeSurface(surface20);
@@ -2230,6 +2228,11 @@ SDL_CreateRGBSurface(Uint32 flags12, int width, int height, int depth, Uint32 Rm
     SDL_assert((surface12->flags & ~(SDL12_SRCCOLORKEY|SDL12_SRCALPHA)) == 0);  // shouldn't have prealloc, rleaccel, or dontfree.
 
     SetPalette12ForMasks(surface12, Rmask, Gmask, Bmask);
+
+    if (flags12 & SDL12_SRCALPHA) {
+        surface12->flags |= SDL12_SRCALPHA;
+        SDL20_SetSurfaceBlendMode(surface20, SDL_BLENDMODE_BLEND);
+    }
 
     return surface12;
 }
@@ -2248,8 +2251,6 @@ SDL_CreateRGBSurfaceFrom(void *pixels, int width, int height, int depth, int pit
     } else {
         surface20 = SDL20_CreateRGBSurfaceFrom(pixels, width, height, depth, pitch, Rmask, Gmask, Bmask, Amask);
     }
-
-    SDL20_SetSurfaceBlendMode(surface20, SDL_BLENDMODE_BLEND);
 
     SDL12_Surface *surface12 = Surface20to12(surface20);
     if (!surface12) {
@@ -2865,14 +2866,113 @@ SDL_GetVideoSurface(void)
     return VideoSurface12;
 }
 
-DECLSPEC int SDLCALL
-SDL_UpperBlit(SDL12_Surface *src, SDL12_Rect *srcrect12, SDL12_Surface *dst, SDL12_Rect *dstrect12)
+static int
+SaveDestAlpha(SDL12_Surface *src12, SDL12_Surface *dst12, Uint8 **retval)
 {
+    FIXME("This should only save the dst rect in use");
+
+    /* The 1.2 docs say this:
+     * RGBA->RGBA:
+     *     SDL_SRCALPHA set:
+     * 	alpha-blend (using the source alpha channel) the RGB values;
+     * 	leave destination alpha untouched. [Note: is this correct?]
+     *
+     * In SDL2, we change the destination alpha. We have to save it off in this case, which sucks.
+     */
+    Uint8 *dstalpha = NULL;
+    const SDL_bool save_dstalpha = ((src12->flags & SDL12_SRCALPHA) && dst12->format->Amask && ((src12->format->alpha != 255) || src12->format->Amask)) ? SDL_TRUE : SDL_FALSE;
+    if (save_dstalpha) {
+        const int w = dst12->w;
+        const int h = dst12->h;
+        dstalpha = (Uint8 *) SDL_malloc(w * h);
+        if (!dstalpha) {
+            *retval = NULL;
+            return SDL20_OutOfMemory();
+        }
+
+        Uint8 *dptr = dstalpha;
+        const Uint32 amask = dst12->format->Amask;
+        const Uint32 ashift = dst12->format->Ashift;
+        const Uint16 pitch = dst12->pitch;
+        if ((amask == 0xFF) || (amask == 0xFF00) || (amask == 0xFF0000) ||(amask == 0xFF000000)) {
+            FIXME("this could be SIMD'd");
+        }
+        if (dst12->format->BytesPerPixel == 2) {
+            const Uint16 *sptr = (const Uint16 *) dst12->pixels;
+            for (int y = 0; y < h; y++) {
+                for (int x = 0; x < w; x++) {
+                    *(dptr++) = (Uint8) ((sptr[x] & amask) >> ashift);
+                }
+                sptr = (Uint16 *) (((Uint8 *) sptr) + pitch);
+            }
+        } else if (dst12->format->BytesPerPixel == 4) {
+            const Uint32 *sptr = (const Uint32 *) dst12->pixels;
+            for (int y = 0; y < h; y++) {
+                for (int x = 0; x < w; x++) {
+                    *(dptr++) = (Uint8) ((sptr[x] & amask) >> ashift);
+                }
+                sptr = (Uint32 *) (((Uint8 *) sptr) + pitch);
+            }
+        } else {
+            FIXME("Unhandled dest alpha");
+        }
+    }
+
+    *retval = dstalpha;
+    return 0;
+}
+
+static void
+RestoreDestAlpha(SDL12_Surface *dst12, Uint8 *dstalpha)
+{
+    if (dstalpha) {
+        const int w = dst12->w;
+        const int h = dst12->h;
+        const Uint8 *sptr = dstalpha;
+        const Uint32 amask = dst12->format->Amask;
+        const Uint32 ashift = dst12->format->Ashift;
+        const Uint16 pitch = dst12->pitch;
+        if ((amask == 0xFF) || (amask == 0xFF00) || (amask == 0xFF0000) ||(amask == 0xFF000000)) {
+            FIXME("this could be SIMD'd");
+        }
+        if (dst12->format->BytesPerPixel == 2) {
+            Uint16 *dptr = (Uint16 *) dst12->pixels;
+            for (int y = 0; y < h; y++) {
+                for (int x = 0; x < w; x++) {
+                    dptr[x] = (Uint16) ((dptr[x] & ~amask) | ((((Uint16) *(sptr++)) << ashift) & amask));
+                }
+                dptr = (Uint16 *) (((Uint8 *) dptr) + pitch);
+            }
+        } else if (dst12->format->BytesPerPixel == 4) {
+            Uint32 *dptr = (Uint32 *) dst12->pixels;
+            for (int y = 0; y < h; y++) {
+                for (int x = 0; x < w; x++) {
+                    dptr[x] = (dptr[x] & ~amask) | ((((Uint32) *(sptr++)) << ashift) & amask);
+                }
+                dptr = (Uint32 *) (((Uint8 *) dptr) + pitch);
+            }
+        } else {
+            FIXME("Unhandled dest alpha");
+        }
+        SDL_free(dstalpha);
+    }
+}
+
+DECLSPEC int SDLCALL
+SDL_UpperBlit(SDL12_Surface *src12, SDL12_Rect *srcrect12, SDL12_Surface *dst12, SDL12_Rect *dstrect12)
+{
+    Uint8 *dstalpha;
+    if (SaveDestAlpha(src12, dst12, &dstalpha) < 0) {
+        return -1;
+    }
+
     SDL_Rect srcrect20, dstrect20;
-    const int retval = SDL20_UpperBlit(src->surface20,
+    const int retval = SDL20_UpperBlit(src12->surface20,
                                        srcrect12 ? Rect12to20(srcrect12, &srcrect20) : NULL,
-                                       dst->surface20,
+                                       dst12->surface20,
                                        dstrect12 ? Rect12to20(dstrect12, &dstrect20) : NULL);
+
+    RestoreDestAlpha(dst12, dstalpha);
 
     if (srcrect12) {
         Rect20to12(&srcrect20, srcrect12);
@@ -2886,13 +2986,20 @@ SDL_UpperBlit(SDL12_Surface *src, SDL12_Rect *srcrect12, SDL12_Surface *dst, SDL
 }
 
 DECLSPEC int SDLCALL
-SDL_LowerBlit(SDL12_Surface *src, SDL12_Rect *srcrect12, SDL12_Surface *dst, SDL12_Rect *dstrect12)
+SDL_LowerBlit(SDL12_Surface *src12, SDL12_Rect *srcrect12, SDL12_Surface *dst12, SDL12_Rect *dstrect12)
 {
+    Uint8 *dstalpha;
+    if (SaveDestAlpha(src12, dst12, &dstalpha) < 0) {
+        return -1;
+    }
+
     SDL_Rect srcrect20, dstrect20;
-    const int retval = SDL20_LowerBlit(src->surface20,
+    const int retval = SDL20_LowerBlit(src12->surface20,
                                        srcrect12 ? Rect12to20(srcrect12, &srcrect20) : NULL,
-                                       dst->surface20,
+                                       dst12->surface20,
                                        dstrect12 ? Rect12to20(dstrect12, &dstrect20) : NULL);
+
+    RestoreDestAlpha(dst12, dstalpha);
 
     if (srcrect12) {
         Rect20to12(&srcrect20, srcrect12);
@@ -2913,13 +3020,7 @@ SDL_SetAlpha(SDL12_Surface *surface12, Uint32 flags12, Uint8 value)
     if (SDL20_GetSurfaceAlphaMod(surface12->surface20, &surface12->format->alpha) < 0) {
         surface12->format->alpha = 255;
     }
-
-    if (surface12->format->alpha != 255) {
-        surface12->flags |= SDL12_SRCALPHA;
-    } else {
-        surface12->flags &= ~SDL12_SRCALPHA;
-    }
-
+    FIXME("Should this set SDL12_SRCALPHA on the surface?");
     return retval;
 }
 
@@ -2957,6 +3058,11 @@ SDL_ConvertSurface(SDL12_Surface *src12, const SDL12_PixelFormat *format12, Uint
         retval = Surface20to12(surface20);
         if (!retval) {
             SDL20_FreeSurface(surface20);
+        } else {
+            if (flags12 & SDL12_SRCALPHA) {
+                SDL20_SetSurfaceBlendMode(surface20, SDL_BLENDMODE_BLEND);
+                retval->flags |= SDL12_SRCALPHA;
+            }
         }
     }
     return retval;
