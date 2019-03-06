@@ -1310,6 +1310,7 @@ SDL_VideoDriverName(char *namebuf, int maxlen)
     return GetDriverName(SDL20_GetCurrentVideoDriver(), namebuf, maxlen);
 }
 
+
 DECLSPEC int SDLCALL
 SDL_PollEvent(SDL12_Event *event12)
 {
@@ -2786,7 +2787,7 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
             VideoRenderer20 = SDL20_CreateRenderer(VideoWindow20, -1, SDL_RENDERER_ACCELERATED|SDL_RENDERER_PRESENTVSYNC);
         }
         if (!VideoRenderer20) {
-            VideoRenderer20 = SDL20_CreateRenderer(VideoWindow20, -1, SDL_RENDERER_PRESENTVSYNC);
+            VideoRenderer20 = SDL20_CreateRenderer(VideoWindow20, -1, SDL_RENDERER_ACCELERATED);
         }
         if (!VideoRenderer20) {
             VideoRenderer20 = SDL20_CreateRenderer(VideoWindow20, -1, 0);
