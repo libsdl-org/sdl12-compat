@@ -144,6 +144,11 @@
 #define SDL12_LOGPAL 1
 #define SDL12_PHYSPAL 2
 
+// this will be in SDL 2.0.10, but here it is in case your headers are missing it.
+#ifndef SDL_SIMD_ALIGNED
+#define SDL_SIMD_ALIGNED    0x00000008
+#endif
+
 typedef struct SDL12_Rect
 {
     Sint16 x;
@@ -2107,9 +2112,7 @@ Surface20to12(SDL_Surface *surface20)
 
     SDL20_zerop(surface12);
     flags = surface20->flags;
-    #ifdef SDL_SIMD_ALIGNED
     flags &= ~SDL_SIMD_ALIGNED;  /* we don't need to map this to 1.2 */
-    #endif
     #define MAPSURFACEFLAGS(fl) { if (surface20->flags & SDL_##fl) { surface12->flags |= SDL12_##fl; flags &= ~SDL_##fl; } }
     MAPSURFACEFLAGS(PREALLOC);
     MAPSURFACEFLAGS(RLEACCEL);
