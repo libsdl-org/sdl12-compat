@@ -729,7 +729,7 @@ static SDL_Surface *VideoConvertSurface20 = NULL;
 static SDL_GLContext *VideoGLContext20 = NULL;
 static char *WindowTitle = NULL;
 static char *WindowIconTitle = NULL;
-static SDL12_Surface *VideoIcon12;
+static SDL_Surface *VideoIcon20 = NULL;
 static int EnabledUnicode = 0;
 static int VideoDisplayIndex = 0;
 static int CDRomInit = 0;
@@ -1202,6 +1202,9 @@ static void
 Quit12Video(void)
 {
     int i;
+
+    SDL20_FreeSurface(VideoIcon20);
+    VideoIcon20 = NULL;
 
     for (i = 0; i < VideoModesCount; i++) {
         SDL20_free(VideoModes[i].modeslist12);
@@ -2745,6 +2748,9 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
         if (!VideoWindow20) {
             return EndVidModeCreate();
         }
+        if (VideoIcon20) {
+            SDL20_SetWindowIcon(VideoWindow20, VideoIcon20);
+        }
     } else {  /* resize it */
         SDL20_SetWindowSize(VideoWindow20, width, height);
         SDL20_SetWindowFullscreen(VideoWindow20, fullscreen_flags20);
@@ -3227,10 +3233,49 @@ SDL_WM_GetCaption(const char **title, const char **icon)
 }
 
 DECLSPEC void SDLCALL
-SDL_WM_SetIcon(SDL_Surface *icon, Uint8 *mask)
+SDL_WM_SetIcon(SDL12_Surface *icon12, Uint8 *mask)
 {
-    FIXME("write me");
-    SDL20_Unsupported();
+SDL20_SetWindowIcon(VideoWindow20, icon12->surface20);
+return;
+
+    // take the mask and zero out those alpha values.
+    SDL_BlendMode blendmode = SDL_BLENDMODE_NONE;
+    if (SDL20_GetSurfaceBlendMode(icon12->surface20, &blendmode) < 0) {
+        return;  // oh well.
+    }
+
+    Uint32 rmask, gmask, bmask, amask;
+    int bpp;
+    if (!SDL20_PixelFormatEnumToMasks(SDL_PIXELFORMAT_ARGB8888, &bpp, &rmask, &gmask, &bmask, &amask)) {
+        return;  // oh well.
+    }
+
+    SDL_Surface *icon20 = SDL20_CreateRGBSurface(0, icon12->w, icon12->h, bpp, rmask, gmask, bmask, amask);
+    if (!icon20) {
+        return;  // oh well.
+    }
+
+    SDL20_SetSurfaceBlendMode(icon12->surface20, SDL_BLENDMODE_NONE);
+    const int rc = SDL20_UpperBlit(icon12->surface20, NULL, icon20, NULL);
+    SDL20_SetSurfaceBlendMode(icon12->surface20, blendmode);
+    if (rc == 0) {
+        SDL_assert(icon20->format->BytesPerPixel == 4);
+        SDL_assert(icon20->pitch == icon20->w * 4);
+        const int w = icon12->w;
+        const int h = icon12->h;
+        const int mpitch = (w + 7) / 8;
+        Uint32 *ptr = (Uint32 *) icon20->pixels;
+        for (int y = 0; y < h; y++) {
+            for (int x = 0; x < w; x++, ptr++) {
+                if (!(mask[y*mpitch + x/8] & (128 >> (x % 8)))) {
+                    *ptr &= ~amask;
+                }
+            }
+        }
+        SDL20_SetWindowIcon(VideoWindow20, icon20);
+        SDL20_FreeSurface(VideoIcon20);
+        VideoIcon20 = icon20;
+    }
 }
 
 DECLSPEC int SDLCALL
