@@ -2754,10 +2754,10 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
         //  software rendering, we're just going to push it off onto the
         //  GPU, so use FULLSCREEN_DESKTOP and logical scaling there.
         FIXME("OpenGL will still expect letterboxing and centering if it didn't get an exact resolution match.");
-        if (flags12 & SDL12_OPENGL) {
-            fullscreen_flags20 |= SDL_WINDOW_FULLSCREEN;
-        } else {
+        if (((flags12 & SDL12_OPENGL) == 0) || ((dmode.w == width) && (dmode.h == height))) {
             fullscreen_flags20 |= SDL_WINDOW_FULLSCREEN_DESKTOP;
+        } else {
+            fullscreen_flags20 |= SDL_WINDOW_FULLSCREEN;
         }
     }
 
