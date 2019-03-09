@@ -740,6 +740,7 @@ static SDL12_Cursor *CurrentCursor12 = NULL;
 static Uint8 EventStates[SDL12_NUMEVENTS];
 static int SwapInterval = 0;
 static JoystickOpenedItem JoystickOpenList[16];
+static Uint8 KeyState[SDLK12_LAST];
 
 // !!! FIXME: need a mutex for the event queue.
 #define SDL12_MAXEVENTS 128
@@ -1838,6 +1839,16 @@ Keysym20to12(const SDL_Keycode keysym20)
     return SDLK12_UNKNOWN;
 }
 
+DECLSPEC Uint8 * SDLCALL
+SDL_GetKeyState(int *numkeys)
+{
+    if (numkeys) {
+        *numkeys = (int) SDL_arraysize(KeyState);
+    }
+    return KeyState;
+}
+
+
 static int
 EventFilter20to12(void *data, SDL_Event *event20)
 {
@@ -1925,6 +1936,9 @@ EventFilter20to12(void *data, SDL_Event *event20)
             if (event12.key.keysym.sym == SDLK12_UNKNOWN) {
                 return 0;  /* drop it if we can't map it */
             }
+
+            KeyState[event12.key.keysym.sym] = event20->key.state;
+
             event12.type = (event20->type == SDL_KEYDOWN) ? SDL12_KEYDOWN : SDL12_KEYUP;
             event12.key.which = 0;
             event12.key.state = event20->key.state;
