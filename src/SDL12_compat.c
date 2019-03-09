@@ -820,6 +820,22 @@ LoadSDL20(void)
     return okay;
 }
 
+static void dllinit(void) __attribute__((constructor));
+static void dllinit(void)
+{
+    if (!LoadSDL20()) {
+        fprintf(stderr, "ERROR: sdl12-compat failed to load SDL 2.0! Aborting!\n");
+        fflush(stderr);
+        abort();
+    }
+}
+
+static void dllquit(void) __attribute__((destructor));
+static void dllquit(void)
+{
+    UnloadSDL20();
+}
+
 DECLSPEC const SDL_version * SDLCALL
 SDL_Linked_Version(void)
 {
@@ -1099,6 +1115,8 @@ Init12Video(void)
 }
 
 
+
+
 DECLSPEC int SDLCALL
 SDL_InitSubSystem(Uint32 sdl12flags)
 {
@@ -1112,9 +1130,6 @@ SDL_InitSubSystem(Uint32 sdl12flags)
 
     Uint32 sdl20flags = 0;
     int rc;
-
-    if (!LoadSDL20())
-        return -1;
 
 #ifdef __MACOSX__
     extern void sdl12_compat_macos_init(void);
@@ -1248,7 +1263,6 @@ SDL_QuitSubSystem(Uint32 sdl12flags)
 
     if ((SDL20_WasInit(0) == 0) && (!CDRomInit)) {
         SDL20_Quit();
-        UnloadSDL20();
     }
 }
 
@@ -1265,10 +1279,6 @@ SDL_SetError(const char *fmt, ...)
     char *str = NULL;
     size_t len = 0;
     va_list ap;
-
-    if (!LoadSDL20()) {  /* SDL_SetError gets called before init sometimes. */
-        return;
-    }
 
     va_start(ap, fmt);
     len = SDL20_vsnprintf(&ch, 1, fmt, ap);
