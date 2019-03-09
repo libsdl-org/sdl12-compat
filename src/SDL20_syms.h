@@ -130,6 +130,7 @@ SDL20_SYM_PASSTHROUGH(void,SetModState,(SDL_Keymod a),(a),)
 SDL20_SYM_PASSTHROUGH(SDL_Keymod,GetModState,(void),(),return)
 
 SDL20_SYM(Uint32,GetMouseState,(int *a, int *b),(a,b),return)
+SDL20_SYM(Uint32,GetRelativeMouseState,(int *a, int *b),(a,b),return)
 SDL20_SYM(void,WarpMouseInWindow,(SDL_Window *a, int b, int c),(a,b,c),)
 SDL20_SYM(int,SetRelativeMouseMode,(SDL_bool a),(a),return)
 SDL20_SYM(int,ShowCursor,(int a),(a),return)

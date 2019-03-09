@@ -1475,19 +1475,31 @@ SDL_EventState(Uint8 type, int state)
     return retval;
 }
 
-DECLSPEC Uint8 SDLCALL
-SDL_GetMouseState(int *x, int *y)
+static Uint8 MouseButtonState20to12(const Uint32 state20)
 {
-    const Uint32 state20 = SDL20_GetMouseState(x, y);
     Uint8 retval = (state20 & 0x7);  /* left, right, and middle will match. */
 
     /* the X[12] buttons are different in 1.2; mousewheel was in the way. */
-    if (state20 & SDL_BUTTON(SDL_BUTTON_X1))
+    if (state20 & SDL_BUTTON(SDL_BUTTON_X1)) {
         retval |= (1<<5);
-    if (state20 & SDL_BUTTON(SDL_BUTTON_X2))
+    }
+    if (state20 & SDL_BUTTON(SDL_BUTTON_X2)) {
         retval |= (1<<6);
+    }
 
     return retval;
+}
+
+DECLSPEC Uint8 SDLCALL
+SDL_GetMouseState(int *x, int *y)
+{
+    return MouseButtonState20to12(SDL20_GetMouseState(x, y));
+}
+
+DECLSPEC Uint8 SDLCALL
+SDL_GetRelativeMouseState(int *x, int *y)
+{
+    return MouseButtonState20to12(SDL20_GetRelativeMouseState(x, y));
 }
 
 DECLSPEC char * SDLCALL

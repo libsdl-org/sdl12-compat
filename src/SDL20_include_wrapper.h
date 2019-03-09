@@ -54,6 +54,7 @@
 #define SDL_UpdateRect IGNORE_THIS_VERSION_OF_SDL_UpdateRect
 #define SDL_UpdateRects IGNORE_THIS_VERSION_OF_SDL_UpdateRects
 #define SDL_GetMouseState IGNORE_THIS_VERSION_OF_SDL_GetMouseState
+#define SDL_GetRelativeMouseState IGNORE_THIS_VERSION_OF_SDL_GetRelativeMouseState
 #define SDL_GL_SetAttribute IGNORE_THIS_VERSION_OF_SDL_GL_SetAttribute
 #define SDL_GL_GetAttribute IGNORE_THIS_VERSION_OF_SDL_GL_GetAttribute
 #define SDL_CreateThread IGNORE_THIS_VERSION_OF_SDL_CreateThread
@@ -121,6 +122,7 @@
 #undef SDL_UpdateRect
 #undef SDL_UpdateRects
 #undef SDL_GetMouseState
+#undef SDL_GetRelativeMouseState
 #undef SDL_GL_SetAttribute
 #undef SDL_GL_GetAttribute
 #undef SDL_CreateThread
