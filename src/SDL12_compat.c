@@ -3263,7 +3263,10 @@ SDL_WM_GetCaption(const char **title, const char **icon)
 DECLSPEC void SDLCALL
 SDL_WM_SetIcon(SDL12_Surface *icon12, Uint8 *mask)
 {
-SDL20_SetWindowIcon(VideoWindow20, icon12->surface20);
+        if (VideoWindow20) {
+            SDL20_SetWindowIcon(VideoWindow20, icon12->surface20);
+
+        }
 return;
 
     // take the mask and zero out those alpha values.
@@ -3287,20 +3290,27 @@ return;
     const int rc = SDL20_UpperBlit(icon12->surface20, NULL, icon20, NULL);
     SDL20_SetSurfaceBlendMode(icon12->surface20, blendmode);
     if (rc == 0) {
-        SDL_assert(icon20->format->BytesPerPixel == 4);
-        SDL_assert(icon20->pitch == icon20->w * 4);
-        const int w = icon12->w;
-        const int h = icon12->h;
-        const int mpitch = (w + 7) / 8;
-        Uint32 *ptr = (Uint32 *) icon20->pixels;
-        for (int y = 0; y < h; y++) {
-            for (int x = 0; x < w; x++, ptr++) {
-                if (!(mask[y*mpitch + x/8] & (128 >> (x % 8)))) {
-                    *ptr &= ~amask;
+        if (mask) {
+            SDL_assert(icon20->format->BytesPerPixel == 4);
+            SDL_assert(icon20->pitch == icon20->w * 4);
+            const int w = icon12->w;
+            const int h = icon12->h;
+            const int mpitch = (w + 7) / 8;
+            Uint32 *ptr = (Uint32 *) icon20->pixels;
+            for (int y = 0; y < h; y++) {
+                for (int x = 0; x < w; x++, ptr++) {
+                    if (!(mask[y*mpitch + x/8] & (128 >> (x % 8)))) {
+                        *ptr &= ~amask;
+} else {
+*ptr |= amask;
+                    }
                 }
             }
         }
-        SDL20_SetWindowIcon(VideoWindow20, icon20);
+
+        if (VideoWindow20) {
+            SDL20_SetWindowIcon(VideoWindow20, icon20);
+        }
         SDL20_FreeSurface(VideoIcon20);
         VideoIcon20 = icon20;
     }
