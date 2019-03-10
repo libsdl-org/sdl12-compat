@@ -1112,6 +1112,8 @@ Init12Video(void)
         return -1;
     }
 
+    SDL20_StopTextInput();
+
     return 0;
 }
 

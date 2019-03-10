@@ -128,6 +128,7 @@ SDL20_SYM(SDL_bool,PixelFormatEnumToMasks,(Uint32 a,int *b,Uint32 *c,Uint32 *d,U
 
 SDL20_SYM_PASSTHROUGH(void,SetModState,(SDL_Keymod a),(a),)
 SDL20_SYM_PASSTHROUGH(SDL_Keymod,GetModState,(void),(),return)
+SDL20_SYM(void,StopTextInput,(void),(),)
 
 SDL20_SYM(Uint32,GetMouseState,(int *a, int *b),(a,b),return)
 SDL20_SYM(Uint32,GetRelativeMouseState,(int *a, int *b),(a,b),return)
