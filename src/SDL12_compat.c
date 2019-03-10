@@ -768,7 +768,7 @@ static EventQueueType *EventQueueAvailable = NULL;
 #elif defined(unix) || defined(__APPLE__)
     #include <dlfcn.h>
     #ifdef __APPLE__
-    #define SDL20_LIBNAME "libSDL2.dylib"
+    #define SDL20_LIBNAME "libSDL2-2.0.0.dylib"
     #else
     #define SDL20_LIBNAME "libSDL2-2.0.so.0"
     #endif
