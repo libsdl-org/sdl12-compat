@@ -2319,7 +2319,7 @@ SDL_CreateRGBSurfaceFrom(void *pixels, int width, int height, int depth, int pit
 DECLSPEC void SDLCALL
 SDL_FreeSurface(SDL12_Surface *surface12)
 {
-    if (surface12) {
+    if (surface12 && (surface12 != VideoSurface12)) {
         SDL20_FreeSurface(surface12->surface20);
         if (surface12->format) {
             SDL20_free(surface12->format->palette);
