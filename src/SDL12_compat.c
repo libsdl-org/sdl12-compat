@@ -4115,5 +4115,22 @@ SDL_OpenAudio(SDL_AudioSpec *want, SDL_AudioSpec *obtained)
 }
 
 
+/* SDL_GL_DisableContext and SDL_GL_EnableContext_Thread are not real SDL 1.2
+   APIs, but some idTech4 games shipped with a custom SDL 1.2 build that added
+   these functions, to let them make a GL context current on a background thread,
+   so we supply them as well to be binary compatible for those games. */
+
+DECLSPEC void SDLCALL
+SDL_GL_DisableContext(void)
+{
+    SDL20_GL_MakeCurrent(NULL, NULL);
+}
+
+DECLSPEC void SDLCALL
+SDL_GL_EnableContext_Thread(void)
+{
+    const SDL_bool enable = (VideoGLContext20 && VideoWindow20);
+    SDL20_GL_MakeCurrent(enable ? VideoWindow20 : NULL, enable ? VideoGLContext20 : NULL);
+}
 
 /* vi: set ts=4 sw=4 expandtab: */
