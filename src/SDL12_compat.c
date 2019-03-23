@@ -3678,10 +3678,18 @@ SDL_EnableUNICODE(int enable)
     return SDL20_Unsupported();
 }
 
-static Uint32
-SetTimerOld_Callback(Uint32 interval, void* param)
+/* SDL 1.2 limited timers to a 10ms resolution. SDL 2.0 doesn't, so we might
+   have to round. This is the equation 1.2 uses: */
+static Uint32 RoundTimerTo12Resolution(const Uint32 ms)
 {
-    return ((SDL12_TimerCallback)param)(interval);
+    return (((ms + 10) - 1) / 10) * 10;
+}
+
+
+static Uint32 SDLCALL
+SetTimerCallback12(Uint32 interval, void* param)
+{
+    return RoundTimerTo12Resolution(((SDL12_TimerCallback)param)(interval));
 }
 
 DECLSPEC int SDLCALL
@@ -3695,7 +3703,8 @@ SDL_SetTimer(Uint32 interval, SDL12_TimerCallback callback)
     }
 
     if (interval && callback) {
-        compat_timer = SDL20_AddTimer(interval, SetTimerOld_Callback, callback);
+        interval = RoundTimerTo12Resolution(interval);
+        compat_timer = SDL20_AddTimer(interval, SetTimerCallback12, callback);
         if (!compat_timer) {
             return -1;
         }
@@ -3785,21 +3794,57 @@ SDL_KillThread(SDL_Thread *thread)
         "This program should be fixed. No thread was actually harmed.\n");
 }
 
+typedef struct SDL12_TimerID_Data
+{
+    SDL_TimerID timer_id;
+    SDL12_NewTimerCallback callback;
+    void *param;
+} SDL12_TimerID_Data;
+
 /* This changed from an opaque pointer to an int in 2.0. */
-typedef struct _SDL12_TimerID *SDL12_TimerID;
+typedef SDL12_TimerID_Data *SDL12_TimerID;
 SDL_COMPILE_TIME_ASSERT(timer, sizeof(SDL12_TimerID) >= sizeof(SDL_TimerID));
 
+
+static Uint32 SDLCALL
+AddTimerCallback12(Uint32 interval, void *param)
+{
+    SDL12_TimerID data = (SDL12_TimerID) param;
+    return RoundTimerTo12Resolution(data->callback(interval, data->param));
+}
 
 DECLSPEC SDL12_TimerID SDLCALL
 SDL_AddTimer(Uint32 interval, SDL12_NewTimerCallback callback, void *param)
 {
-    return (SDL12_TimerID) ((size_t) SDL20_AddTimer(interval, callback, param));
+    SDL12_TimerID data = (SDL12_TimerID) SDL_malloc(sizeof (SDL12_TimerID_Data));
+    if (!data) {
+        SDL20_OutOfMemory();
+        return NULL;
+    }
+
+    interval = RoundTimerTo12Resolution(interval);
+    data->callback = callback;
+    data->param = param;
+    data->timer_id = SDL20_AddTimer(interval, AddTimerCallback12, data);
+
+    if (!data->timer_id) {
+        SDL_free(data);
+        return NULL;
+    }
+
+    return data;
 }
 
 DECLSPEC SDL_bool SDLCALL
-SDL_RemoveTimer(SDL12_TimerID id)
+SDL_RemoveTimer(SDL12_TimerID data)
 {
-    return SDL20_RemoveTimer((SDL_TimerID) ((size_t)id));
+    // !!! FIXME: classic 1.2 will safely return SDL_FALSE if this is a bogus
+    // !!! FIXME:  timer. This code will dereference a bogus pointer.
+    const SDL_bool retval = SDL20_RemoveTimer(data->timer_id);
+    if (retval) {
+        SDL_free(data);
+    }
+    return retval;
 }
 
 
