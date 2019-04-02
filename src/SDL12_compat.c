@@ -705,6 +705,7 @@ typedef enum
 typedef struct
 {
     Uint32 format;
+    int nummodes;
     SDL12_Rect *modeslist12;
     SDL12_Rect **modes12;  /* ptrs to each item in modeslist, for SDL_ListModes() */
 } VideoModeList;
@@ -717,7 +718,7 @@ typedef struct
 
 // !!! FIXME: go through all of these.
 static VideoModeList *VideoModes = NULL;
-static int VideoModesCount = 0;
+static int VideoModesCount = 0;  // this counts items in VideoModeList, not total video modes.
 static SDL12_VideoInfo VideoInfo12;
 static SDL12_Palette VideoInfoPalette12;
 static SDL12_PixelFormat VideoInfoVfmt12;
@@ -1071,7 +1072,6 @@ Init12VidModes(void)
 {
     const int total = SDL20_GetNumDisplayModes(VideoDisplayIndex);
     VideoModeList *vmode = NULL;
-    int num_modes = 0;
     void *ptr = NULL;
     int i, j;
 
@@ -1092,9 +1092,6 @@ Init12VidModes(void)
         }
 
         if (!vmode || (mode.format != vmode->format)) {  // SDL20_GetDisplayMode() sorts on bpp first. We know when to change arrays.
-            if (VideoModesCount > 0) {
-                VideoModes[VideoModesCount-1].modes12[num_modes] = NULL;
-            }
             ptr = (VideoModeList *) SDL20_realloc(VideoModes, sizeof (VideoModeList) * (VideoModesCount+1));
             if (!ptr) {
                 return SDL20_OutOfMemory();
@@ -1102,49 +1099,49 @@ Init12VidModes(void)
             VideoModes = (VideoModeList *) ptr;
             vmode = &VideoModes[VideoModesCount];
             vmode->format = mode.format;
+            vmode->nummodes = 0;
             vmode->modeslist12 = NULL;
             vmode->modes12 = NULL;
             VideoModesCount++;
-            num_modes = 0;
         }
 
         /* make sure we don't have this one already (with a different refresh rate, etc). */
-        for (j = 0; j < num_modes; j++) {
+        for (j = 0; j < vmode->nummodes; j++) {
             if ((vmode->modeslist12[j].w == mode.w) && (vmode->modeslist12[j].h == mode.h)) {
                 break;
             }
         }
 
-        if (j < num_modes) {
+        if (j < vmode->nummodes) {
             continue;  /* already have this one. */
         }
 
         FIXME("Make sure mode dimensions fit in 16-bits for SDL12_Rect");
 
-        ptr = SDL20_realloc(vmode->modes12, sizeof (SDL12_Rect *) * (num_modes + 2));
-        if (ptr == NULL) {
-            return SDL20_OutOfMemory();
-        }
-        vmode->modes12 = (SDL12_Rect **) ptr;
-
-        ptr = SDL20_realloc(vmode->modeslist12, sizeof (SDL12_Rect) * (num_modes + 1));
+        ptr = SDL20_realloc(vmode->modeslist12, sizeof (SDL12_Rect) * (vmode->nummodes + 1));
         if (ptr == NULL) {
             return SDL20_OutOfMemory();
         }
         vmode->modeslist12 = (SDL12_Rect *) ptr;
 
-        vmode->modeslist12[num_modes].x = 0;
-        vmode->modeslist12[num_modes].y = 0;
-        vmode->modeslist12[num_modes].w = mode.w;
-        vmode->modeslist12[num_modes].h = mode.h;
+        vmode->modeslist12[vmode->nummodes].x = 0;
+        vmode->modeslist12[vmode->nummodes].y = 0;
+        vmode->modeslist12[vmode->nummodes].w = mode.w;
+        vmode->modeslist12[vmode->nummodes].h = mode.h;
 
-        vmode->modes12[num_modes] = &vmode->modeslist12[num_modes];
-
-        num_modes++;
+        vmode->nummodes++;
     }
 
-    if (VideoModesCount > 0) {
-        VideoModes[VideoModesCount-1].modes12[num_modes] = NULL;
+    // link up modes12 for SDL_ListModes()'s use...
+    for (i = 0, vmode = VideoModes; i < VideoModesCount; i++, vmode++) {
+        const int nummodes = vmode->nummodes;
+        vmode->modes12 = (SDL12_Rect **) SDL20_calloc(sizeof (SDL12_Rect *), nummodes + 1);
+        if (vmode->modes12 == NULL) {
+            return SDL20_OutOfMemory();
+        }
+        for (j = 0; j < nummodes; j++) {
+            vmode->modes12[j] = &vmode->modeslist12[j];
+        }
     }
 
     return 0;
