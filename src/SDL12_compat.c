@@ -231,7 +231,7 @@ typedef struct
     Uint32 blit_fill    :1;
     Uint32 UnusedBits3  :16;
     Uint32 video_mem;
-    SDL_PixelFormat *vfmt;
+    SDL12_PixelFormat *vfmt;
     int current_w;
     int current_h;
 } SDL12_VideoInfo;
@@ -719,6 +719,9 @@ typedef struct
 static VideoModeList *VideoModes = NULL;
 static int VideoModesCount = 0;
 static SDL12_VideoInfo VideoInfo12;
+static SDL12_Palette VideoInfoPalette12;
+static SDL12_PixelFormat VideoInfoVfmt12;
+static SDL_PixelFormat *VideoInfoVfmt20 = NULL;
 static SDL_bool VideoWindowGrabbed = SDL_FALSE;
 static SDL_bool VideoCursorHidden = SDL_FALSE;
 static SDL_Window *VideoWindow20 = NULL;
@@ -983,6 +986,69 @@ SDL_JoystickOpened(int device_index)
     return retval;
 }
 
+static SDL_PixelFormat *
+PixelFormat12to20(SDL_PixelFormat *format20, SDL_Palette *palette20, const SDL12_PixelFormat *format12)
+{
+    if (format12->palette) {
+        palette20->ncolors = format12->palette->ncolors;
+        palette20->colors = format12->palette->colors;
+        palette20->version = 1;
+        palette20->refcount = 1;
+        format20->palette = palette20;
+    } else {
+        format20->palette = NULL;
+    }
+
+    format20->format = SDL20_MasksToPixelFormatEnum(format12->BitsPerPixel, format12->Rmask, format12->Gmask, format12->Bmask, format12->Amask);
+    format20->BitsPerPixel = format12->BitsPerPixel;
+    format20->BytesPerPixel = format12->BytesPerPixel;
+    format20->Rmask = format12->Rmask;
+    format20->Gmask = format12->Gmask;
+    format20->Bmask = format12->Bmask;
+    format20->Amask = format12->Amask;
+    format20->Rloss = format12->Rloss;
+    format20->Gloss = format12->Gloss;
+    format20->Bloss = format12->Bloss;
+    format20->Aloss = format12->Aloss;
+    format20->Rshift = format12->Rshift;
+    format20->Gshift = format12->Gshift;
+    format20->Bshift = format12->Bshift;
+    format20->Ashift = format12->Ashift;
+    format20->refcount = 1;
+    format20->next = NULL;
+    return format20;
+}
+
+static SDL12_PixelFormat *
+PixelFormat20to12(SDL12_PixelFormat *format12, SDL12_Palette *palette12, const SDL_PixelFormat *format20)
+{
+    if (format20->palette) {
+        palette12->ncolors = format20->palette->ncolors;
+        palette12->colors = format20->palette->colors;
+        format12->palette = palette12;
+    } else {
+        format12->palette = NULL;
+    }
+
+    format12->BitsPerPixel = format20->BitsPerPixel;
+    format12->BytesPerPixel = format20->BytesPerPixel;
+    format12->Rloss = format20->Rloss;
+    format12->Gloss = format20->Gloss;
+    format12->Bloss = format20->Bloss;
+    format12->Aloss = format20->Aloss;
+    format12->Rshift = format20->Rshift;
+    format12->Gshift = format20->Gshift;
+    format12->Bshift = format20->Bshift;
+    format12->Ashift = format20->Ashift;
+    format12->Rmask = format20->Rmask;
+    format12->Gmask = format20->Gmask;
+    format12->Bmask = format20->Bmask;
+    format12->Amask = format20->Amask;
+    format12->colorkey = 0;  // this is a surface, not pixelformat, properties in SDL2.
+    format12->alpha = 255;  // this is a surface, not pixelformat, properties in SDL2.
+    return format12;
+}
+
 static int
 GetVideoDisplay()
 {
@@ -1114,11 +1180,18 @@ Init12Video(void)
 
     SDL20_StopTextInput();
 
+    SDL_DisplayMode mode;
+    if (SDL20_GetDesktopDisplayMode(VideoDisplayIndex, &mode) == 0) {
+        VideoInfoVfmt20 = SDL20_AllocFormat(mode.format);
+        VideoInfo12.vfmt = PixelFormat20to12(&VideoInfoVfmt12, &VideoInfoPalette12, VideoInfoVfmt20);
+        VideoInfo12.current_w = mode.w;
+        VideoInfo12.current_h = mode.h;
+        VideoInfo12.wm_available = 1;  FIXME("not sure if we can determine this in SDL2...?");
+        VideoInfo12.video_mem = 1024 * 256;  /* good enough. */
+    }
+
     return 0;
 }
-
-
-
 
 DECLSPEC int SDLCALL
 SDL_InitSubSystem(Uint32 sdl12flags)
@@ -1236,9 +1309,10 @@ Quit12Video(void)
     }
     SDL20_free(VideoModes);
 
-    SDL20_FreeFormat(VideoInfo12.vfmt);
+    SDL20_FreeFormat(VideoInfoVfmt20);
     SDL20_zero(VideoInfo12);
 
+    VideoInfoVfmt20 = NULL;
     EventFilter12 = NULL;
     EventQueueAvailable = EventQueueHead = EventQueueTail = NULL;
     CurrentCursor12 = NULL;
@@ -2367,40 +2441,6 @@ SDL_FillRect(SDL12_Surface *dst, SDL12_Rect *dstrect12, Uint32 color)
     return retval;
 }
 
-
-static SDL_PixelFormat *
-PixelFormat12to20(SDL_PixelFormat *format20, SDL_Palette *palette20, const SDL12_PixelFormat *format12)
-{
-    if (format12->palette) {
-        palette20->ncolors = format12->palette->ncolors;
-        palette20->colors = format12->palette->colors;
-        palette20->version = 1;
-        palette20->refcount = 1;
-        format20->palette = palette20;
-    } else {
-        format20->palette = NULL;
-    }
-
-    format20->format = SDL20_MasksToPixelFormatEnum(format12->BitsPerPixel, format12->Rmask, format12->Gmask, format12->Bmask, format12->Amask);
-    format20->BitsPerPixel = format12->BitsPerPixel;
-    format20->BytesPerPixel = format12->BytesPerPixel;
-    format20->Rmask = format12->Rmask;
-    format20->Gmask = format12->Gmask;
-    format20->Bmask = format12->Bmask;
-    format20->Amask = format12->Amask;
-    format20->Rloss = format12->Rloss;
-    format20->Gloss = format12->Gloss;
-    format20->Bloss = format12->Bloss;
-    format20->Aloss = format12->Aloss;
-    format20->Rshift = format12->Rshift;
-    format20->Gshift = format12->Gshift;
-    format20->Bshift = format12->Bshift;
-    format20->Ashift = format12->Ashift;
-    format20->refcount = 1;
-    format20->next = NULL;
-    return format20;
-}
-
 DECLSPEC Uint32 SDLCALL
 SDL_MapRGB(const SDL12_PixelFormat *format12, Uint8 r, Uint8 g, Uint8 b)
 {
@@ -2440,19 +2480,7 @@ SDL_GetRGBA(Uint32 pixel, const SDL12_PixelFormat *format12, Uint8 *r, Uint8 *g,
 DECLSPEC const SDL12_VideoInfo * SDLCALL
 SDL_GetVideoInfo(void)
 {
-    SDL_DisplayMode mode;
-
-    FIXME("calculate this in Init12Video(), then this just does: return VideoInfo.vfmt ? &VideoInfo : NULL;");
-
-    if (!VideoInfo12.vfmt && SDL20_GetDesktopDisplayMode(VideoDisplayIndex, &mode) == 0) {
-        VideoInfo12.vfmt = SDL20_AllocFormat(mode.format);
-        VideoInfo12.current_w = mode.w;
-        VideoInfo12.current_h = mode.h;
-        FIXME("vidinfo details commented out");
-        //VideoInfo12.wm_available = 1;
-        //VideoInfo12.video_mem = 1024 * 256;
-    }
-    return &VideoInfo12;
+    return VideoInfo12.vfmt ? &VideoInfo12 : NULL;
 }
 
 DECLSPEC int SDLCALL
@@ -2505,10 +2533,10 @@ SDL_ListModes(const SDL12_PixelFormat *format12, Uint32 flags)
         return (SDL12_Rect **) (-1);  /* any resolution is fine. */
     }
 
-    if (format12) {
+    if (format12 && (format12 != VideoInfo12.vfmt)) {
         fmt = SDL20_MasksToPixelFormatEnum(format12->BitsPerPixel, format12->Rmask, format12->Gmask, format12->Bmask, format12->Amask);
     } else {
-        fmt = VideoInfo12.vfmt->format;
+        fmt = VideoInfoVfmt20->format;
     }
 
     for (i = 0; i < VideoModesCount; i++) {
