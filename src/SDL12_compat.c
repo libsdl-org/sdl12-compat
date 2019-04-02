@@ -2521,6 +2521,7 @@ SDL_ListModes(const SDL12_PixelFormat *format12, Uint32 flags)
     int i;
 
     if (!SDL20_WasInit(SDL_INIT_VIDEO)) {
+        SDL20_SetError("Video subsystem not initialized");
         return NULL;
     }
 
