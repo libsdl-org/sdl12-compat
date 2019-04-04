@@ -3491,6 +3491,10 @@ SDL_SetPalette(SDL12_Surface *surface12, int flags, const SDL_Color *colors,
         return 0;  // not an error, a no-op.
     }
 
+    if ((flags & (SDL12_LOGPAL | SDL12_PHYSPAL)) == 0) {
+        return 0;  // nothing to do.
+    }
+
     SDL12_Palette *palette12 = surface12->format->palette;
     if (!palette12) {
         return 0;  // not an error, a no-op.
@@ -3514,11 +3518,23 @@ SDL_SetPalette(SDL12_Surface *surface12, int flags, const SDL_Color *colors,
         opaquecolors[i].a = 255;
     }
 
-    const int retval = SDL20_SetPaletteColors(palette20, opaquecolors, firstcolor, ncolors);
+    int retval = 0;
+
+    if (flags & SDL12_LOGPAL) {
+        if (SDL20_SetPaletteColors(palette20, opaquecolors, firstcolor, ncolors) < 0) {
+            retval = -1;
+        }
+    }
+
     SDL20_free(opaquecolors);
 
     // in case this pointer changed...
     palette12->colors = palette20->colors;
+
+    FIXME("We need to store the physical palette somewhere");  // it might be different that logical palette and it will be needed for future blits.
+    if ((surface12 == VideoSurface12) && (flags & SDL12_PHYSPAL)) {
+        SDL_UpdateRect(surface12, 0, 0, 0, 0);   // force screen to reblit with new palette.
+    }
 
     return retval;
 }
