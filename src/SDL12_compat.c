@@ -2261,6 +2261,8 @@ static void
 SetPalette12ForMasks(SDL12_Surface *surface12, const Uint32 Rmask, const Uint32 Gmask, const Uint32 Bmask)
 {
     SDL12_PixelFormat *format12 = surface12->format;
+    int i;
+
     if (format12->palette && (Rmask || Bmask || Gmask)) {
         #define LOSSMASKSHIFTSETUP(t) { \
             format12->t##shift = 0; \
@@ -2289,7 +2291,7 @@ SetPalette12ForMasks(SDL12_Surface *surface12, const Uint32 Rmask, const Uint32 
             int t##w = 0, t##m = 0; \
             if (t##mask) { \
             t##w = 8 - format12->t##loss; \
-            for (int i = format12->t##loss; i > 0; i -= t##w) { \
+            for (i = format12->t##loss; i > 0; i -= t##w) { \
                 t##m |= 1 << i; \
             } \
         }
@@ -2300,7 +2302,7 @@ SetPalette12ForMasks(SDL12_Surface *surface12, const Uint32 Rmask, const Uint32 
 
         const int ncolors = format12->palette->ncolors;
         SDL_Color *color = format12->palette->colors;
-        for (int i = 0; i < ncolors; i++, color++) {
+        for (i = 0; i < ncolors; i++, color++) {
             #define SETCOLOR(T, t) { \
                 const int x = (i & T##mask) >> format12->T##shift; \
                 color->t = (x << format12->T##loss) | ((x * T##m) >> T##w); \
@@ -2962,9 +2964,13 @@ SaveDestAlpha(SDL12_Surface *src12, SDL12_Surface *dst12, Uint8 **retval)
      */
     Uint8 *dstalpha = NULL;
     const SDL_bool save_dstalpha = ((src12->flags & SDL12_SRCALPHA) && dst12->format->Amask && ((src12->format->alpha != 255) || src12->format->Amask)) ? SDL_TRUE : SDL_FALSE;
+
     if (save_dstalpha) {
+        int x, y;
+
         const int w = dst12->w;
         const int h = dst12->h;
+
         dstalpha = (Uint8 *) SDL_malloc(w * h);
         if (!dstalpha) {
             *retval = NULL;
@@ -2980,16 +2986,16 @@ SaveDestAlpha(SDL12_Surface *src12, SDL12_Surface *dst12, Uint8 **retval)
         }
         if (dst12->format->BytesPerPixel == 2) {
             const Uint16 *sptr = (const Uint16 *) dst12->pixels;
-            for (int y = 0; y < h; y++) {
-                for (int x = 0; x < w; x++) {
+            for (y = 0; y < h; y++) {
+                for (x = 0; x < w; x++) {
                     *(dptr++) = (Uint8) ((sptr[x] & amask) >> ashift);
                 }
                 sptr = (Uint16 *) (((Uint8 *) sptr) + pitch);
             }
         } else if (dst12->format->BytesPerPixel == 4) {
             const Uint32 *sptr = (const Uint32 *) dst12->pixels;
-            for (int y = 0; y < h; y++) {
-                for (int x = 0; x < w; x++) {
+            for (y = 0; y < h; y++) {
+                for (x = 0; x < w; x++) {
                     *(dptr++) = (Uint8) ((sptr[x] & amask) >> ashift);
                 }
                 sptr = (Uint32 *) (((Uint8 *) sptr) + pitch);
@@ -3007,27 +3013,30 @@ static void
 RestoreDestAlpha(SDL12_Surface *dst12, Uint8 *dstalpha)
 {
     if (dstalpha) {
+        int x, y;
+
         const int w = dst12->w;
         const int h = dst12->h;
         const Uint8 *sptr = dstalpha;
         const Uint32 amask = dst12->format->Amask;
         const Uint32 ashift = dst12->format->Ashift;
         const Uint16 pitch = dst12->pitch;
+
         if ((amask == 0xFF) || (amask == 0xFF00) || (amask == 0xFF0000) ||(amask == 0xFF000000)) {
             FIXME("this could be SIMD'd");
         }
         if (dst12->format->BytesPerPixel == 2) {
             Uint16 *dptr = (Uint16 *) dst12->pixels;
-            for (int y = 0; y < h; y++) {
-                for (int x = 0; x < w; x++) {
+            for (y = 0; y < h; y++) {
+                for (x = 0; x < w; x++) {
                     dptr[x] = (Uint16) ((dptr[x] & ~amask) | ((((Uint16) *(sptr++)) << ashift) & amask));
                 }
                 dptr = (Uint16 *) (((Uint8 *) dptr) + pitch);
             }
         } else if (dst12->format->BytesPerPixel == 4) {
             Uint32 *dptr = (Uint32 *) dst12->pixels;
-            for (int y = 0; y < h; y++) {
-                for (int x = 0; x < w; x++) {
+            for (y = 0; y < h; y++) {
+                for (x = 0; x < w; x++) {
                     dptr[x] = (dptr[x] & ~amask) | ((((Uint32) *(sptr++)) << ashift) & amask);
                 }
                 dptr = (Uint32 *) (((Uint8 *) dptr) + pitch);
@@ -3189,7 +3198,8 @@ PresentScreen(void)
         const int h = VideoSurface12->h;
         char *dst = (char *) pixels;
         char *src = (char *) VideoSurface12->pixels;
-        for (int i = 0; i < h; i++) {
+        int i = 0;
+        for (; i < h; i++) {
             SDL_memcpy(dst, src, cpy);
             src += srcpitch;
             dst += pitch;
@@ -3226,8 +3236,8 @@ SDL_UpdateRects(SDL12_Surface *surface12, int numrects, SDL12_Rect *rects12)
                 whole_screen = SDL_TRUE;
             }
         }
-                
-        if (whole_screen) {  
+
+        if (whole_screen) {
             PresentScreen();  // flip it now.
         } else {
             VideoSurfacePresentTicks = VideoSurfaceLastPresentTicks + 15;  // flip it later.
@@ -3305,10 +3315,9 @@ SDL_WM_GetCaption(const char **title, const char **icon)
 DECLSPEC void SDLCALL
 SDL_WM_SetIcon(SDL12_Surface *icon12, Uint8 *mask)
 {
-        if (VideoWindow20) {
-            SDL20_SetWindowIcon(VideoWindow20, icon12->surface20);
-
-        }
+    if (VideoWindow20) {
+        SDL20_SetWindowIcon(VideoWindow20, icon12->surface20);
+    }
 return;
 
     // take the mask and zero out those alpha values.
@@ -3333,18 +3342,22 @@ return;
     SDL20_SetSurfaceBlendMode(icon12->surface20, blendmode);
     if (rc == 0) {
         if (mask) {
-            SDL_assert(icon20->format->BytesPerPixel == 4);
-            SDL_assert(icon20->pitch == icon20->w * 4);
             const int w = icon12->w;
             const int h = icon12->h;
             const int mpitch = (w + 7) / 8;
             Uint32 *ptr = (Uint32 *) icon20->pixels;
-            for (int y = 0; y < h; y++) {
-                for (int x = 0; x < w; x++, ptr++) {
+
+            int x, y;
+
+            SDL_assert(icon20->format->BytesPerPixel == 4);
+            SDL_assert(icon20->pitch == icon20->w * 4);
+
+            for (y = 0; y < h; y++) {
+                for (x = 0; x < w; x++, ptr++) {
                     if (!(mask[y*mpitch + x/8] & (128 >> (x % 8)))) {
                         *ptr &= ~amask;
-} else {
-*ptr |= amask;
+                    } else {
+                        *ptr |= amask;
                     }
                 }
             }
@@ -3487,6 +3500,11 @@ DECLSPEC int SDLCALL
 SDL_SetPalette(SDL12_Surface *surface12, int flags, const SDL_Color *colors,
                int firstcolor, int ncolors)
 {
+    SDL12_Palette *palette12;
+    SDL_Palette *palette20;
+    SDL_Color *opaquecolors;
+    int i, retval;
+
     if (!surface12) {
         return 0;  // not an error, a no-op.
     }
@@ -3495,30 +3513,30 @@ SDL_SetPalette(SDL12_Surface *surface12, int flags, const SDL_Color *colors,
         return 0;  // nothing to do.
     }
 
-    SDL12_Palette *palette12 = surface12->format->palette;
+    palette12 = surface12->format->palette;
     if (!palette12) {
         return 0;  // not an error, a no-op.
     }
 
-    SDL_Palette *palette20 = surface12->surface20->format->palette;
+    palette20 = surface12->surface20->format->palette;
     SDL_assert(palette20 != NULL);
 
     // we need to force the "unused" field to 255, since it's "alpha" in SDL2.
-    SDL_Color *opaquecolors = (SDL_Color *) SDL20_malloc(sizeof (SDL_Color) * ncolors);
+    opaquecolors = (SDL_Color *) SDL20_malloc(sizeof (SDL_Color) * ncolors);
     if (!opaquecolors) {
         return SDL20_OutOfMemory();
     }
 
     // don't SDL_memcpy in case the 'a' field is uninitialized and upsets
     //  memory tools like Valgrind.
-    for (int i = 0; i < ncolors; i++) {
+    for (i = 0; i < ncolors; i++) {
         opaquecolors[i].r = colors[i].r;
         opaquecolors[i].g = colors[i].g;
         opaquecolors[i].b = colors[i].b;
         opaquecolors[i].a = 255;
     }
 
-    int retval = 0;
+    retval = 0;
 
     if (flags & SDL12_LOGPAL) {
         if (SDL20_SetPaletteColors(palette20, opaquecolors, firstcolor, ncolors) < 0) {
