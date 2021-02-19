@@ -762,7 +762,9 @@ static EventQueueType *EventQueueAvailable = NULL;
 
 /* Obviously we can't use SDL_LoadObject() to load SDL2.  :)  */
 #if defined(_WINDOWS)
+    #ifndef WIN32_LEAN_AND_MEAN
     #define WIN32_LEAN_AND_MEAN 1
+    #endif
     #include <windows.h>
     #define SDL20_LIBNAME "SDL2.dll"
     static HANDLE Loaded_SDL20 = NULL;
