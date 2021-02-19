@@ -74,6 +74,6 @@ clean: .SYMBOLIC
 	@if exist $(LNKFILE) rm $(LNKFILE)
 
 distclean: clean .SYMBOLIC
-	@if exist *.obj rm *.err
+	@if exist *.err rm *.err
 	@if exist $(DLLFILE) rm $(DLLFILE)
 	@if exist $(LIBFILE) rm $(LIBFILE)
