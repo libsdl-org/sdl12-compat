@@ -39,6 +39,7 @@
 
 #include <stdarg.h>
 #include <stdio.h> /* fprintf(), etc. */
+#include <stdlib.h>    /* for abort() */
 
 /* mingw headers may define these ... */
 #undef strtod
