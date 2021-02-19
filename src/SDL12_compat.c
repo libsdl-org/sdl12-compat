@@ -38,6 +38,7 @@
 #define SDL12_COMPAT_VERSION 50
 
 #include <stdarg.h>
+#include <stdio.h> /* fprintf(), etc. */
 
 // !!! IMPLEMENT_ME SDL_CDClose
 // !!! IMPLEMENT_ME SDL_CDEject
