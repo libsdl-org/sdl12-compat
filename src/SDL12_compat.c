@@ -1064,8 +1064,9 @@ PixelFormat20to12(SDL12_PixelFormat *format12, SDL12_Palette *palette12, const S
 static int
 GetVideoDisplay()
 {
+    const char *variable;
     FIXME("cache this value during SDL_Init() so it doesn't change.");
-    const char *variable = SDL20_getenv("SDL_VIDEO_FULLSCREEN_DISPLAY");
+    variable = SDL20_getenv("SDL_VIDEO_FULLSCREEN_DISPLAY");
     if ( !variable ) {
         variable = SDL20_getenv("SDL_VIDEO_FULLSCREEN_HEAD");
     }
@@ -1161,6 +1162,7 @@ Init12VidModes(void)
 static int
 Init12Video(void)
 {
+    SDL_DisplayMode mode;
     int i;
 
     for (i = 0; i < SDL12_MAXEVENTS-1; i++)
@@ -1188,7 +1190,6 @@ Init12Video(void)
 
     SDL20_StopTextInput();
 
-    SDL_DisplayMode mode;
     if (SDL20_GetDesktopDisplayMode(VideoDisplayIndex, &mode) == 0) {
         VideoInfoVfmt20 = SDL20_AllocFormat(mode.format);
         VideoInfo12.vfmt = PixelFormat20to12(&VideoInfoVfmt12, &VideoInfoPalette12, VideoInfoVfmt20);
@@ -1204,6 +1205,9 @@ Init12Video(void)
 DECLSPEC int SDLCALL
 SDL_InitSubSystem(Uint32 sdl12flags)
 {
+    Uint32 sdl20flags = 0;
+    int rc;
+
     FIXME("there is never a parachute in SDL2, should we catch segfaults ourselves?");
 
     FIXME("support event thread where it makes sense to do so?");
@@ -1211,9 +1215,6 @@ SDL_InitSubSystem(Uint32 sdl12flags)
     if ( (sdl12flags & SDL12_INIT_EVENTTHREAD) == SDL12_INIT_EVENTTHREAD ) {
         return SDL20_SetError("OS doesn't support threaded events");
     }
-
-    Uint32 sdl20flags = 0;
-    int rc;
 
 #ifdef __MACOSX__
     extern void sdl12_compat_macos_init(void);
@@ -2176,6 +2177,7 @@ Rect12to20(const SDL12_Rect *rect12, SDL_Rect *rect20)
 static SDL12_Surface *
 Surface20to12(SDL_Surface *surface20)
 {
+    SDL_BlendMode blendmode;
     SDL12_Surface *surface12 = NULL;
     SDL12_Palette *palette12 = NULL;
     SDL12_PixelFormat *format12 = NULL;
@@ -2234,7 +2236,7 @@ Surface20to12(SDL_Surface *surface20)
         format12->alpha = 255;
     }
 
-    SDL_BlendMode blendmode = SDL_BLENDMODE_NONE;
+    blendmode = SDL_BLENDMODE_NONE;
     if ((SDL20_GetSurfaceBlendMode(surface20, &blendmode) == 0) && (blendmode == SDL_BLENDMODE_BLEND)) {
         surface12->flags |= SDL12_SRCALPHA;
     }
@@ -2271,10 +2273,14 @@ failed:
 static void
 SetPalette12ForMasks(SDL12_Surface *surface12, const Uint32 Rmask, const Uint32 Gmask, const Uint32 Bmask)
 {
-    SDL12_PixelFormat *format12 = surface12->format;
-    int i;
+    SDL12_PixelFormat *format12;
+    SDL_PixelFormat  * format20;
+    SDL_Color *color;
+    int i, ncolors;
 
+    format12 = surface12->format;
     if (format12->palette && (Rmask || Bmask || Gmask)) {
+        int Rw, Rm, Gw, Gm, Bw, Bm;
         #define LOSSMASKSHIFTSETUP(t) { \
             format12->t##shift = 0; \
             format12->t##loss = 8; \
@@ -2298,12 +2304,13 @@ SetPalette12ForMasks(SDL12_Surface *surface12, const Uint32 Rmask, const Uint32 
         format12->Ashift = 0;
         format12->Aloss = 8;
 
-        #define MASKSETUP(t) \
-            int t##w = 0, t##m = 0; \
+        #define MASKSETUP(t) { \
+            t##w = 0, t##m = 0; \
             if (t##mask) { \
-            t##w = 8 - format12->t##loss; \
-            for (i = format12->t##loss; i > 0; i -= t##w) { \
-                t##m |= 1 << i; \
+                t##w = 8 - format12->t##loss; \
+                for (i = format12->t##loss; i > 0; i -= t##w) { \
+                    t##m |= 1 << i; \
+                } \
             } \
         }
         MASKSETUP(R);
@@ -2311,8 +2318,8 @@ SetPalette12ForMasks(SDL12_Surface *surface12, const Uint32 Rmask, const Uint32 
         MASKSETUP(B);
         #undef MASKSETUP
 
-        const int ncolors = format12->palette->ncolors;
-        SDL_Color *color = format12->palette->colors;
+        ncolors = format12->palette->ncolors;
+        color = format12->palette->colors;
         for (i = 0; i < ncolors; i++, color++) {
             #define SETCOLOR(T, t) { \
                 const int x = (i & T##mask) >> format12->T##shift; \
@@ -2325,7 +2332,7 @@ SetPalette12ForMasks(SDL12_Surface *surface12, const Uint32 Rmask, const Uint32 
             color->a = 255;
         }
 
-        SDL_PixelFormat *format20 = surface12->surface20->format;
+        format20 = surface12->surface20->format;
         #define UPDATEFMT20(t) \
             format20->t##mask = format12->t##mask; \
             format20->t##loss = format12->t##loss; \
@@ -2341,20 +2348,22 @@ SetPalette12ForMasks(SDL12_Surface *surface12, const Uint32 Rmask, const Uint32 
 DECLSPEC SDL12_Surface * SDLCALL
 SDL_CreateRGBSurface(Uint32 flags12, int width, int height, int depth, Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask)
 {
+    SDL_Surface *surface20;
+    SDL12_Surface *surface12;
+
     // SDL 1.2 checks this.
     if ((width >= 16384) || (height >= 65536)) {
         SDL20_SetError("Width or height is too large");
         return NULL;
     }
 
-    SDL_Surface *surface20;
     if (depth == 8) {  // don't pass masks to SDL2 for 8-bit surfaces, it'll cause problems.
         surface20 = SDL20_CreateRGBSurface(0, width, height, depth, 0, 0, 0, 0);
     } else {
         surface20 = SDL20_CreateRGBSurface(0, width, height, depth, Rmask, Gmask, Bmask, Amask);
     }
 
-    SDL12_Surface *surface12 = Surface20to12(surface20);
+    surface12 = Surface20to12(surface20);
     if (!surface12) {
         SDL20_FreeSurface(surface20);
         return NULL;
@@ -2375,19 +2384,21 @@ SDL_CreateRGBSurface(Uint32 flags12, int width, int height, int depth, Uint32 Rm
 DECLSPEC SDL12_Surface * SDLCALL
 SDL_CreateRGBSurfaceFrom(void *pixels, int width, int height, int depth, int pitch, Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask)
 {
+    SDL_Surface *surface20;
+    SDL12_Surface *surface12;
+
     if ((width >= 16384) || (height >= 65536)) {
         SDL20_SetError("Width or height is too large");
         return NULL;
     }
 
-    SDL_Surface *surface20;
     if (depth == 8) {  // don't pass masks to SDL2 for 8-bit surfaces, it'll cause problems.
         surface20 = SDL20_CreateRGBSurfaceFrom(pixels, width, height, depth, pitch, 0, 0, 0, 0);
     } else {
         surface20 = SDL20_CreateRGBSurfaceFrom(pixels, width, height, depth, pitch, Rmask, Gmask, Bmask, Amask);
     }
 
-    SDL12_Surface *surface12 = Surface20to12(surface20);
+    surface12 = Surface20to12(surface20);
     if (!surface12) {
         SDL20_FreeSurface(surface20);
         return NULL;
@@ -2738,10 +2749,11 @@ CreateNullPixelSurface20(const int width, const int height, const Uint32 fmt)
 DECLSPEC SDL12_Surface * SDLCALL
 SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
 {
-    FIXME("currently ignores SDL_WINDOWID, which we could use with SDL_CreateWindowFrom ...?");
     SDL_DisplayMode dmode;
     Uint32 fullscreen_flags20 = 0;
     Uint32 appfmt;
+
+    FIXME("currently ignores SDL_WINDOWID, which we could use with SDL_CreateWindowFrom ...?");
 
     /* SDL_SetVideoMode() implicitly inits if necessary. */
     if (SDL20_WasInit(SDL_INIT_VIDEO) == 0) {
@@ -2963,8 +2975,6 @@ SDL_GetVideoSurface(void)
 static int
 SaveDestAlpha(SDL12_Surface *src12, SDL12_Surface *dst12, Uint8 **retval)
 {
-    FIXME("This should only save the dst rect in use");
-
     /* The 1.2 docs say this:
      * RGBA->RGBA:
      *     SDL_SRCALPHA set:
@@ -2976,22 +2986,26 @@ SaveDestAlpha(SDL12_Surface *src12, SDL12_Surface *dst12, Uint8 **retval)
     Uint8 *dstalpha = NULL;
     const SDL_bool save_dstalpha = ((src12->flags & SDL12_SRCALPHA) && dst12->format->Amask && ((src12->format->alpha != 255) || src12->format->Amask)) ? SDL_TRUE : SDL_FALSE;
 
+    FIXME("This should only save the dst rect in use");
+
     if (save_dstalpha) {
+        Uint8 *dptr;
         int x, y;
 
         const int w = dst12->w;
         const int h = dst12->h;
+
+        const Uint32 amask = dst12->format->Amask;
+        const Uint32 ashift = dst12->format->Ashift;
+        const Uint16 pitch = dst12->pitch;
 
         dstalpha = (Uint8 *) SDL_malloc(w * h);
         if (!dstalpha) {
             *retval = NULL;
             return SDL20_OutOfMemory();
         }
+        dptr = dstalpha;
 
-        Uint8 *dptr = dstalpha;
-        const Uint32 amask = dst12->format->Amask;
-        const Uint32 ashift = dst12->format->Ashift;
-        const Uint16 pitch = dst12->pitch;
         if ((amask == 0xFF) || (amask == 0xFF00) || (amask == 0xFF0000) ||(amask == 0xFF000000)) {
             FIXME("this could be SIMD'd");
         }
@@ -3063,15 +3077,17 @@ DECLSPEC int SDLCALL
 SDL_UpperBlit(SDL12_Surface *src12, SDL12_Rect *srcrect12, SDL12_Surface *dst12, SDL12_Rect *dstrect12)
 {
     Uint8 *dstalpha;
+    SDL_Rect srcrect20, dstrect20;
+    int retval;
+
     if (SaveDestAlpha(src12, dst12, &dstalpha) < 0) {
         return -1;
     }
 
-    SDL_Rect srcrect20, dstrect20;
-    const int retval = SDL20_UpperBlit(src12->surface20,
-                                       srcrect12 ? Rect12to20(srcrect12, &srcrect20) : NULL,
-                                       dst12->surface20,
-                                       dstrect12 ? Rect12to20(dstrect12, &dstrect20) : NULL);
+    retval = SDL20_UpperBlit(src12->surface20,
+                             srcrect12 ? Rect12to20(srcrect12, &srcrect20) : NULL,
+                             dst12->surface20,
+                             dstrect12 ? Rect12to20(dstrect12, &dstrect20) : NULL);
 
     RestoreDestAlpha(dst12, dstalpha);
 
@@ -3090,15 +3106,17 @@ DECLSPEC int SDLCALL
 SDL_LowerBlit(SDL12_Surface *src12, SDL12_Rect *srcrect12, SDL12_Surface *dst12, SDL12_Rect *dstrect12)
 {
     Uint8 *dstalpha;
+    SDL_Rect srcrect20, dstrect20;
+    int retval;
+
     if (SaveDestAlpha(src12, dst12, &dstalpha) < 0) {
         return -1;
     }
 
-    SDL_Rect srcrect20, dstrect20;
-    const int retval = SDL20_LowerBlit(src12->surface20,
-                                       srcrect12 ? Rect12to20(srcrect12, &srcrect20) : NULL,
-                                       dst12->surface20,
-                                       dstrect12 ? Rect12to20(dstrect12, &dstrect20) : NULL);
+    retval = SDL20_LowerBlit(src12->surface20,
+                             srcrect12 ? Rect12to20(srcrect12, &srcrect20) : NULL,
+                             dst12->surface20,
+                             dstrect12 ? Rect12to20(dstrect12, &dstrect20) : NULL);
 
     RestoreDestAlpha(dst12, dstalpha);
 
@@ -3326,32 +3344,36 @@ SDL_WM_GetCaption(const char **title, const char **icon)
 DECLSPEC void SDLCALL
 SDL_WM_SetIcon(SDL12_Surface *icon12, Uint8 *mask)
 {
+    SDL_BlendMode blendmode;
+    Uint32 rmask, gmask, bmask, amask;
+    SDL_Surface *icon20;
+    int bpp;
+    int ret;
+
     if (VideoWindow20) {
         SDL20_SetWindowIcon(VideoWindow20, icon12->surface20);
     }
 return;
 
     // take the mask and zero out those alpha values.
-    SDL_BlendMode blendmode = SDL_BLENDMODE_NONE;
+    blendmode = SDL_BLENDMODE_NONE;
     if (SDL20_GetSurfaceBlendMode(icon12->surface20, &blendmode) < 0) {
         return;  // oh well.
     }
 
-    Uint32 rmask, gmask, bmask, amask;
-    int bpp;
     if (!SDL20_PixelFormatEnumToMasks(SDL_PIXELFORMAT_ARGB8888, &bpp, &rmask, &gmask, &bmask, &amask)) {
         return;  // oh well.
     }
 
-    SDL_Surface *icon20 = SDL20_CreateRGBSurface(0, icon12->w, icon12->h, bpp, rmask, gmask, bmask, amask);
+    icon20 = SDL20_CreateRGBSurface(0, icon12->w, icon12->h, bpp, rmask, gmask, bmask, amask);
     if (!icon20) {
         return;  // oh well.
     }
 
     SDL20_SetSurfaceBlendMode(icon12->surface20, SDL_BLENDMODE_NONE);
-    const int rc = SDL20_UpperBlit(icon12->surface20, NULL, icon20, NULL);
+    ret = SDL20_UpperBlit(icon12->surface20, NULL, icon20, NULL);
     SDL20_SetSurfaceBlendMode(icon12->surface20, blendmode);
-    if (rc == 0) {
+    if (ret == 0) {
         if (mask) {
             const int w = icon12->w;
             const int h = icon12->h;
@@ -3394,8 +3416,9 @@ SDL_WM_ToggleFullScreen(SDL12_Surface *surface)
 {
     int retval = 0;
     if (surface == VideoSurface12) {
+        Uint32 flags20;
         SDL_assert(VideoWindow20);
-        const Uint32 flags20 = SDL20_GetWindowFlags(VideoWindow20);
+        flags20 = SDL20_GetWindowFlags(VideoWindow20);
         if (flags20 & SDL_WINDOW_FULLSCREEN) {
             SDL_assert(VideoSurface12->flags & SDL12_FULLSCREEN);
             retval = (SDL20_SetWindowFullscreen(VideoWindow20, 0) == 0);
@@ -3403,8 +3426,9 @@ SDL_WM_ToggleFullScreen(SDL12_Surface *surface)
                 VideoSurface12->flags &= ~SDL12_FULLSCREEN;
             }
         } else {
+            Uint32 newflags20;
             SDL_assert((VideoSurface12->flags & SDL12_FULLSCREEN) == 0);
-            const Uint32 newflags20 = (VideoSurface12->flags & SDL12_OPENGL) ? SDL_WINDOW_FULLSCREEN : SDL_WINDOW_FULLSCREEN_DESKTOP;
+            newflags20 = (VideoSurface12->flags & SDL12_OPENGL) ? SDL_WINDOW_FULLSCREEN : SDL_WINDOW_FULLSCREEN_DESKTOP;
             retval = (SDL20_SetWindowFullscreen(VideoWindow20, newflags20) == 0);
             if (retval) {
                 VideoSurface12->flags |= SDL12_FULLSCREEN;
@@ -3630,12 +3654,13 @@ SDL_GL_LoadLibrary(const char *libname)
     const int rc = SDL20_GL_LoadLibrary(libname);
     if (rc == -1) {
         const char *err = SDL20_GetError();
+        char *dup;
+
         if (SDL20_strcmp(err, "OpenGL library already loaded") == 0) {
             return 0;
         }
-
         /* reset the actual error. */
-        char *dup = SDL20_strdup(err);
+        dup = SDL20_strdup(err);
         if (!dup) {
             SDL20_OutOfMemory();
         } else {
@@ -3803,7 +3828,6 @@ SDL_putenv(const char *_var)
     SDL20_free(var);
     return 0;
 }
-
 
 
 /* CD-ROM support is gone from SDL 2.0, so just have stubs that fail. */
@@ -4081,24 +4105,24 @@ RWops12to20_size(struct SDL_RWops *rwops20)
 static Sint64 SDLCALL
 RWops12to20_seek(struct SDL_RWops *rwops20, Sint64 offset, int whence)
 {
-    FIXME("fail if (offset) is too big");
     SDL12_RWops *rwops12 = (SDL12_RWops *) rwops20->hidden.unknown.data1;
+    FIXME("fail if (offset) is too big");
     return (Sint64) rwops12->seek(rwops12, (int) offset, whence);
 }
 
 static size_t SDLCALL
 RWops12to20_read(struct SDL_RWops *rwops20, void *ptr, size_t size, size_t maxnum)
 {
-    FIXME("fail if (size) or (maxnum) is too big");
     SDL12_RWops *rwops12 = (SDL12_RWops *) rwops20->hidden.unknown.data1;
+    FIXME("fail if (size) or (maxnum) is too big");
     return (size_t) rwops12->read(rwops12, ptr, (int) size, (int) maxnum);
 }
 
 static size_t SDLCALL
 RWops12to20_write(struct SDL_RWops *rwops20, const void *ptr, size_t size, size_t num)
 {
-    FIXME("fail if (size) or (maxnum) is too big");
     SDL12_RWops *rwops12 = (SDL12_RWops *) rwops20->hidden.unknown.data1;
+    FIXME("fail if (size) or (maxnum) is too big");
     return (size_t) rwops12->write(rwops12, ptr, (int) size, (int) num);
 }
 
@@ -4156,9 +4180,9 @@ SDL_LoadBMP_RW(SDL12_RWops *rwops12, int freerwops12)
 DECLSPEC int SDLCALL
 SDL_SaveBMP_RW(SDL12_Surface *surface12, SDL12_RWops *rwops12, int freerwops12)
 {
-    FIXME("wrap surface");
     SDL_RWops *rwops20 = RWops12to20(rwops12);
     const int retval = SDL20_SaveBMP_RW(surface12->surface20, rwops20, freerwops12);
+    FIXME("wrap surface");
     if (!freerwops12)  /* free our wrapper if SDL2 didn't close it. */
         SDL20_FreeRW(rwops20);
     return retval;
@@ -4195,12 +4219,15 @@ AudioCallbackWrapper(void *userdata, Uint8 *stream, int len)
 DECLSPEC int SDLCALL
 SDL_OpenAudio(SDL_AudioSpec *want, SDL_AudioSpec *obtained)
 {
+    AudioCallbackWrapperData *data;
+    int retval;
+
     // SDL2 uses a NULL callback to mean "we play to use SDL_QueueAudio()"
     if (want && (want->callback == NULL)) {
         return SDL20_SetError("Callback can't be NULL");
     }
 
-    AudioCallbackWrapperData *data = (AudioCallbackWrapperData *) SDL20_calloc(1, sizeof (AudioCallbackWrapperData));
+    data = (AudioCallbackWrapperData *) SDL20_calloc(1, sizeof (AudioCallbackWrapperData));
     if (!data) {
         return SDL20_OutOfMemory();
     }
@@ -4211,7 +4238,7 @@ SDL_OpenAudio(SDL_AudioSpec *want, SDL_AudioSpec *obtained)
 
     FIXME("Don't allow int32 or float32");
     FIXME("clamp output to mono/stereo");
-    const int retval = SDL20_OpenAudio(want, obtained);
+    retval = SDL20_OpenAudio(want, obtained);
     want->callback = data->app_callback;
     want->userdata = data->app_userdata;
     if (retval == -1) {
