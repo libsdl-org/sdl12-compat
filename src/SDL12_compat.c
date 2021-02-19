@@ -3643,9 +3643,10 @@ SDL_SetColors(SDL12_Surface *surface12, const SDL_Color * colors, int firstcolor
 DECLSPEC int SDLCALL
 SDL_GetWMInfo(SDL_SysWMinfo * info)
 {
-    FIXME("write me");
     //return SDL20_GetWindowWMInfo(VideoWindow20, info);
-    return SDL20_Unsupported();
+    FIXME("write me");
+    SDL20_Unsupported();
+    return 0; /* some programs only test against 0, not -1 */
 }
 
 DECLSPEC SDL12_Overlay * SDLCALL
