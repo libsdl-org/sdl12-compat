@@ -94,7 +94,12 @@
 
 #define BUILD_SDL 1
 #include "SDL.h"
-#include "SDL_syswm.h"
+#include "SDL_syswm.h" /* includes windows.h for _WIN32 */
+#ifdef _WIN32
+#undef CreateThread
+#undef CreateSemaphore
+#undef CreateMutex
+#endif
 
 #undef SDL_ReportAssertion
 #undef SDL_SetError
