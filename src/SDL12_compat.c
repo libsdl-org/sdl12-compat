@@ -836,6 +836,7 @@ LoadSDL20(void)
     return okay;
 }
 
+#if defined(__GNUC__)
 static void dllinit(void) __attribute__((constructor));
 static void dllinit(void)
 {
@@ -851,6 +852,13 @@ static void dllquit(void)
 {
     UnloadSDL20();
 }
+#elif defined(_MSC_VER) && defined(_WIN32)
+    #error Write me
+#elif defined(__WATCOMC__) && defined(__OS2__)
+    #error Write me
+#else
+    #error Please define your platform.
+#endif
 
 DECLSPEC const SDL_version * SDLCALL
 SDL_Linked_Version(void)
