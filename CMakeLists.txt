@@ -7,6 +7,11 @@ target_include_directories(SDL PRIVATE "/usr/local/include/SDL2")  # !!! FIXME
 #target_include_directories(SDL PRIVATE "/usr/X11/include")  # !!! FIXME
 add_definitions("-D_THREAD_SAFE")  # !!! FIXME
 
+# avoid DLL having 'lib' prefix with Windows MinGW builds
+if(WIN32)
+  set(CMAKE_SHARED_LIBRARY_PREFIX "")
+endif()
+
 if(UNIX OR APPLE)
     target_link_libraries(SDL PRIVATE dl)
 endif()
