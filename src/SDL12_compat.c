@@ -40,6 +40,13 @@
 #include <stdarg.h>
 #include <stdio.h> /* fprintf(), etc. */
 
+/* mingw headers may define these ... */
+#undef strtod
+#undef strcasecmp
+#undef strncasecmp
+#undef snprintf
+#undef vsnprintf
+
 // !!! IMPLEMENT_ME SDL_CDClose
 // !!! IMPLEMENT_ME SDL_CDEject
 // !!! IMPLEMENT_ME SDL_CDName
