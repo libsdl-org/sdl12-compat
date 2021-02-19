@@ -4001,7 +4001,7 @@ SDL_RWFromFile(const char *file, const char *mode)
 }
 
 DECLSPEC SDL12_RWops * SDLCALL
-SDL_RWFromFP(FILE *io, int autoclose)
+SDL_RWFromFP(void *io, int autoclose)
 {
     return RWops20to12(SDL20_RWFromFP(io, autoclose));
 }

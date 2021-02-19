@@ -214,7 +214,7 @@ SDL20_SYM(void,UnlockJoysticks,(void),(),)
 SDL20_SYM(SDL_JoystickID,JoystickGetDeviceInstanceID,(int a),(a),return)
 
 SDL20_SYM(SDL_RWops *,RWFromFile,(const char *a, const char *b),(a,b),return)
-SDL20_SYM(SDL_RWops *,RWFromFP,(FILE *a, int b),(a,b),return)
+SDL20_SYM(SDL_RWops *,RWFromFP,(void *a, int b),(a,b),return) /* FILE* */
 SDL20_SYM(SDL_RWops *,RWFromMem,(void *a, int b),(a,b),return)
 SDL20_SYM(SDL_RWops *,RWFromConstMem,(const void *a, int b),(a,b),return)
 SDL20_SYM(SDL_RWops *,AllocRW,(void),(),return)
