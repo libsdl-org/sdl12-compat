@@ -672,7 +672,7 @@ typedef union
 } SDL12_Event;
 
 typedef int (SDLCALL *SDL12_EventFilter)(const SDL12_Event *event12);
-static int EventFilter20to12(void *data, SDL_Event *event20);
+static int SDLCALL EventFilter20to12(void *data, SDL_Event *event20);
 
 typedef Uint32 (SDLCALL *SDL12_TimerCallback)(Uint32 interval);
 typedef SDL_TimerCallback SDL12_NewTimerCallback;
