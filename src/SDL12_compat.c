@@ -768,7 +768,7 @@ static EventQueueType *EventQueueAvailable = NULL;
     static HANDLE Loaded_SDL20 = NULL;
     #define LoadSDL20Library() ((Loaded_SDL20 = LoadLibraryA(SDL20_LIBNAME)) != NULL)
     #define LookupSDL20Sym(sym) GetProcAddress(Loaded_SDL20, sym)
-    #define CloseSDL20Library() { { if (Loaded_SDL20) { FreeLibrary(Loaded_SDL20); Loaded_SDL20 = NULL; } }
+    #define CloseSDL20Library() { if (Loaded_SDL20) { FreeLibrary(Loaded_SDL20); Loaded_SDL20 = NULL; } }
 #elif defined(unix) || defined(__APPLE__)
     #include <dlfcn.h>
     #ifdef __APPLE__
