@@ -791,6 +791,28 @@ static EventQueueType *EventQueueAvailable = NULL;
     #define LoadSDL20Library() ((Loaded_SDL20 = dlopen(SDL20_LIBNAME, RTLD_LOCAL|RTLD_NOW)) != NULL)
     #define LookupSDL20Sym(sym) dlsym(Loaded_SDL20, sym)
     #define CloseSDL20Library() { if (Loaded_SDL20) { dlclose(Loaded_SDL20); Loaded_SDL20 = NULL; } }
+#elif defined(__OS2__)
+    #include <os2.h>
+    #define SDL20_LIBNAME "SDL2.dll"
+    static HMODULE Loaded_SDL20 = NULLHANDLE;
+    static SDL_bool LoadSDL20Library(void) {
+        char err[256];
+        if (DosLoadModule(err, sizeof(err), SDL20_LIBNAME, &Loaded_SDL20) != 0) {
+            return SDL_FALSE;
+        }
+        return SDL_TRUE;
+    }
+    static void *LookupSDL20Sym (const char *symname) {
+        PFN fp;
+        if (DosQueryProcAddr(Loaded_SDL20, 0, symname, &fp) != 0) return NULL;
+        return (void *)fp;
+    }
+    static void CloseSDL20Library(void) {
+        if (Loaded_SDL20 != NULLHANDLE) {
+            DosFreeModule(Loaded_SDL20);
+            Loaded_SDL20 = NULLHANDLE;
+        }
+    }
 #else
     #error Please define your platform.
 #endif
@@ -855,7 +877,18 @@ static void dllquit(void)
 #elif defined(_MSC_VER) && defined(_WIN32)
     #error Write me
 #elif defined(__WATCOMC__) && defined(__OS2__)
-    #error Write me
+unsigned _System LibMain(unsigned hmod, unsigned termination)
+{
+    (void)hmod;
+    if (termination) {
+        UnloadSDL20();
+    } else if (!LoadSDL20()) {
+        fprintf(stderr, "ERROR: sdl12-compat failed to load SDL 2.0! Aborting!\n");
+        fflush(stderr);
+        abort();
+    }
+    return 1;
+}
 #else
     #error Please define your platform.
 #endif

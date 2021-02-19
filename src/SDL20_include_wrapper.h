@@ -94,7 +94,10 @@
 
 #define BUILD_SDL 1
 #include "SDL.h"
-#include "SDL_syswm.h" /* includes windows.h for _WIN32 */
+#ifdef __OS2__
+#define INCL_DOSMODULEMGR /* for Dos_LoadModule() & co. */
+#endif
+#include "SDL_syswm.h"    /* includes windows.h for _WIN32, os2.h for __OS2__ */
 #ifdef _WIN32
 #undef CreateThread
 #undef CreateSemaphore
