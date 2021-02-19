@@ -2486,7 +2486,7 @@ SDL_GetRGB(Uint32 pixel, const SDL12_PixelFormat *format12, Uint8 *r, Uint8 *g, 
     /* This is probably way slower than apps expect. */
     SDL_PixelFormat format20;
     SDL_Palette palette20;
-    return SDL20_GetRGB(pixel, PixelFormat12to20(&format20, &palette20, format12), r, g, b);
+    SDL20_GetRGB(pixel, PixelFormat12to20(&format20, &palette20, format12), r, g, b);
 }
 
 DECLSPEC void SDLCALL
@@ -2495,7 +2495,7 @@ SDL_GetRGBA(Uint32 pixel, const SDL12_PixelFormat *format12, Uint8 *r, Uint8 *g,
     /* This is probably way slower than apps expect. */
     SDL_PixelFormat format20;
     SDL_Palette palette20;
-    return SDL20_GetRGBA(pixel, PixelFormat12to20(&format20, &palette20, format12), r, g, b, a);
+    SDL20_GetRGBA(pixel, PixelFormat12to20(&format20, &palette20, format12), r, g, b, a);
 }
 
 DECLSPEC const SDL12_VideoInfo * SDLCALL
