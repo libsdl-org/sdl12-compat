@@ -8,9 +8,8 @@ DLLNAME = SDL12
 VERSION = 1.2.50
 LIBHOME = .
 
-# change SDL2_INC in order to point to the dependency headers.
-#SDL2INC = -IC:\SDL2DEV/h/SDL2
-SDL2INC = -I/home/ozzie/Downloads/sdl-dev/SDL/include
+# change SDL2INC to point to the SDL2 headers.
+SDL2INC = -IC:\SDL2DEV/h/SDL2
 INCPATH = -I$(%WATCOM)/h/os2 -I$(%WATCOM)/h $(SDL2INC)
 LIBNAME = $(DLLNAME)
 
