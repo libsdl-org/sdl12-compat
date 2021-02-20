@@ -868,14 +868,33 @@ static void dllinit(void)
         abort();
     }
 }
-
 static void dllquit(void) __attribute__((destructor));
 static void dllquit(void)
 {
     UnloadSDL20();
 }
+
 #elif defined(_MSC_VER) && defined(_WIN32)
-    #error Write me
+BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD reason, LPVOID reserved)
+{
+    switch (reason) {
+    case DLL_PROCESS_DETACH:
+        UnloadSDL20();
+        break;
+
+    case DLL_PROCESS_ATTACH: /* init once for each new process */
+        if (!LoadSDL20()) {
+            return FALSE;
+        }
+        break;
+
+    case DLL_THREAD_ATTACH: /* thread-specific init. */
+    case DLL_THREAD_DETACH: /* thread-specific cleanup */
+        break;
+    }
+    return TRUE;
+}
+
 #elif defined(__WATCOMC__) && defined(__OS2__)
 unsigned _System LibMain(unsigned hmod, unsigned termination)
 {
@@ -889,8 +908,9 @@ unsigned _System LibMain(unsigned hmod, unsigned termination)
     }
     return 1;
 }
+
 #else
-    #error Please define your platform.
+    #error Please define your platform
 #endif
 
 DECLSPEC const SDL_version * SDLCALL
