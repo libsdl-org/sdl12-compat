@@ -2821,6 +2821,8 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
 
     FIXME("currently ignores SDL_WINDOWID, which we could use with SDL_CreateWindowFrom ...?");
 
+    flags12 &= ~SDL12_HWACCEL; /* just in case - https://github.com/libsdl-org/SDL-1.2/issues/817 */
+
     /* SDL_SetVideoMode() implicitly inits if necessary. */
     if (SDL20_WasInit(SDL_INIT_VIDEO) == 0) {
         if (SDL20_Init(SDL_INIT_VIDEO) < 0) {
