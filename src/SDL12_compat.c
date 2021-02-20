@@ -2068,7 +2068,9 @@ EventFilter20to12(void *data, SDL_Event *event20)
             event12.type = (event20->type == SDL_KEYDOWN) ? SDL12_KEYDOWN : SDL12_KEYUP;
             event12.key.which = 0;
             event12.key.state = event20->key.state;
-            event12.key.keysym.scancode = (event20->key.keysym.scancode < 256) ? (Uint8) event20->key.keysym.scancode : 0;
+            FIXME("SDL1.2 and SDL2.0 scancodes are incompatible");
+            // turns out that some apps actually made use of the hardware scancodes (checking for platform beforehand)
+            event12.key.keysym.scancode = 0;
             event12.key.keysym.mod = event20->key.keysym.mod;  /* these match up between 1.2 and 2.0! */
             event12.key.keysym.unicode = 0;  FIXME("unicode");
             break;
