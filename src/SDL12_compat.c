@@ -2852,6 +2852,8 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
         EndVidModeCreate();  /* rebuild the window if moving to/from a GL context */
     } else if ( VideoSurface12 && (VideoSurface12->surface20->format->format != appfmt)) {
         EndVidModeCreate();  /* rebuild the window if changing pixel format */
+    } else if ( VideoSurface12 && (VideoSurface12->w != width || VideoSurface12->h != height) && ((flags12 & SDL12_FULLSCREEN) == 0)) {
+        EndVidModeCreate(); /* rebuild the window if window size changed and not in full screen */
     } else if (VideoGLContext20) {
         /* SDL 1.2 (infuriatingly!) destroys the GL context on each resize, so we will too */
         SDL20_GL_MakeCurrent(NULL, NULL);
