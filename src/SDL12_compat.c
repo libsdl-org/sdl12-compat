@@ -1365,6 +1365,7 @@ SDL_WasInit(Uint32 sdl12flags)
     return InitFlags20to12(SDL20_WasInit(sdl20flags)) | extraflags;
 }
 
+static SDL12_Surface *EndVidModeCreate(void);
 static void
 Quit12Video(void)
 {
@@ -1372,6 +1373,8 @@ Quit12Video(void)
 
     SDL20_FreeSurface(VideoIcon20);
     VideoIcon20 = NULL;
+
+    EndVidModeCreate(); /* clean-up static data. */
 
     for (i = 0; i < VideoModesCount; i++) {
         SDL20_free(VideoModes[i].modeslist12);
