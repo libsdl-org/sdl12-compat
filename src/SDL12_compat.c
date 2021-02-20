@@ -952,7 +952,7 @@ SDL_Has3DNowExt(void)
 DECLSPEC SDL_Joystick * SDLCALL
 SDL_JoystickOpen(int device_index)
 {
-    int i;
+    size_t i;
     SDL20_LockJoysticks();
     for (i = 0; i < SDL_arraysize(JoystickOpenList); i++) {
         if (JoystickOpenList[i].joystick == NULL) {
@@ -978,7 +978,7 @@ SDL_JoystickOpen(int device_index)
 DECLSPEC void SDLCALL
 SDL_JoystickClose(SDL_Joystick *joystick)
 {
-    int i;
+    size_t i;
     SDL20_LockJoysticks();
     for (i = 0; i < SDL_arraysize(JoystickOpenList); i++) {
         if (JoystickOpenList[i].joystick == joystick) {
@@ -1004,7 +1004,7 @@ SDL_JoystickName(int device_index)
 DECLSPEC int SDLCALL
 SDL_JoystickIndex(SDL_Joystick *joystick)
 {
-    int i;
+    size_t i;
 
     SDL20_LockJoysticks(); {
         for (i = 0; i < SDL_arraysize(JoystickOpenList); i++) {
@@ -1027,7 +1027,7 @@ DECLSPEC int SDLCALL
 SDL_JoystickOpened(int device_index)
 {
     int retval = 0;
-    int i;
+    size_t i;
     SDL20_LockJoysticks();
     for (i = 0; i < SDL_arraysize(JoystickOpenList); i++) {
         if ((JoystickOpenList[i].joystick) && (JoystickOpenList[i].device_index == device_index)) {
@@ -1523,7 +1523,7 @@ SDL_PeepEvents(SDL12_Event *events12, int numevents, SDL_eventaction action, Uin
     }
     else if ((action == SDL_PEEKEVENT) || (action == SDL_GETEVENT))
     {
-        const SDL_bool isGet = (action == SDL_GETEVENT);
+        const SDL_bool isGet = (action == SDL_GETEVENT)? SDL_TRUE : SDL_FALSE;
         EventQueueType *prev = NULL;
         EventQueueType *item = EventQueueHead;
         EventQueueType *next = NULL;
@@ -1581,7 +1581,7 @@ PushEventIfNotFiltered(SDL12_Event *event12)
         if (EventStates[event12->type] != SDL_IGNORE)
         {
             if ((!EventFilter12) || (EventFilter12(event12)))
-                return (SDL_PushEvent(event12) == 0);
+                return (SDL_PushEvent(event12) == 0)? SDL_TRUE : SDL_FALSE;
         }
     }
     return SDL_FALSE;
@@ -4314,7 +4314,7 @@ SDL_GL_DisableContext(void)
 DECLSPEC void SDLCALL
 SDL_GL_EnableContext_Thread(void)
 {
-    const SDL_bool enable = (VideoGLContext20 && VideoWindow20);
+    const SDL_bool enable = (VideoGLContext20 && VideoWindow20)? SDL_TRUE : SDL_FALSE;
     SDL20_GL_MakeCurrent(enable ? VideoWindow20 : NULL, enable ? VideoGLContext20 : NULL);
 }
 
