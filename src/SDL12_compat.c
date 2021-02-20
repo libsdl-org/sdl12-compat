@@ -1998,7 +1998,7 @@ SDL_GetKeyState(int *numkeys)
 }
 
 
-static int
+static int SDLCALL
 EventFilter20to12(void *data, SDL_Event *event20)
 {
     //const int maxUserEvents12 = SDL12_NUMEVENTS - SDL12_USEREVENT;
@@ -2102,7 +2102,7 @@ EventFilter20to12(void *data, SDL_Event *event20)
         case SDL_TEXTINPUT: FIXME("write me"); return 0;
 
         case SDL_MOUSEMOTION:
-        	event12.type = SDL12_MOUSEMOTION;
+            event12.type = SDL12_MOUSEMOTION;
             event12.motion.which = (Uint8) event20->motion.which;
             event12.motion.state = event20->motion.state;
             event12.motion.x = (Uint16) event20->motion.x;
@@ -2112,7 +2112,7 @@ EventFilter20to12(void *data, SDL_Event *event20)
             break;
 
         case SDL_MOUSEBUTTONDOWN:
-        	event12.type = SDL12_MOUSEBUTTONDOWN;
+            event12.type = SDL12_MOUSEBUTTONDOWN;
             event12.button.which = (Uint8) event20->button.which;
             event12.button.button = event20->button.button;
             event12.button.state = event20->button.state;
@@ -2121,7 +2121,7 @@ EventFilter20to12(void *data, SDL_Event *event20)
             break;
 
         case SDL_MOUSEBUTTONUP:
-        	event12.type = SDL12_MOUSEBUTTONUP;
+            event12.type = SDL12_MOUSEBUTTONUP;
             event12.button.which = (Uint8) event20->button.which;
             event12.button.button = event20->button.button;
             event12.button.state = event20->button.state;
@@ -2182,12 +2182,12 @@ EventFilter20to12(void *data, SDL_Event *event20)
 
         //case SDL_JOYDEVICEADDED:
         //case SDL_JOYDEVICEREMOVED:
-	    //case SDL_CONTROLLERAXISMOTION:
-	    //case SDL_CONTROLLERBUTTONDOWN:
-	    //case SDL_CONTROLLERBUTTONUP:
-	    //case SDL_CONTROLLERDEVICEADDED:
-	    //case SDL_CONTROLLERDEVICEREMOVED:
-	    //case SDL_CONTROLLERDEVICEREMAPPED:
+        //case SDL_CONTROLLERAXISMOTION:
+        //case SDL_CONTROLLERBUTTONDOWN:
+        //case SDL_CONTROLLERBUTTONUP:
+        //case SDL_CONTROLLERDEVICEADDED:
+        //case SDL_CONTROLLERDEVICEREMOVED:
+        //case SDL_CONTROLLERDEVICEREMAPPED:
         //case SDL_FINGERDOWN:
         //case SDL_FINGERUP:
         //case SDL_FINGERMOTION:
@@ -3424,7 +3424,7 @@ SDL_WM_SetIcon(SDL12_Surface *icon12, Uint8 *mask)
     if (VideoWindow20) {
         SDL20_SetWindowIcon(VideoWindow20, icon12->surface20);
     }
-return;
+    return; ////////
 
     // take the mask and zero out those alpha values.
     blendmode = SDL_BLENDMODE_NONE;
