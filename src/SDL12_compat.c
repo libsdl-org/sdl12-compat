@@ -902,9 +902,8 @@ unsigned _System LibMain(unsigned hmod, unsigned termination)
     if (termination) {
         UnloadSDL20();
     } else if (!LoadSDL20()) {
-        fprintf(stderr, "ERROR: sdl12-compat failed to load SDL 2.0! Aborting!\n");
-        fflush(stderr);
-        abort();
+        fprintf(stderr, "ERROR: SDL12-compat failed to load SDL2.dll\n");
+        return 0;
     }
     return 1;
 }
