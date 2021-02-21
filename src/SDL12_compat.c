@@ -745,9 +745,7 @@ static SDL_GLContext VideoGLContext20 = NULL;
 static char *WindowTitle = NULL;
 static char *WindowIconTitle = NULL;
 static SDL_Surface *VideoIcon20 = NULL;
-#if 0 /* unused, yet. */
 static int EnabledUnicode = 0;
-#endif
 static int VideoDisplayIndex = 0;
 static int CDRomInit = 0;
 static SDL12_EventFilter EventFilter12 = NULL;
@@ -2095,7 +2093,9 @@ EventFilter20to12(void *data, SDL_Event *event20)
             // turns out that some apps actually made use of the hardware scancodes (checking for platform beforehand)
             event12.key.keysym.scancode = 0;
             event12.key.keysym.mod = event20->key.keysym.mod;  /* these match up between 1.2 and 2.0! */
-            event12.key.keysym.unicode = 0;  FIXME("unicode");
+            FIXME("unicode");
+            /* without setting keysym.unicode to at least keysym.sym, text input in some games don't work at all ! */
+            event12.key.keysym.unicode = (EnabledUnicode)? event12.key.keysym.sym : 0;
             break;
 
         case SDL_TEXTEDITING: FIXME("write me"); return 0;
@@ -3850,8 +3850,10 @@ SDL_GetKeyRepeat(int *delay, int *interval)
 DECLSPEC int SDLCALL
 SDL_EnableUNICODE(int enable)
 {
-    FIXME("write me");
-    return SDL20_Unsupported();
+    int old = EnabledUnicode;
+    FIXME("implement properly");
+    EnabledUnicode = enable;
+    return old;
 }
 
 /* SDL 1.2 limited timers to a 10ms resolution. SDL 2.0 doesn't, so we might
