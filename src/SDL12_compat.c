@@ -745,7 +745,9 @@ static SDL_GLContext VideoGLContext20 = NULL;
 static char *WindowTitle = NULL;
 static char *WindowIconTitle = NULL;
 static SDL_Surface *VideoIcon20 = NULL;
+#if 0 /* unused, yet. */
 static int EnabledUnicode = 0;
+#endif
 static int VideoDisplayIndex = 0;
 static int CDRomInit = 0;
 static SDL12_EventFilter EventFilter12 = NULL;
@@ -2733,6 +2735,7 @@ GetEnvironmentWindowPosition(int *x, int *y)
     }
 }
 
+#if 0 /* unused, yet. */
 static void
 SetupScreenSaver(const int flags12)
 {
@@ -2754,7 +2757,7 @@ SetupScreenSaver(const int flags12)
         SDL20_DisableScreenSaver();
     }
 }
-
+#endif
 
 static SDL12_Surface *
 EndVidModeCreate(void)
