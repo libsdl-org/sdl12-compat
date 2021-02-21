@@ -93,16 +93,41 @@
 #define SDL_GetKeyName IGNORE_THIS_VERSION_OF_SDL_GetKeyName
 
 #define BUILD_SDL 1
-#include "SDL.h"
+
+/* *** HACK HACK HACK:
+ * *** Avoid including SDL_thread.h: it defines SDL_CreateThread() as a macro */
+#if defined(_WIN32) || defined(__OS2__)
+#define _SDL_thread_h
+#define SDL_thread_h_
+#define SDL_PASSED_BEGINTHREAD_ENDTHREAD
+#endif
 #ifdef __OS2__
 #define INCL_DOSMODULEMGR /* for Dos_LoadModule() & co. */
 #endif
+
+#include "SDL.h"
 #include "SDL_syswm.h"    /* includes windows.h for _WIN32, os2.h for __OS2__ */
+
+/* Missing SDL_thread.h stuff (see above): */
+#if defined(_WIN32) || defined(__OS2__)
+struct SDL_Thread;
+typedef struct SDL_Thread SDL_Thread;
+typedef unsigned long SDL_threadID;
+typedef int (SDLCALL *SDL_ThreadFunction) (void*);
+#endif
+#ifdef __OS2__
+typedef int (*pfnSDL_CurrentBeginThread) (void (*func)(void*), void*, unsigned, void*);
+typedef void (*pfnSDL_CurrentEndThread) (void);
+#endif
 #ifdef _WIN32
+typedef UINT_PTR (__cdecl *pfnSDL_CurrentBeginThread)
+                   (void*, unsigned, unsigned (__stdcall *func)(void*), void*, unsigned, unsigned*);
+typedef void (__cdecl *pfnSDL_CurrentEndThread) (unsigned);
+/* the following macros from Win32 SDK headers are harmful here: */
 #undef CreateThread
 #undef CreateSemaphore
 #undef CreateMutex
-#endif
+#endif /* _WIN32 */
 
 #undef SDL_ReportAssertion
 #undef SDL_SetError
