@@ -3425,16 +3425,16 @@ SDL_WM_GetCaption(const char **title, const char **icon)
 DECLSPEC void SDLCALL
 SDL_WM_SetIcon(SDL12_Surface *icon12, Uint8 *mask)
 {
+#if 1
+    if (VideoWindow20) {
+        SDL20_SetWindowIcon(VideoWindow20, icon12->surface20);
+    }
+#else
     SDL_BlendMode blendmode;
     Uint32 rmask, gmask, bmask, amask;
     SDL_Surface *icon20;
     int bpp;
     int ret;
-
-    if (VideoWindow20) {
-        SDL20_SetWindowIcon(VideoWindow20, icon12->surface20);
-    }
-    return; ////////
 
     // take the mask and zero out those alpha values.
     blendmode = SDL_BLENDMODE_NONE;
@@ -3483,6 +3483,7 @@ SDL_WM_SetIcon(SDL12_Surface *icon12, Uint8 *mask)
         SDL20_FreeSurface(VideoIcon20);
         VideoIcon20 = icon20;
     }
+#endif
 }
 
 DECLSPEC int SDLCALL
