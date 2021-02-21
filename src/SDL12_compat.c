@@ -2003,7 +2003,6 @@ EventFilter20to12(void *data, SDL_Event *event20)
 {
     //const int maxUserEvents12 = SDL12_NUMEVENTS - SDL12_USEREVENT;
     SDL12_Event event12;
-    int x, y;
 
     SDL_assert(data == NULL);  /* currently unused. */
 
@@ -2115,6 +2114,9 @@ EventFilter20to12(void *data, SDL_Event *event20)
             event12.type = SDL12_MOUSEBUTTONDOWN;
             event12.button.which = (Uint8) event20->button.which;
             event12.button.button = event20->button.button;
+            if (event12.button.button > 3) {
+                event12.button.button += 2; /* SDL_BUTTON_X1/2 */
+            }
             event12.button.state = event20->button.state;
             event12.button.x = (Uint16) event20->button.x;
             event12.button.y = (Uint16) event20->button.y;
@@ -2124,6 +2126,9 @@ EventFilter20to12(void *data, SDL_Event *event20)
             event12.type = SDL12_MOUSEBUTTONUP;
             event12.button.which = (Uint8) event20->button.which;
             event12.button.button = event20->button.button;
+            if (event12.button.button > 3) {
+                event12.button.button += 2; /* SDL_BUTTON_X1/2 */
+            }
             event12.button.state = event20->button.state;
             event12.button.x = (Uint16) event20->button.x;
             event12.button.y = (Uint16) event20->button.y;
@@ -2136,12 +2141,13 @@ EventFilter20to12(void *data, SDL_Event *event20)
             event12.type = SDL12_MOUSEBUTTONDOWN;
             event12.button.which = (Uint8) event20->wheel.which;
             event12.button.button = (event20->wheel.y > 0) ? 4 : 5;  /* wheelup is 4, down is 5. */
-            event12.button.state = SDL_GetMouseState(&x, &y);
-            event12.button.x = (Uint16) x;
-            event12.button.y = (Uint16) y;
+            event12.button.state = SDL_PRESSED;
+            event12.button.x = 0;
+            event12.button.y = 0;
             PushEventIfNotFiltered(&event12);
 
             event12.type = SDL12_MOUSEBUTTONUP;  /* immediately release mouse "button" at the end of this switch. */
+            event12.button.state = SDL_RELEASED;
             break;
 
         case SDL_JOYAXISMOTION:
