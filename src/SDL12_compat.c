@@ -3936,7 +3936,9 @@ DECLSPEC int SDLCALL SDL_CDStop(SDL12_CD *cdrom) { return SDL20_Unsupported(); }
 DECLSPEC int SDLCALL SDL_CDEject(SDL12_CD *cdrom) { return SDL20_Unsupported(); }
 DECLSPEC void SDLCALL SDL_CDClose(SDL12_CD *cdrom) {}
 
-
+#if (defined(_WIN32) || defined(__OS2__)) && !defined(SDL_PASSED_BEGINTHREAD_ENDTHREAD)
+#error SDL_PASSED_BEGINTHREAD_ENDTHREAD not defined
+#endif
 #ifdef SDL_PASSED_BEGINTHREAD_ENDTHREAD
 DECLSPEC SDL_Thread * SDLCALL
 SDL_CreateThread(int (SDLCALL *fn)(void *), void *data, pfnSDL_CurrentBeginThread pfnBeginThread, pfnSDL_CurrentEndThread pfnEndThread)
