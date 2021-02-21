@@ -3425,35 +3425,33 @@ SDL_WM_GetCaption(const char **title, const char **icon)
 DECLSPEC void SDLCALL
 SDL_WM_SetIcon(SDL12_Surface *icon12, Uint8 *mask)
 {
-#if 1
-    if (VideoWindow20) {
-        SDL20_SetWindowIcon(VideoWindow20, icon12->surface20);
-    }
-#else
-    SDL_BlendMode blendmode;
+    SDL_BlendMode oldmode;
     Uint32 rmask, gmask, bmask, amask;
     SDL_Surface *icon20;
     int bpp;
     int ret;
 
+    if (VideoWindow20) {
+        SDL20_SetWindowIcon(VideoWindow20, icon12->surface20);
+        return;
+    }
+
     // take the mask and zero out those alpha values.
-    blendmode = SDL_BLENDMODE_NONE;
-    if (SDL20_GetSurfaceBlendMode(icon12->surface20, &blendmode) < 0) {
-        return;  // oh well.
+    oldmode = SDL_BLENDMODE_NONE;
+    if (SDL20_GetSurfaceBlendMode(icon12->surface20, &oldmode) < 0) {
+        return; // oh well.
     }
-
     if (!SDL20_PixelFormatEnumToMasks(SDL_PIXELFORMAT_ARGB8888, &bpp, &rmask, &gmask, &bmask, &amask)) {
-        return;  // oh well.
+        return; // oh well.
     }
-
     icon20 = SDL20_CreateRGBSurface(0, icon12->w, icon12->h, bpp, rmask, gmask, bmask, amask);
     if (!icon20) {
-        return;  // oh well.
+        return; // oh well.
     }
 
     SDL20_SetSurfaceBlendMode(icon12->surface20, SDL_BLENDMODE_NONE);
     ret = SDL20_UpperBlit(icon12->surface20, NULL, icon20, NULL);
-    SDL20_SetSurfaceBlendMode(icon12->surface20, blendmode);
+    SDL20_SetSurfaceBlendMode(icon12->surface20, oldmode);
     if (ret == 0) {
         if (mask) {
             const int w = icon12->w;
@@ -3483,7 +3481,6 @@ SDL_WM_SetIcon(SDL12_Surface *icon12, Uint8 *mask)
         SDL20_FreeSurface(VideoIcon20);
         VideoIcon20 = icon20;
     }
-#endif
 }
 
 DECLSPEC int SDLCALL
