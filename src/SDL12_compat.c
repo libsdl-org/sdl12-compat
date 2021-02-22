@@ -929,7 +929,9 @@ BOOL WINAPI _DllMainCRTStartup(HANDLE dllhandle, DWORD reason, LPVOID reserved)
     case DLL_PROCESS_ATTACH: /* init once for each new process */
         if (!LoadSDL20()) {
             error_dialog(loaderror);
-            return FALSE;
+            TerminateProcess(GetCurrentProcess(), 42);
+            ExitProcess(42);
+            return FALSE;   /* NOT-REACHED */
         }
         break;
 
