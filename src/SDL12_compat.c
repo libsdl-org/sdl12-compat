@@ -3366,6 +3366,10 @@ PresentScreen(void)
     }
 
     SDL20_UnlockTexture(VideoTexture20);
+
+    SDL20_SetRenderDrawColor(VideoRenderer20, 0, 0, 0, 255);
+    SDL20_RenderClear(VideoRenderer20);
+    SDL20_SetRenderDrawColor(VideoRenderer20, 255, 255, 255, 255);
     SDL20_RenderCopy(VideoRenderer20, VideoTexture20, NULL, NULL);
     SDL20_RenderPresent(VideoRenderer20);
     VideoSurfaceLastPresentTicks = SDL20_GetTicks();
