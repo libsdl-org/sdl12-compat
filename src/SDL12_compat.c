@@ -886,11 +886,7 @@ static void error_dialog(const char *errorMsg)
     MessageBoxA(NULL, errorMsg, "Error", MB_OK | MB_SETFOREGROUND | MB_ICONSTOP);
 }
 #elif defined(__APPLE__)
-static void error_dialog(const char *errorMsg)
-{
-    NSString* msg = [NSString stringWithCString:errorMsg encoding:NSASCIIStringEncoding];
-    NSRunCriticalAlertPanel (@"Error", @"%@", @"OK", nil, nil, msg);
-}
+extern void error_dialog(const char *errorMsg);
 #else
 static void error_dialog(const char *errorMsg)
 {
