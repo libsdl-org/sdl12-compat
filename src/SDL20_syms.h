@@ -33,6 +33,8 @@
 #define SDL20_SYM_VARARGS(rc,fn,params) SDL20_SYM(rc,fn,params,unused,unused)
 #endif
 
+SDL20_SYM(void,GetVersion,(SDL_version *a),(a),)
+SDL20_SYM_VARARGS(void,Log,(const char *fmt, ...))
 SDL20_SYM(int,Init,(Uint32 a),(a),return)
 SDL20_SYM(int,InitSubSystem,(Uint32 a),(a),return)
 SDL20_SYM(Uint32,WasInit,(Uint32 a),(a),return)

@@ -1,0 +1,36 @@
+# Makefile for Win32 using MSVC:
+#	nmake /f NMakefile
+
+# change INCLUDES so it points to SDL2 headers directory:
+INCLUDES = -Iinclude
+
+CPPFLAGS = -DNDEBUG -DDLL_EXPORT
+
+CC = cl
+LD = link
+RC = rc
+
+CFLAGS = /nologo /O2 /MD /W3 /GS-
+LDFLAGS = /nologo /DLL /NODEFAULTLIB /RELEASE
+LDLIBS = kernel32.lib user32.lib
+
+DLLNAME = SDL.dll
+IMPNAME = SDL.lib
+
+COMPILE=$(CC) $(CFLAGS) $(CPPFLAGS) $(INCLUDES)
+
+OBJ = SDL12_compat.obj
+
+all: $(DLLNAME)
+
+$(DLLNAME): $(OBJ)
+	$(LD) /OUT:$@ $(LDFLAGS) $(OBJ) $(LDLIBS)
+
+.c.obj:
+	$(COMPILE) -Fo$@ -c $<
+
+distclean: clean
+	-del $(DLLNAME)
+	-del $(IMPNAME)
+clean:
+	-del *.obj *.exp *.manifest

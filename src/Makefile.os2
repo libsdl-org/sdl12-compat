@@ -32,8 +32,6 @@ object_files= SDL12_compat.obj
 .extensions:
 .extensions: .lib .dll .obj .c .asm
 
-.c: src;
-
 .c.obj:
 	wcc386 $(CFLAGS) -fo=$^@ $<
 

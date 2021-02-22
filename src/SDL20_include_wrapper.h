@@ -28,6 +28,8 @@
 #ifndef _INCL_SDL20_INCLUDE_WRAPPER_H_
 #define _INCL_SDL20_INCLUDE_WRAPPER_H_
 
+#define SDL_GetVersion IGNORE_THIS_VERSION_OF_SDL_GetVersion
+#define SDL_Log IGNORE_THIS_VERSION_OF_SDL_Log
 #define SDL_ReportAssertion IGNORE_THIS_VERSION_OF_SDL_ReportAssertion
 #define SDL_SetError IGNORE_THIS_VERSION_OF_SDL_SetError
 #define SDL_PollEvent IGNORE_THIS_VERSION_OF_SDL_PollEvent
@@ -129,6 +131,8 @@ typedef void (__cdecl *pfnSDL_CurrentEndThread) (unsigned);
 #undef CreateMutex
 #endif /* _WIN32 */
 
+#undef SDL_Log
+#undef SDL_GetVersion
 #undef SDL_ReportAssertion
 #undef SDL_SetError
 #undef SDL_PollEvent

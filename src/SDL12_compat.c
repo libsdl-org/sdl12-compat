@@ -38,8 +38,11 @@
 #define SDL12_COMPAT_VERSION 50
 
 #include <stdarg.h>
+#ifndef _WIN32
 #include <stdio.h> /* fprintf(), etc. */
 #include <stdlib.h>    /* for abort() */
+#include <string.h>
+#endif
 
 /* mingw headers may define these ... */
 #undef strtod
@@ -113,7 +116,7 @@
     do { \
         static SDL_bool seen = SDL_FALSE; \
         if (!seen) { \
-            fprintf(stderr, "FIXME: %s (%s, %s:%d)\n", x, __FUNCTION__, __FILE__, __LINE__); \
+            SDL20_Log("FIXME: %s (%s:%d)\n", x, __FUNCTION__, __LINE__); \
             seen = SDL_TRUE; \
         } \
     } while (0)
@@ -770,16 +773,21 @@ static EventQueueType *EventQueueAvailable = NULL;
 
 
 /* Obviously we can't use SDL_LoadObject() to load SDL2.  :)  */
+static char loaderror[256];
 #if defined(_WIN32)
     #ifndef WIN32_LEAN_AND_MEAN
     #define WIN32_LEAN_AND_MEAN 1
     #endif
     #include <windows.h>
     #define SDL20_LIBNAME "SDL2.dll"
+    /* require SDL2 >= 2.0.12 for SDL_CreateThread binary compatibility */
+    #define SDL20_REQUIRED_VER SDL_VERSIONNUM(2,0,12)
     static HANDLE Loaded_SDL20 = NULL;
     #define LoadSDL20Library() ((Loaded_SDL20 = LoadLibraryA(SDL20_LIBNAME)) != NULL)
     #define LookupSDL20Sym(sym) GetProcAddress(Loaded_SDL20, sym)
     #define CloseSDL20Library() { if (Loaded_SDL20) { FreeLibrary(Loaded_SDL20); Loaded_SDL20 = NULL; } }
+    #define strcpy_fn  lstrcpyA
+    #define sprintf_fn wsprintfA
 #elif defined(__unix__) || defined(__APPLE__)
     #include <dlfcn.h>
     #ifdef __APPLE__
@@ -787,13 +795,19 @@ static EventQueueType *EventQueueAvailable = NULL;
     #else
     #define SDL20_LIBNAME "libSDL2-2.0.so.0"
     #endif
+    #define SDL20_REQUIRED_VER SDL_VERSIONNUM(2,0,9)
     static void *Loaded_SDL20 = NULL;
     #define LoadSDL20Library() ((Loaded_SDL20 = dlopen(SDL20_LIBNAME, RTLD_LOCAL|RTLD_NOW)) != NULL)
     #define LookupSDL20Sym(sym) dlsym(Loaded_SDL20, sym)
     #define CloseSDL20Library() { if (Loaded_SDL20) { dlclose(Loaded_SDL20); Loaded_SDL20 = NULL; } }
+    #define strcpy_fn  strcpy
+    #define sprintf_fn sprintf
 #elif defined(__OS2__)
     #include <os2.h>
     #define SDL20_LIBNAME "SDL2.dll"
+    #define SDL20_REQUIRED_VER SDL_VERSIONNUM(2,0,9)
+    #define strcpy_fn  strcpy
+    #define sprintf_fn sprintf
     static HMODULE Loaded_SDL20 = NULLHANDLE;
     static SDL_bool LoadSDL20Library(void) {
         char err[256];
@@ -824,12 +838,8 @@ LoadSDL20Symbol(const char *fn, int *okay)
     if (*okay) { /* only bother trying if we haven't previously failed. */
         retval = LookupSDL20Sym(fn);
         if (retval == NULL) {
-            /* Flip to 1 to warn but maybe work if nothing calls that function, flip to zero to fail out. */
-            #if 0
-            fprintf(stderr, "WARNING: LOAD FAILED: %s\n", fn);
-            #else
+            sprintf_fn(loaderror, "%s missing in SDL2 library.", fn);
             *okay = 0;
-            #endif
         }
     }
     return retval;
@@ -850,22 +860,56 @@ LoadSDL20(void)
     if (!Loaded_SDL20)
     {
         okay = LoadSDL20Library();
+        if (!okay) {
+            strcpy_fn(loaderror, "Failed loading SDL2 library.");
+        }
         #define SDL20_SYM(rc,fn,params,args,ret) SDL20_##fn = (SDL20_##fn##_t) LoadSDL20Symbol("SDL_" #fn, &okay);
         #include "SDL20_syms.h"
         if (!okay)
             UnloadSDL20();
+        else {
+            SDL_version v;
+            SDL20_GetVersion(&v);
+            okay = (SDL_VERSIONNUM(v.major,v.minor,v.patch) >= SDL20_REQUIRED_VER);
+            if (!okay) {
+                sprintf_fn(loaderror, "SDL2 %d.%d.%d library is too old.", v.major, v.minor, v.patch);
+                UnloadSDL20();
+            }
+        }
     }
     return okay;
 }
+
+#if defined(_WIN32)
+static void error_dialog(const char *errorMsg)
+{
+    MessageBoxA(NULL, errorMsg, "Error", MB_OK | MB_SETFOREGROUND | MB_ICONSTOP);
+}
+#elif defined(__APPLE__)
+static void error_dialog(const char *errorMsg)
+{
+    NSString* msg = [NSString stringWithCString:errorMsg encoding:NSASCIIStringEncoding];
+    NSRunCriticalAlertPanel (@"Error", @"%@", @"OK", nil, nil, msg);
+}
+#else
+static void error_dialog(const char *errorMsg)
+{
+    fprintf(stderr, "%s\n", errorMsg);
+}
+#endif
 
 #if defined(__GNUC__)
 static void dllinit(void) __attribute__((constructor));
 static void dllinit(void)
 {
     if (!LoadSDL20()) {
-        fprintf(stderr, "ERROR: sdl12-compat failed to load SDL 2.0! Aborting!\n");
-        fflush(stderr);
+        error_dialog(loaderror);
+        #ifdef _WIN32
+        TerminateProcess(GetCurrentProcess(), 42);
+        ExitProcess(42);
+        #else
         abort();
+        #endif
     }
 }
 static void dllquit(void) __attribute__((destructor));
@@ -875,7 +919,11 @@ static void dllquit(void)
 }
 
 #elif defined(_MSC_VER) && defined(_WIN32)
-BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD reason, LPVOID reserved)
+#ifndef __FLTUSED__
+#define __FLTUSED__
+__declspec(selectany) int _fltused = 1;
+#endif
+BOOL WINAPI _DllMainCRTStartup(HANDLE dllhandle, DWORD reason, LPVOID reserved)
 {
     switch (reason) {
     case DLL_PROCESS_DETACH:
@@ -884,6 +932,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD reason, LPVOID reserved)
 
     case DLL_PROCESS_ATTACH: /* init once for each new process */
         if (!LoadSDL20()) {
+            error_dialog(loaderror);
             return FALSE;
         }
         break;
@@ -902,7 +951,7 @@ unsigned _System LibMain(unsigned hmod, unsigned termination)
     if (termination) {
         UnloadSDL20();
     } else if (!LoadSDL20()) {
-        fprintf(stderr, "ERROR: SDL12-compat failed to load SDL2.dll\n");
+        error_dialog(loaderror);
         return 0;
     }
     return 1;
@@ -3968,9 +4017,8 @@ DECLSPEC void SDLCALL
 SDL_KillThread(SDL_Thread *thread)
 {
     FIXME("Removed from 2.0; do nothing. We can't even report failure.");
-    fprintf(stderr,
-        "WARNING: this app used SDL_KillThread(), an unforgivable curse.\n"
-        "This program should be fixed. No thread was actually harmed.\n");
+    SDL20_Log("WARNING: this app used SDL_KillThread(), an unforgivable curse.\n"
+              "This program should be fixed. No thread was actually harmed.\n");
 }
 
 typedef struct SDL12_TimerID_Data
@@ -4173,15 +4221,15 @@ RWops12to20_size(struct SDL_RWops *rwops20)
     if (size != -1)
         return size;
 
-    pos = rwops12->seek(rwops12, 0, SEEK_CUR);
+    pos = rwops12->seek(rwops12, 0, RW_SEEK_CUR);
     if (pos == -1)
         return -1;
 
-    size = (Sint64) rwops12->seek(rwops12, 0, SEEK_END);
+    size = (Sint64) rwops12->seek(rwops12, 0, RW_SEEK_END);
     if (size == -1)
         return -1;
 
-    rwops12->seek(rwops12, pos, SEEK_SET);  FIXME("...and if this fails?");
+    rwops12->seek(rwops12, pos, RW_SEEK_SET);  FIXME("...and if this fails?");
     rwops20->hidden.unknown.data2 = (void *) ((size_t) size);
     return size;
 }
