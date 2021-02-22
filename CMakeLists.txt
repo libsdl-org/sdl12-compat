@@ -5,15 +5,18 @@ if(APPLE)
   set(OSX_SRCS "src/SDL12_compat_objc.m")
   set_source_files_properties(${OSX_SRCS} PROPERTIES LANGUAGE C)
 endif()
+if(WIN32)
+  set(WIN32_SRCS "src/version.rc")
+endif()
 
 set(SDL12COMPAT_SRCS
   src/SDL12_compat.c
   ${OSX_SRCS}
+  ${WIN32_SRCS}
 )
 add_library(SDL SHARED ${SDL12COMPAT_SRCS})
 
 target_include_directories(SDL PRIVATE "/usr/local/include/SDL2")  # !!! FIXME
-#target_include_directories(SDL PRIVATE "/usr/X11/include")  # !!! FIXME
 add_definitions("-D_THREAD_SAFE")  # !!! FIXME
 
 # avoid DLL having 'lib' prefix with Windows MinGW builds

@@ -17,20 +17,17 @@ LDLIBS = kernel32.lib user32.lib
 DLLNAME = SDL.dll
 IMPNAME = SDL.lib
 
-COMPILE=$(CC) $(CFLAGS) $(CPPFLAGS) $(INCLUDES)
-
-OBJ = SDL12_compat.obj
+OBJ = SDL12_compat.obj version.res
 
 all: $(DLLNAME)
 
 $(DLLNAME): $(OBJ)
 	$(LD) /OUT:$@ $(LDFLAGS) $(OBJ) $(LDLIBS)
-
 .c.obj:
-	$(COMPILE) -Fo$@ -c $<
+	$(CC) $(CFLAGS) $(CPPFLAGS) $(INCLUDES) /Fo$@ -c $<
+.rc.res:
+	$(RC) /r /Fo$@ $<
 
 distclean: clean
-	-del $(DLLNAME)
-	-del $(IMPNAME)
 clean:
-	-del *.obj *.exp *.manifest
+	-del *.obj *.res *.exp *.manifest $(DLLNAME) $(IMPNAME)
