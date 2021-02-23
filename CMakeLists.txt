@@ -25,11 +25,11 @@ if(WIN32)
 endif()
 
 if(UNIX AND NOT APPLE)
-    add_definitions("-D_REENTRANT")
+    set_target_properties(SDL PROPERTIES COMPILE_DEFINITIONS "_REENTRANT")
     target_link_libraries(SDL PRIVATE dl)
 endif()
 if(APPLE)
-    add_definitions("-D_THREAD_SAFE")
+    set_target_properties(SDL PROPERTIES COMPILE_DEFINITIONS "_THREAD_SAFE")
     target_link_libraries(SDL PRIVATE "-framework AppKit")
 endif()
 
