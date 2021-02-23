@@ -1,0 +1,44 @@
+# GNU Makefile for Windows to build SDL12-compat.
+#
+
+# change INCLUDES so it points to SDL2 headers directory:
+INCLUDES = -Iinclude
+
+ifeq ($(CROSS),)
+CC=gcc
+RC=windres
+else
+CC=$(CROSS)-gcc
+RC=$(CROSS)-windres
+endif
+LD = $(CC)
+
+CPPFLAGS = -DDLL_EXPORT -DNDEBUG
+
+CFLAGS  = -O3 -Wall
+LDFLAGS = -shared -Wl,--no-undefined
+LDFLAGS+= -nostdlib
+LDFLAGS+= -Wl,--enable-auto-image-base
+LDLIBS  = -lkernel32 -luser32
+
+DLL = SDL.dll
+
+OBJ = SDL12_compat.o version.o
+
+.SUFFIXES:
+.SUFFIXES: .o .c .rc
+
+all: $(DLL)
+
+$(DLL): $(OBJ)
+	$(LD) -o $@ $(LDFLAGS) $(OBJ) $(LDLIBS)
+
+.c.o:
+	$(CC) $(CFLAGS) $(CPPFLAGS) $(INCLUDES) -o $@ -c $<
+.rc.o:
+	$(RC) -o $@ $<
+
+distclean: clean
+	$(RM) $(DLL)
+clean:
+	$(RM) *.o

@@ -1,5 +1,5 @@
 # Makefile for Win32 using MSVC:
-#	nmake /f NMakefile
+#	nmake /f Makefile.vc
 
 # change INCLUDES so it points to SDL2 headers directory:
 INCLUDES = -Iinclude
