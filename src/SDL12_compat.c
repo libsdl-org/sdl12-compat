@@ -894,18 +894,13 @@ static void error_dialog(const char *errorMsg)
 }
 #endif
 
-#if defined(__GNUC__)
+#if defined(__GNUC__) && !defined(_WIN32)
 static void dllinit(void) __attribute__((constructor));
 static void dllinit(void)
 {
     if (!LoadSDL20()) {
         error_dialog(loaderror);
-        #ifdef _WIN32
-        TerminateProcess(GetCurrentProcess(), 42);
-        ExitProcess(42);
-        #else
         abort();
-        #endif
     }
 }
 static void dllquit(void) __attribute__((destructor));
@@ -914,10 +909,13 @@ static void dllquit(void)
     UnloadSDL20();
 }
 
-#elif defined(_MSC_VER) && defined(_WIN32)
-#ifndef __FLTUSED__
+#elif defined(_WIN32)
+#if defined(_MSC_VER) && !defined(__FLTUSED__)
 #define __FLTUSED__
 __declspec(selectany) int _fltused = 1;
+#endif
+#if defined(__MINGW32__)
+#define _DllMainCRTStartup DllMainCRTStartup
 #endif
 BOOL WINAPI _DllMainCRTStartup(HANDLE dllhandle, DWORD reason, LPVOID reserved)
 {
@@ -929,6 +927,10 @@ BOOL WINAPI _DllMainCRTStartup(HANDLE dllhandle, DWORD reason, LPVOID reserved)
     case DLL_PROCESS_ATTACH: /* init once for each new process */
         if (!LoadSDL20()) {
             error_dialog(loaderror);
+            #if 0
+            TerminateProcess(GetCurrentProcess(), 42);
+            ExitProcess(42);
+            #endif
             return FALSE;
         }
         break;

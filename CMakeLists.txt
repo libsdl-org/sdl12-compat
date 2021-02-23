@@ -17,17 +17,19 @@ set(SDL12COMPAT_SRCS
 add_library(SDL SHARED ${SDL12COMPAT_SRCS})
 
 target_include_directories(SDL PRIVATE "/usr/local/include/SDL2")  # !!! FIXME
-add_definitions("-D_THREAD_SAFE")  # !!! FIXME
 
 # avoid DLL having 'lib' prefix with Windows MinGW builds
 if(WIN32)
   set(CMAKE_SHARED_LIBRARY_PREFIX "")
+  set_target_properties(SDL PROPERTIES COMPILE_DEFINITIONS "DLL_EXPORT")
 endif()
 
 if(UNIX AND NOT APPLE)
+    add_definitions("-D_REENTRANT")
     target_link_libraries(SDL PRIVATE dl)
 endif()
 if(APPLE)
+    add_definitions("-D_THREAD_SAFE")
     target_link_libraries(SDL PRIVATE "-framework AppKit")
 endif()
 
@@ -48,13 +50,20 @@ else()
       OUTPUT_NAME "SDL")
 endif()
 
+if(MINGW)
+    set_target_properties(SDL PROPERTIES LINK_FLAGS "-nostdlib")
+endif()
 if(MSVC)
     # Don't try to link with the default set of libraries.
-    set_target_properties(SDL PROPERTIES LINK_FLAGS_RELEASE "/NODEFAULTLIB")
-    set_target_properties(SDL PROPERTIES LINK_FLAGS_DEBUG "/NODEFAULTLIB")
-    set_target_properties(SDL PROPERTIES STATIC_LIBRARY_FLAGS "/NODEFAULTLIB")
+    set_target_properties(SDL PROPERTIES COMPILE_FLAGS "/GS-")
+    set_target_properties(SDL PROPERTIES LINK_FLAGS "/NODEFAULTLIB")
+    # Make sure /RTC1 is disabled: (from SDL2 CMake)
+    foreach(flag_var
+      CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
+      CMAKE_C_FLAGS_MINSIZEREL CMAKE_C_FLAGS_RELWITHDEBINFO)
+      string(REGEX REPLACE "/RTC(su|[1su])" "" ${flag_var} "${${flag_var}}")
+    endforeach(flag_var)
 endif()
-
 
 # test programs...
 macro(test_program _NAME _SRCS)
