@@ -213,7 +213,6 @@ SDL20_SYM_PASSTHROUGH(Uint8,JoystickGetButton,(SDL_Joystick *a, int b),(a,b),ret
 SDL20_SYM(void,JoystickClose,(SDL_Joystick *a),(a),return)
 SDL20_SYM(void,LockJoysticks,(void),(),)
 SDL20_SYM(void,UnlockJoysticks,(void),(),)
-SDL20_SYM(SDL_JoystickID,JoystickGetDeviceInstanceID,(int a),(a),return)
 
 SDL20_SYM(SDL_RWops *,RWFromFile,(const char *a, const char *b),(a,b),return)
 SDL20_SYM(SDL_RWops *,RWFromFP,(void *a, int b),(a,b),return) /* FILE* */

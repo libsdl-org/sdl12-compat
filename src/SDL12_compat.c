@@ -1071,20 +1071,18 @@ DECLSPEC int SDLCALL
 SDL_JoystickIndex(SDL_Joystick *joystick)
 {
     size_t i;
-
-    SDL20_LockJoysticks(); {
-        for (i = 0; i < SDL_arraysize(JoystickOpenList); i++) {
-            if (JoystickOpenList[i].joystick == joystick) {
-                break;
-            }
+    SDL20_LockJoysticks();
+    for (i = 0; i < SDL_arraysize(JoystickOpenList); i++) {
+        if (JoystickOpenList[i].joystick == joystick) {
+            break;
         }
-
-        if (i < SDL_arraysize(JoystickOpenList)) {
-            SDL20_UnlockJoysticks();
-            return JoystickOpenList[i].device_index;
-        }
-
     }
+
+    if (i < SDL_arraysize(JoystickOpenList)) {
+        SDL20_UnlockJoysticks();
+        return JoystickOpenList[i].device_index;
+    }
+
     SDL20_UnlockJoysticks();
     return SDL20_SetError("Can't find joystick");
 }
