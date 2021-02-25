@@ -3988,11 +3988,29 @@ DECLSPEC void SDLCALL SDL_CDClose(SDL12_CD *cdrom) {}
 #error SDL_PASSED_BEGINTHREAD_ENDTHREAD not defined
 #endif
 #ifdef SDL_PASSED_BEGINTHREAD_ENDTHREAD
+#ifdef _WIN32
+/* Official Windows versions of SDL-1.2 >= 1.2.10 were always built
+ * with HAVE_LIBC, i.e.: *without* SDL_PASSED_BEGINTHREAD_ENDTHREAD
+ * defined, in order to keep binary compatibility with SDL <= 1.2.9.
+ *
+ * On the other hand SDL2 >= 2.0.12, as we dictate for Windows does
+ * always define SDL_PASSED_BEGINTHREAD_ENDTHREAD, in order to keep
+ * SDL2 versions built with and without libc binary compatible with
+ * each other.
+ *
+ * Therefore, we have to do the following trick below. */
+DECLSPEC SDL_Thread * SDLCALL
+SDL_CreateThread(int (SDLCALL *fn)(void *), void *data)
+{
+    return SDL20_CreateThread(fn, NULL, data, NULL, NULL);
+}
+#else
 DECLSPEC SDL_Thread * SDLCALL
 SDL_CreateThread(int (SDLCALL *fn)(void *), void *data, pfnSDL_CurrentBeginThread pfnBeginThread, pfnSDL_CurrentEndThread pfnEndThread)
 {
     return SDL20_CreateThread(fn, NULL, data, pfnBeginThread, pfnEndThread);
 }
+#endif
 #else
 DECLSPEC SDL_Thread * SDLCALL
 SDL_CreateThread(int (SDLCALL *fn)(void *), void *data)
