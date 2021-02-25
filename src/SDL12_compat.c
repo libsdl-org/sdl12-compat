@@ -1167,15 +1167,15 @@ PixelFormat20to12(SDL12_PixelFormat *format12, SDL12_Palette *palette12, const S
 }
 
 static int
-GetVideoDisplay()
+GetVideoDisplay(void)
 {
     const char *variable;
     FIXME("cache this value during SDL_Init() so it doesn't change.");
     variable = SDL20_getenv("SDL_VIDEO_FULLSCREEN_DISPLAY");
-    if ( !variable ) {
+    if (!variable) {
         variable = SDL20_getenv("SDL_VIDEO_FULLSCREEN_HEAD");
     }
-    if ( variable ) {
+    if (variable) {
         return SDL20_atoi(variable);
     } else {
         return 0;
@@ -1317,7 +1317,7 @@ SDL_InitSubSystem(Uint32 sdl12flags)
 
     FIXME("support event thread where it makes sense to do so?");
 
-    if ( (sdl12flags & SDL12_INIT_EVENTTHREAD) == SDL12_INIT_EVENTTHREAD ) {
+    if ((sdl12flags & SDL12_INIT_EVENTTHREAD) == SDL12_INIT_EVENTTHREAD) {
         return SDL20_SetError("OS doesn't support threaded events");
     }
 
@@ -1447,7 +1447,6 @@ SDL_QuitSubSystem(Uint32 sdl12flags)
         CDRomInit = 0;
     }
 
-    FIXME("reset a bunch of other global variables too.");
     if (sdl12flags & SDL12_INIT_VIDEO) {
         Quit12Video();
     }
@@ -1948,7 +1947,7 @@ SDL_GetKeyName(SDL12Key key)
 static SDL12Key
 Keysym20to12(const SDL_Keycode keysym20)
 {
-    if ( ((int) keysym20) < 127 ) {  /* (most of) low-ASCII maps directly */
+    if (((int) keysym20) < 127) {  /* (most of) low-ASCII maps directly */
         if (keysym20 == SDLK_PAUSE) {
             return SDLK12_PAUSE;
         } else if (keysym20 == SDLK_CLEAR) {
@@ -2926,11 +2925,11 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
     FIXME("don't do anything if the window's dimensions, etc haven't changed.");
     FIXME("we need to preserve VideoSurface12 (but not its pixels), I think...");
 
-    if ( VideoSurface12 && ((VideoSurface12->flags & SDL12_OPENGL) != (flags12 & SDL12_OPENGL)) ) {
+    if (VideoSurface12 && ((VideoSurface12->flags & SDL12_OPENGL) != (flags12 & SDL12_OPENGL)) ) {
         EndVidModeCreate();  /* rebuild the window if moving to/from a GL context */
-    } else if ( VideoSurface12 && (VideoSurface12->surface20->format->format != appfmt)) {
+    } else if (VideoSurface12 && (VideoSurface12->surface20->format->format != appfmt)) {
         EndVidModeCreate();  /* rebuild the window if changing pixel format */
-    } else if ( VideoSurface12 && (VideoSurface12->w != width || VideoSurface12->h != height) && ((flags12 & SDL12_FULLSCREEN) == 0)) {
+    } else if (VideoSurface12 && (VideoSurface12->w != width || VideoSurface12->h != height) && ((flags12 & SDL12_FULLSCREEN) == 0)) {
         EndVidModeCreate(); /* rebuild the window if window size changed and not in full screen */
     } else if (VideoGLContext20) {
         /* SDL 1.2 (infuriatingly!) destroys the GL context on each resize, so we will too */
@@ -4176,7 +4175,7 @@ RWops20to12(SDL_RWops *rwops20)
 DECLSPEC SDL12_RWops * SDLCALL
 SDL_RWFromFile(const char *file, const char *mode)
 {
-    if ( !file || !*file || !mode || !*mode ) {
+    if (!file || !*file || !mode || !*mode) {
         SDL_SetError("SDL_RWFromFile(): No file or no mode specified");
         return NULL;
     }
