@@ -999,20 +999,78 @@ SDL_revcpy(void *dst, const void *src, size_t len)
 }
 
 
+/* SDL2 doesn't have MMXExt / 3dNowExt. */
+#if defined(__GNUC__) && defined(__i386__)
+#define cpuid(func, a, b, c, d) \
+    __asm__ __volatile__ ( \
+"        pushl %%ebx        \n" \
+"        xorl %%ecx,%%ecx   \n" \
+"        cpuid              \n" \
+"        movl %%ebx, %%esi  \n" \
+"        popl %%ebx         \n" : \
+            "=a" (a), "=S" (b), "=c" (c), "=d" (d) : "a" (func))
+#elif defined(__GNUC__) && defined(__x86_64__)
+#define cpuid(func, a, b, c, d) \
+    __asm__ __volatile__ ( \
+"        pushq %%rbx        \n" \
+"        xorq %%rcx,%%rcx   \n" \
+"        cpuid              \n" \
+"        movq %%rbx, %%rsi  \n" \
+"        popq %%rbx         \n" : \
+            "=a" (a), "=S" (b), "=c" (c), "=d" (d) : "a" (func))
+#elif (defined(_MSC_VER) && defined(_M_IX86)) || defined(__WATCOMC__)
+#define cpuid(func, a, b, c, d) \
+    __asm { \
+        __asm mov eax, func \
+        __asm xor ecx, ecx \
+        __asm cpuid \
+        __asm mov a, eax \
+        __asm mov b, ebx \
+        __asm mov c, ecx \
+        __asm mov d, edx \
+}
+#elif defined(_MSC_VER) && defined(_M_X64)
+#include <intrin.h>
+#define cpuid(func, a, b, c, d) \
+{ \
+    int CPUInfo[4]; \
+    __cpuid(CPUInfo, func); \
+    a = CPUInfo[0]; \
+    b = CPUInfo[1]; \
+    c = CPUInfo[2]; \
+    d = CPUInfo[3]; \
+}
+#else
+#define cpuid(func, a, b, c, d) \
+    do { a = b = c = d = 0; (void) a; (void) b; (void) c; (void) d; } while (0)
+#endif
+
+static int cpu_ext_features = -1;
+static int get_cpu_ext_features(void) {
+    if (cpu_ext_features < 0) {
+        cpu_ext_features = 0;
+        if (SDL20_HasMMX()) {
+            int a, b, c, d;
+            cpuid(0x80000000, a, b, c, d);
+            if (a >= 0x80000001) {
+                cpuid(0x80000001, a, b, c, d);
+                cpu_ext_features = d;
+            }
+        }
+    }
+    return cpu_ext_features;
+}
+
 DECLSPEC SDL_bool SDLCALL
 SDL_HasMMXExt(void)
 {
-    /* this isn't accurate, but SDL2 doesn't have this for some reason.
-        MMXExt is available in all SSE1 machines, except early Athlon chips,
-        so we'll just say it's available if they have SSE1. Oh well. */
-    return SDL20_HasSSE();
+    return (get_cpu_ext_features() & 0x00400000)? SDL_TRUE : SDL_FALSE;
 }
 
 DECLSPEC SDL_bool SDLCALL
 SDL_Has3DNowExt(void)
 {
-    FIXME("check this");
-    return SDL20_HasSSE();
+    return (get_cpu_ext_features() & 0x40000000)? SDL_TRUE : SDL_FALSE;
 }
 
 DECLSPEC SDL_Joystick * SDLCALL
