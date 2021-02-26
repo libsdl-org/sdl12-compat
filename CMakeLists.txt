@@ -16,7 +16,10 @@ set(SDL12COMPAT_SRCS
 )
 add_library(SDL SHARED ${SDL12COMPAT_SRCS})
 
-target_include_directories(SDL PRIVATE "/usr/local/include/SDL2")  # !!! FIXME
+include("cmake/modules/FindSDL2.cmake")
+target_include_directories(SDL PRIVATE ${SDL2_INCLUDE_DIRS})
+#target_include_directories(SDL PRIVATE "/usr/X11/include")  # !!! FIXME
+add_definitions("-D_THREAD_SAFE")  # !!! FIXME
 
 # avoid DLL having 'lib' prefix with Windows MinGW builds
 if(WIN32)
@@ -68,7 +71,7 @@ endif()
 # test programs...
 macro(test_program _NAME _SRCS)
     add_executable(${_NAME} ${_SRCS})
-    target_include_directories(${_NAME} PUBLIC "/usr/local/include/SDL")  # !!! FIXME
+    target_include_directories(${_NAME} PUBLIC ${SDL2_INCLUDE_DIRS})
 #    target_include_directories(${_NAME} PUBLIC "/usr/X11/include")  # !!! FIXME
     target_link_libraries(${_NAME} SDL)
     target_link_libraries(${_NAME} m)
