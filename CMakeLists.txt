@@ -1,15 +1,39 @@
 cmake_minimum_required(VERSION 3.0.0)
 project(sdl12_compat)
 
-add_library(SDL SHARED "src/SDL12_compat.c")
+if(APPLE)
+  set(OSX_SRCS "src/SDL12_compat_objc.m")
+  set_source_files_properties(${OSX_SRCS} PROPERTIES LANGUAGE C)
+endif()
+if(WIN32)
+  set(WIN32_SRCS "src/version.rc")
+endif()
+
+set(SDL12COMPAT_SRCS
+  src/SDL12_compat.c
+  ${OSX_SRCS}
+  ${WIN32_SRCS}
+)
+add_library(SDL SHARED ${SDL12COMPAT_SRCS})
 
 include("cmake/modules/FindSDL2.cmake")
 target_include_directories(SDL PRIVATE ${SDL2_INCLUDE_DIRS})
 #target_include_directories(SDL PRIVATE "/usr/X11/include")  # !!! FIXME
 add_definitions("-D_THREAD_SAFE")  # !!! FIXME
 
-if(UNIX OR APPLE)
+# avoid DLL having 'lib' prefix with Windows MinGW builds
+if(WIN32)
+  set(CMAKE_SHARED_LIBRARY_PREFIX "")
+  set_target_properties(SDL PROPERTIES COMPILE_DEFINITIONS "DLL_EXPORT")
+endif()
+
+if(UNIX AND NOT APPLE)
+    set_target_properties(SDL PROPERTIES COMPILE_DEFINITIONS "_REENTRANT")
     target_link_libraries(SDL PRIVATE dl)
+endif()
+if(APPLE)
+    set_target_properties(SDL PROPERTIES COMPILE_DEFINITIONS "_THREAD_SAFE")
+    target_link_libraries(SDL PRIVATE "-framework AppKit")
 endif()
 
 if(APPLE)
@@ -29,13 +53,20 @@ else()
       OUTPUT_NAME "SDL")
 endif()
 
+if(MINGW)
+    set_target_properties(SDL PROPERTIES LINK_FLAGS "-nostdlib")
+endif()
 if(MSVC)
     # Don't try to link with the default set of libraries.
-    set_target_properties(SDL PROPERTIES LINK_FLAGS_RELEASE "/NODEFAULTLIB")
-    set_target_properties(SDL PROPERTIES LINK_FLAGS_DEBUG "/NODEFAULTLIB")
-    set_target_properties(SDL PROPERTIES STATIC_LIBRARY_FLAGS "/NODEFAULTLIB")
+    set_target_properties(SDL PROPERTIES COMPILE_FLAGS "/GS-")
+    set_target_properties(SDL PROPERTIES LINK_FLAGS "/NODEFAULTLIB")
+    # Make sure /RTC1 is disabled: (from SDL2 CMake)
+    foreach(flag_var
+      CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
+      CMAKE_C_FLAGS_MINSIZEREL CMAKE_C_FLAGS_RELWITHDEBINFO)
+      string(REGEX REPLACE "/RTC(su|[1su])" "" ${flag_var} "${${flag_var}}")
+    endforeach(flag_var)
 endif()
-
 
 # test programs...
 macro(test_program _NAME _SRCS)

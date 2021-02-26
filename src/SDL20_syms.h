@@ -33,6 +33,8 @@
 #define SDL20_SYM_VARARGS(rc,fn,params) SDL20_SYM(rc,fn,params,unused,unused)
 #endif
 
+SDL20_SYM(void,GetVersion,(SDL_version *a),(a),)
+SDL20_SYM_VARARGS(void,Log,(const char *fmt, ...))
 SDL20_SYM(int,Init,(Uint32 a),(a),return)
 SDL20_SYM(int,InitSubSystem,(Uint32 a),(a),return)
 SDL20_SYM(Uint32,WasInit,(Uint32 a),(a),return)
@@ -211,7 +213,6 @@ SDL20_SYM_PASSTHROUGH(Uint8,JoystickGetButton,(SDL_Joystick *a, int b),(a,b),ret
 SDL20_SYM(void,JoystickClose,(SDL_Joystick *a),(a),return)
 SDL20_SYM(void,LockJoysticks,(void),(),)
 SDL20_SYM(void,UnlockJoysticks,(void),(),)
-SDL20_SYM(SDL_JoystickID,JoystickGetDeviceInstanceID,(int a),(a),return)
 
 SDL20_SYM(SDL_RWops *,RWFromFile,(const char *a, const char *b),(a,b),return)
 SDL20_SYM(SDL_RWops *,RWFromFP,(void *a, int b),(a,b),return) /* FILE* */

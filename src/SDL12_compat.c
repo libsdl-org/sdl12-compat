@@ -38,8 +38,11 @@
 #define SDL12_COMPAT_VERSION 50
 
 #include <stdarg.h>
+#ifndef _WIN32
 #include <stdio.h> /* fprintf(), etc. */
 #include <stdlib.h>    /* for abort() */
+#include <string.h>
+#endif
 
 /* mingw headers may define these ... */
 #undef strtod
@@ -113,7 +116,7 @@
     do { \
         static SDL_bool seen = SDL_FALSE; \
         if (!seen) { \
-            fprintf(stderr, "FIXME: %s (%s, %s:%d)\n", x, __FUNCTION__, __FILE__, __LINE__); \
+            SDL20_Log("FIXME: %s (%s:%d)\n", x, __FUNCTION__, __LINE__); \
             seen = SDL_TRUE; \
         } \
     } while (0)
@@ -672,7 +675,7 @@ typedef union
 } SDL12_Event;
 
 typedef int (SDLCALL *SDL12_EventFilter)(const SDL12_Event *event12);
-static int EventFilter20to12(void *data, SDL_Event *event20);
+static int SDLCALL EventFilter20to12(void *data, SDL_Event *event20);
 
 typedef Uint32 (SDLCALL *SDL12_TimerCallback)(Uint32 interval);
 typedef SDL_TimerCallback SDL12_NewTimerCallback;
@@ -741,7 +744,7 @@ static SDL12_Surface *VideoSurface12 = NULL;
 static Uint32 VideoSurfacePresentTicks = 0;
 static Uint32 VideoSurfaceLastPresentTicks = 0;
 static SDL_Surface *VideoConvertSurface20 = NULL;
-static SDL_GLContext *VideoGLContext20 = NULL;
+static SDL_GLContext VideoGLContext20 = NULL;
 static char *WindowTitle = NULL;
 static char *WindowIconTitle = NULL;
 static SDL_Surface *VideoIcon20 = NULL;
@@ -754,6 +757,8 @@ static Uint8 EventStates[SDL12_NUMEVENTS];
 static int SwapInterval = 0;
 static JoystickOpenedItem JoystickOpenList[16];
 static Uint8 KeyState[SDLK12_LAST];
+static SDL_bool MouseInputIsRelative = SDL_FALSE;
+static SDL_Point MousePositionWhenRelative = { 0, 0 };
 
 // !!! FIXME: need a mutex for the event queue.
 #define SDL12_MAXEVENTS 128
@@ -770,27 +775,60 @@ static EventQueueType *EventQueueAvailable = NULL;
 
 
 /* Obviously we can't use SDL_LoadObject() to load SDL2.  :)  */
+static char loaderror[256];
 #if defined(_WIN32)
     #ifndef WIN32_LEAN_AND_MEAN
     #define WIN32_LEAN_AND_MEAN 1
     #endif
     #include <windows.h>
     #define SDL20_LIBNAME "SDL2.dll"
+    /* require SDL2 >= 2.0.12 for SDL_CreateThread binary compatibility */
+    #define SDL20_REQUIRED_VER SDL_VERSIONNUM(2,0,12)
     static HANDLE Loaded_SDL20 = NULL;
     #define LoadSDL20Library() ((Loaded_SDL20 = LoadLibraryA(SDL20_LIBNAME)) != NULL)
     #define LookupSDL20Sym(sym) GetProcAddress(Loaded_SDL20, sym)
     #define CloseSDL20Library() { if (Loaded_SDL20) { FreeLibrary(Loaded_SDL20); Loaded_SDL20 = NULL; } }
-#elif defined(unix) || defined(__APPLE__)
+    #define strcpy_fn  lstrcpyA
+    #define sprintf_fn wsprintfA
+#elif defined(__unix__) || defined(__APPLE__)
     #include <dlfcn.h>
     #ifdef __APPLE__
     #define SDL20_LIBNAME "libSDL2-2.0.0.dylib"
     #else
     #define SDL20_LIBNAME "libSDL2-2.0.so.0"
     #endif
+    #define SDL20_REQUIRED_VER SDL_VERSIONNUM(2,0,9)
     static void *Loaded_SDL20 = NULL;
     #define LoadSDL20Library() ((Loaded_SDL20 = dlopen(SDL20_LIBNAME, RTLD_LOCAL|RTLD_NOW)) != NULL)
     #define LookupSDL20Sym(sym) dlsym(Loaded_SDL20, sym)
     #define CloseSDL20Library() { if (Loaded_SDL20) { dlclose(Loaded_SDL20); Loaded_SDL20 = NULL; } }
+    #define strcpy_fn  strcpy
+    #define sprintf_fn sprintf
+#elif defined(__OS2__)
+    #include <os2.h>
+    #define SDL20_LIBNAME "SDL2.dll"
+    #define SDL20_REQUIRED_VER SDL_VERSIONNUM(2,0,9)
+    #define strcpy_fn  strcpy
+    #define sprintf_fn sprintf
+    static HMODULE Loaded_SDL20 = NULLHANDLE;
+    static SDL_bool LoadSDL20Library(void) {
+        char err[256];
+        if (DosLoadModule(err, sizeof(err), SDL20_LIBNAME, &Loaded_SDL20) != 0) {
+            return SDL_FALSE;
+        }
+        return SDL_TRUE;
+    }
+    static void *LookupSDL20Sym (const char *symname) {
+        PFN fp;
+        if (DosQueryProcAddr(Loaded_SDL20, 0, symname, &fp) != 0) return NULL;
+        return (void *)fp;
+    }
+    static void CloseSDL20Library(void) {
+        if (Loaded_SDL20 != NULLHANDLE) {
+            DosFreeModule(Loaded_SDL20);
+            Loaded_SDL20 = NULLHANDLE;
+        }
+    }
 #else
     #error Please define your platform.
 #endif
@@ -802,12 +840,8 @@ LoadSDL20Symbol(const char *fn, int *okay)
     if (*okay) { /* only bother trying if we haven't previously failed. */
         retval = LookupSDL20Sym(fn);
         if (retval == NULL) {
-            /* Flip to 1 to warn but maybe work if nothing calls that function, flip to zero to fail out. */
-            #if 0
-            fprintf(stderr, "WARNING: LOAD FAILED: %s\n", fn);
-            #else
+            sprintf_fn(loaderror, "%s missing in SDL2 library.", fn);
             *okay = 0;
-            #endif
         }
     }
     return retval;
@@ -828,29 +862,104 @@ LoadSDL20(void)
     if (!Loaded_SDL20)
     {
         okay = LoadSDL20Library();
+        if (!okay) {
+            strcpy_fn(loaderror, "Failed loading SDL2 library.");
+        }
         #define SDL20_SYM(rc,fn,params,args,ret) SDL20_##fn = (SDL20_##fn##_t) LoadSDL20Symbol("SDL_" #fn, &okay);
         #include "SDL20_syms.h"
         if (!okay)
             UnloadSDL20();
+        else {
+            SDL_version v;
+            SDL20_GetVersion(&v);
+            okay = (SDL_VERSIONNUM(v.major,v.minor,v.patch) >= SDL20_REQUIRED_VER);
+            if (!okay) {
+                sprintf_fn(loaderror, "SDL2 %d.%d.%d library is too old.", v.major, v.minor, v.patch);
+                UnloadSDL20();
+            }
+        }
     }
     return okay;
 }
 
+#if defined(_WIN32)
+static void error_dialog(const char *errorMsg)
+{
+    MessageBoxA(NULL, errorMsg, "Error", MB_OK | MB_SETFOREGROUND | MB_ICONSTOP);
+}
+#elif defined(__APPLE__)
+extern void error_dialog(const char *errorMsg);
+#else
+static void error_dialog(const char *errorMsg)
+{
+    fprintf(stderr, "%s\n", errorMsg);
+}
+#endif
+
+#if defined(__GNUC__) && !defined(_WIN32)
 static void dllinit(void) __attribute__((constructor));
 static void dllinit(void)
 {
     if (!LoadSDL20()) {
-        fprintf(stderr, "ERROR: sdl12-compat failed to load SDL 2.0! Aborting!\n");
-        fflush(stderr);
+        error_dialog(loaderror);
         abort();
     }
 }
-
 static void dllquit(void) __attribute__((destructor));
 static void dllquit(void)
 {
     UnloadSDL20();
 }
+
+#elif defined(_WIN32)
+#if defined(_MSC_VER) && !defined(__FLTUSED__)
+#define __FLTUSED__
+__declspec(selectany) int _fltused = 1;
+#endif
+#if defined(__MINGW32__)
+#define _DllMainCRTStartup DllMainCRTStartup
+#endif
+BOOL WINAPI _DllMainCRTStartup(HANDLE dllhandle, DWORD reason, LPVOID reserved)
+{
+    switch (reason) {
+    case DLL_PROCESS_DETACH:
+        UnloadSDL20();
+        break;
+
+    case DLL_PROCESS_ATTACH: /* init once for each new process */
+        if (!LoadSDL20()) {
+            error_dialog(loaderror);
+            #if 0
+            TerminateProcess(GetCurrentProcess(), 42);
+            ExitProcess(42);
+            #endif
+            return FALSE;
+        }
+        break;
+
+    case DLL_THREAD_ATTACH: /* thread-specific init. */
+    case DLL_THREAD_DETACH: /* thread-specific cleanup */
+        break;
+    }
+    return TRUE;
+}
+
+#elif defined(__WATCOMC__) && defined(__OS2__)
+unsigned _System LibMain(unsigned hmod, unsigned termination)
+{
+    (void)hmod;
+    if (termination) {
+        UnloadSDL20();
+    } else if (!LoadSDL20()) {
+        error_dialog(loaderror);
+        return 0;
+    }
+    return 1;
+}
+
+#else
+    #error Please define your platform
+#endif
 
 DECLSPEC const SDL_version * SDLCALL
 SDL_Linked_Version(void)
@@ -892,26 +1001,84 @@ SDL_revcpy(void *dst, const void *src, size_t len)
 }
 
 
+/* SDL2 doesn't have MMXExt / 3dNowExt. */
+#if defined(__GNUC__) && defined(__i386__)
+#define cpuid(func, a, b, c, d) \
+    __asm__ __volatile__ ( \
+"        pushl %%ebx        \n" \
+"        xorl %%ecx,%%ecx   \n" \
+"        cpuid              \n" \
+"        movl %%ebx, %%esi  \n" \
+"        popl %%ebx         \n" : \
+            "=a" (a), "=S" (b), "=c" (c), "=d" (d) : "a" (func))
+#elif defined(__GNUC__) && defined(__x86_64__)
+#define cpuid(func, a, b, c, d) \
+    __asm__ __volatile__ ( \
+"        pushq %%rbx        \n" \
+"        xorq %%rcx,%%rcx   \n" \
+"        cpuid              \n" \
+"        movq %%rbx, %%rsi  \n" \
+"        popq %%rbx         \n" : \
+            "=a" (a), "=S" (b), "=c" (c), "=d" (d) : "a" (func))
+#elif (defined(_MSC_VER) && defined(_M_IX86)) || defined(__WATCOMC__)
+#define cpuid(func, a, b, c, d) \
+    __asm { \
+        __asm mov eax, func \
+        __asm xor ecx, ecx \
+        __asm cpuid \
+        __asm mov a, eax \
+        __asm mov b, ebx \
+        __asm mov c, ecx \
+        __asm mov d, edx \
+}
+#elif defined(_MSC_VER) && defined(_M_X64)
+#include <intrin.h>
+#define cpuid(func, a, b, c, d) \
+{ \
+    int CPUInfo[4]; \
+    __cpuid(CPUInfo, func); \
+    a = CPUInfo[0]; \
+    b = CPUInfo[1]; \
+    c = CPUInfo[2]; \
+    d = CPUInfo[3]; \
+}
+#else
+#define cpuid(func, a, b, c, d) \
+    do { a = b = c = d = 0; (void) a; (void) b; (void) c; (void) d; } while (0)
+#endif
+
+static int cpu_ext_features = -1;
+static int get_cpu_ext_features(void) {
+    if (cpu_ext_features < 0) {
+        cpu_ext_features = 0;
+        if (SDL20_HasMMX()) {
+            int a, b, c, d;
+            cpuid(0x80000000, a, b, c, d);
+            if (a >= 0x80000001) {
+                cpuid(0x80000001, a, b, c, d);
+                cpu_ext_features = d;
+            }
+        }
+    }
+    return cpu_ext_features;
+}
+
 DECLSPEC SDL_bool SDLCALL
 SDL_HasMMXExt(void)
 {
-    /* this isn't accurate, but SDL2 doesn't have this for some reason.
-        MMXExt is available in all SSE1 machines, except early Athlon chips,
-        so we'll just say it's available if they have SSE1. Oh well. */
-    return SDL20_HasSSE();
+    return (get_cpu_ext_features() & 0x00400000)? SDL_TRUE : SDL_FALSE;
 }
 
 DECLSPEC SDL_bool SDLCALL
 SDL_Has3DNowExt(void)
 {
-    FIXME("check this");
-    return SDL20_HasSSE();
+    return (get_cpu_ext_features() & 0x40000000)? SDL_TRUE : SDL_FALSE;
 }
 
 DECLSPEC SDL_Joystick * SDLCALL
 SDL_JoystickOpen(int device_index)
 {
-    int i;
+    size_t i;
     SDL20_LockJoysticks();
     for (i = 0; i < SDL_arraysize(JoystickOpenList); i++) {
         if (JoystickOpenList[i].joystick == NULL) {
@@ -937,7 +1104,7 @@ SDL_JoystickOpen(int device_index)
 DECLSPEC void SDLCALL
 SDL_JoystickClose(SDL_Joystick *joystick)
 {
-    int i;
+    size_t i;
     SDL20_LockJoysticks();
     for (i = 0; i < SDL_arraysize(JoystickOpenList); i++) {
         if (JoystickOpenList[i].joystick == joystick) {
@@ -963,21 +1130,19 @@ SDL_JoystickName(int device_index)
 DECLSPEC int SDLCALL
 SDL_JoystickIndex(SDL_Joystick *joystick)
 {
-    int i;
-
-    SDL20_LockJoysticks(); {
-        for (i = 0; i < SDL_arraysize(JoystickOpenList); i++) {
-            if (JoystickOpenList[i].joystick == joystick) {
-                break;
-            }
+    size_t i;
+    SDL20_LockJoysticks();
+    for (i = 0; i < SDL_arraysize(JoystickOpenList); i++) {
+        if (JoystickOpenList[i].joystick == joystick) {
+            break;
         }
-
-        if (i < SDL_arraysize(JoystickOpenList)) {
-            SDL20_UnlockJoysticks();
-            return JoystickOpenList[i].device_index;
-        }
-
     }
+
+    if (i < SDL_arraysize(JoystickOpenList)) {
+        SDL20_UnlockJoysticks();
+        return JoystickOpenList[i].device_index;
+    }
+
     SDL20_UnlockJoysticks();
     return SDL20_SetError("Can't find joystick");
 }
@@ -986,7 +1151,7 @@ DECLSPEC int SDLCALL
 SDL_JoystickOpened(int device_index)
 {
     int retval = 0;
-    int i;
+    size_t i;
     SDL20_LockJoysticks();
     for (i = 0; i < SDL_arraysize(JoystickOpenList); i++) {
         if ((JoystickOpenList[i].joystick) && (JoystickOpenList[i].device_index == device_index)) {
@@ -1062,15 +1227,15 @@ PixelFormat20to12(SDL12_PixelFormat *format12, SDL12_Palette *palette12, const S
 }
 
 static int
-GetVideoDisplay()
+GetVideoDisplay(void)
 {
     const char *variable;
     FIXME("cache this value during SDL_Init() so it doesn't change.");
     variable = SDL20_getenv("SDL_VIDEO_FULLSCREEN_DISPLAY");
-    if ( !variable ) {
+    if (!variable) {
         variable = SDL20_getenv("SDL_VIDEO_FULLSCREEN_HEAD");
     }
-    if ( variable ) {
+    if (variable) {
         return SDL20_atoi(variable);
     } else {
         return 0;
@@ -1212,7 +1377,7 @@ SDL_InitSubSystem(Uint32 sdl12flags)
 
     FIXME("support event thread where it makes sense to do so?");
 
-    if ( (sdl12flags & SDL12_INIT_EVENTTHREAD) == SDL12_INIT_EVENTTHREAD ) {
+    if ((sdl12flags & SDL12_INIT_EVENTTHREAD) == SDL12_INIT_EVENTTHREAD) {
         return SDL20_SetError("OS doesn't support threaded events");
     }
 
@@ -1304,6 +1469,7 @@ SDL_WasInit(Uint32 sdl12flags)
     return InitFlags20to12(SDL20_WasInit(sdl20flags)) | extraflags;
 }
 
+static SDL12_Surface *EndVidModeCreate(void);
 static void
 Quit12Video(void)
 {
@@ -1311,6 +1477,8 @@ Quit12Video(void)
 
     SDL20_FreeSurface(VideoIcon20);
     VideoIcon20 = NULL;
+
+    EndVidModeCreate(); /* clean-up static data. */
 
     for (i = 0; i < VideoModesCount; i++) {
         SDL20_free(VideoModes[i].modeslist12);
@@ -1339,7 +1507,6 @@ SDL_QuitSubSystem(Uint32 sdl12flags)
         CDRomInit = 0;
     }
 
-    FIXME("reset a bunch of other global variables too.");
     if (sdl12flags & SDL12_INIT_VIDEO) {
         Quit12Video();
     }
@@ -1482,7 +1649,7 @@ SDL_PeepEvents(SDL12_Event *events12, int numevents, SDL_eventaction action, Uin
     }
     else if ((action == SDL_PEEKEVENT) || (action == SDL_GETEVENT))
     {
-        const SDL_bool isGet = (action == SDL_GETEVENT);
+        const SDL_bool isGet = (action == SDL_GETEVENT)? SDL_TRUE : SDL_FALSE;
         EventQueueType *prev = NULL;
         EventQueueType *item = EventQueueHead;
         EventQueueType *next = NULL;
@@ -1540,7 +1707,7 @@ PushEventIfNotFiltered(SDL12_Event *event12)
         if (EventStates[event12->type] != SDL_IGNORE)
         {
             if ((!EventFilter12) || (EventFilter12(event12)))
-                return (SDL_PushEvent(event12) == 0);
+                return (SDL_PushEvent(event12) == 0)? SDL_TRUE : SDL_FALSE;
         }
     }
     return SDL_FALSE;
@@ -1579,7 +1746,12 @@ static Uint8 MouseButtonState20to12(const Uint32 state20)
 DECLSPEC Uint8 SDLCALL
 SDL_GetMouseState(int *x, int *y)
 {
-    return MouseButtonState20to12(SDL20_GetMouseState(x, y));
+    const Uint8 buttons = MouseButtonState20to12(SDL20_GetMouseState(x, y));
+    if (MouseInputIsRelative) {
+        if (x) { *x = MousePositionWhenRelative.x; }
+        if (y) { *y = MousePositionWhenRelative.y; }
+    }
+    return buttons;
 }
 
 DECLSPEC Uint8 SDLCALL
@@ -1840,7 +2012,7 @@ SDL_GetKeyName(SDL12Key key)
 static SDL12Key
 Keysym20to12(const SDL_Keycode keysym20)
 {
-    if ( ((int) keysym20) < 127 ) {  /* (most of) low-ASCII maps directly */
+    if (((int) keysym20) < 127) {  /* (most of) low-ASCII maps directly */
         if (keysym20 == SDLK_PAUSE) {
             return SDLK12_PAUSE;
         } else if (keysym20 == SDLK_CLEAR) {
@@ -1934,12 +2106,11 @@ SDL_GetKeyState(int *numkeys)
 }
 
 
-static int
+static int SDLCALL
 EventFilter20to12(void *data, SDL_Event *event20)
 {
     //const int maxUserEvents12 = SDL12_NUMEVENTS - SDL12_USEREVENT;
     SDL12_Event event12;
-    int x, y;
 
     SDL_assert(data == NULL);  /* currently unused. */
 
@@ -2027,37 +2198,61 @@ EventFilter20to12(void *data, SDL_Event *event20)
             event12.type = (event20->type == SDL_KEYDOWN) ? SDL12_KEYDOWN : SDL12_KEYUP;
             event12.key.which = 0;
             event12.key.state = event20->key.state;
-            event12.key.keysym.scancode = (event20->key.keysym.scancode < 256) ? (Uint8) event20->key.keysym.scancode : 0;
+            FIXME("SDL1.2 and SDL2.0 scancodes are incompatible");
+            // turns out that some apps actually made use of the hardware scancodes (checking for platform beforehand)
+            event12.key.keysym.scancode = 0;
             event12.key.keysym.mod = event20->key.keysym.mod;  /* these match up between 1.2 and 2.0! */
-            event12.key.keysym.unicode = 0;  FIXME("unicode");
+            FIXME("unicode");
+            /* without setting keysym.unicode to at least keysym.sym, text input in some games don't work at all ! */
+            event12.key.keysym.unicode = (EnabledUnicode)? event12.key.keysym.sym : 0;
             break;
 
         case SDL_TEXTEDITING: FIXME("write me"); return 0;
         case SDL_TEXTINPUT: FIXME("write me"); return 0;
 
         case SDL_MOUSEMOTION:
-        	event12.type = SDL12_MOUSEMOTION;
+            event12.type = SDL12_MOUSEMOTION;
             event12.motion.which = (Uint8) event20->motion.which;
             event12.motion.state = event20->motion.state;
             event12.motion.x = (Uint16) event20->motion.x;
             event12.motion.y = (Uint16) event20->motion.y;
             event12.motion.xrel = (Sint16) event20->motion.xrel;
             event12.motion.yrel = (Sint16) event20->motion.yrel;
+            if (MouseInputIsRelative) {
+                /* in relative mode, clamp fake absolute position to the window dimensions. */
+                #define ADJUST_RELATIVE(axis, rel, dim) { \
+                    MousePositionWhenRelative.axis += event20->motion.rel; \
+                    if (MousePositionWhenRelative.axis <= 0) { \
+                        MousePositionWhenRelative.axis = 0; \
+                    } else if (MousePositionWhenRelative.axis >= VideoSurface12->dim) { \
+                        MousePositionWhenRelative.axis = (VideoSurface12->dim - 1); \
+                    } \
+                }
+                ADJUST_RELATIVE(x, xrel, w);
+                ADJUST_RELATIVE(y, yrel, h);
+                #undef ADJUST_RELATIVE
+            }
             break;
 
         case SDL_MOUSEBUTTONDOWN:
-        	event12.type = SDL12_MOUSEBUTTONDOWN;
+            event12.type = SDL12_MOUSEBUTTONDOWN;
             event12.button.which = (Uint8) event20->button.which;
             event12.button.button = event20->button.button;
+            if (event12.button.button > 3) {
+                event12.button.button += 2; /* SDL_BUTTON_X1/2 */
+            }
             event12.button.state = event20->button.state;
             event12.button.x = (Uint16) event20->button.x;
             event12.button.y = (Uint16) event20->button.y;
             break;
 
         case SDL_MOUSEBUTTONUP:
-        	event12.type = SDL12_MOUSEBUTTONUP;
+            event12.type = SDL12_MOUSEBUTTONUP;
             event12.button.which = (Uint8) event20->button.which;
             event12.button.button = event20->button.button;
+            if (event12.button.button > 3) {
+                event12.button.button += 2; /* SDL_BUTTON_X1/2 */
+            }
             event12.button.state = event20->button.state;
             event12.button.x = (Uint16) event20->button.x;
             event12.button.y = (Uint16) event20->button.y;
@@ -2070,12 +2265,13 @@ EventFilter20to12(void *data, SDL_Event *event20)
             event12.type = SDL12_MOUSEBUTTONDOWN;
             event12.button.which = (Uint8) event20->wheel.which;
             event12.button.button = (event20->wheel.y > 0) ? 4 : 5;  /* wheelup is 4, down is 5. */
-            event12.button.state = SDL_GetMouseState(&x, &y);
-            event12.button.x = (Uint16) x;
-            event12.button.y = (Uint16) y;
+            event12.button.state = SDL_PRESSED;
+            event12.button.x = 0;
+            event12.button.y = 0;
             PushEventIfNotFiltered(&event12);
 
             event12.type = SDL12_MOUSEBUTTONUP;  /* immediately release mouse "button" at the end of this switch. */
+            event12.button.state = SDL_RELEASED;
             break;
 
         case SDL_JOYAXISMOTION:
@@ -2116,12 +2312,12 @@ EventFilter20to12(void *data, SDL_Event *event20)
 
         //case SDL_JOYDEVICEADDED:
         //case SDL_JOYDEVICEREMOVED:
-	    //case SDL_CONTROLLERAXISMOTION:
-	    //case SDL_CONTROLLERBUTTONDOWN:
-	    //case SDL_CONTROLLERBUTTONUP:
-	    //case SDL_CONTROLLERDEVICEADDED:
-	    //case SDL_CONTROLLERDEVICEREMOVED:
-	    //case SDL_CONTROLLERDEVICEREMAPPED:
+        //case SDL_CONTROLLERAXISMOTION:
+        //case SDL_CONTROLLERBUTTONDOWN:
+        //case SDL_CONTROLLERBUTTONUP:
+        //case SDL_CONTROLLERDEVICEADDED:
+        //case SDL_CONTROLLERDEVICEREMOVED:
+        //case SDL_CONTROLLERDEVICEREMAPPED:
         //case SDL_FINGERDOWN:
         //case SDL_FINGERUP:
         //case SDL_FINGERMOTION:
@@ -2486,7 +2682,7 @@ SDL_GetRGB(Uint32 pixel, const SDL12_PixelFormat *format12, Uint8 *r, Uint8 *g, 
     /* This is probably way slower than apps expect. */
     SDL_PixelFormat format20;
     SDL_Palette palette20;
-    return SDL20_GetRGB(pixel, PixelFormat12to20(&format20, &palette20, format12), r, g, b);
+    SDL20_GetRGB(pixel, PixelFormat12to20(&format20, &palette20, format12), r, g, b);
 }
 
 DECLSPEC void SDLCALL
@@ -2495,7 +2691,7 @@ SDL_GetRGBA(Uint32 pixel, const SDL12_PixelFormat *format12, Uint8 *r, Uint8 *g,
     /* This is probably way slower than apps expect. */
     SDL_PixelFormat format20;
     SDL_Palette palette20;
-    return SDL20_GetRGBA(pixel, PixelFormat12to20(&format20, &palette20, format12), r, g, b, a);
+    SDL20_GetRGBA(pixel, PixelFormat12to20(&format20, &palette20, format12), r, g, b, a);
 }
 
 DECLSPEC const SDL12_VideoInfo * SDLCALL
@@ -2662,6 +2858,7 @@ GetEnvironmentWindowPosition(int *x, int *y)
     }
 }
 
+#if 0 /* unused, yet. */
 static void
 SetupScreenSaver(const int flags12)
 {
@@ -2683,7 +2880,7 @@ SetupScreenSaver(const int flags12)
         SDL20_DisableScreenSaver();
     }
 }
-
+#endif
 
 static SDL12_Surface *
 EndVidModeCreate(void)
@@ -2715,6 +2912,11 @@ EndVidModeCreate(void)
         SDL20_FreeSurface(VideoConvertSurface20);
         VideoConvertSurface20 = NULL;
     }
+
+    MouseInputIsRelative = SDL_FALSE;
+    MousePositionWhenRelative.x = 0;
+    MousePositionWhenRelative.y = 0;
+
     return NULL;
 }
 
@@ -2754,6 +2956,8 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
     Uint32 appfmt;
 
     FIXME("currently ignores SDL_WINDOWID, which we could use with SDL_CreateWindowFrom ...?");
+
+    flags12 &= ~SDL12_HWACCEL; /* just in case - https://github.com/libsdl-org/SDL-1.2/issues/817 */
 
     /* SDL_SetVideoMode() implicitly inits if necessary. */
     if (SDL20_WasInit(SDL_INIT_VIDEO) == 0) {
@@ -2805,10 +3009,12 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
     FIXME("don't do anything if the window's dimensions, etc haven't changed.");
     FIXME("we need to preserve VideoSurface12 (but not its pixels), I think...");
 
-    if ( VideoSurface12 && ((VideoSurface12->flags & SDL12_OPENGL) != (flags12 & SDL12_OPENGL)) ) {
+    if (VideoSurface12 && ((VideoSurface12->flags & SDL12_OPENGL) != (flags12 & SDL12_OPENGL)) ) {
         EndVidModeCreate();  /* rebuild the window if moving to/from a GL context */
-    } else if ( VideoSurface12 && (VideoSurface12->surface20->format->format != appfmt)) {
+    } else if (VideoSurface12 && (VideoSurface12->surface20->format->format != appfmt)) {
         EndVidModeCreate();  /* rebuild the window if changing pixel format */
+    } else if (VideoSurface12 && (VideoSurface12->w != width || VideoSurface12->h != height) && ((flags12 & SDL12_FULLSCREEN) == 0)) {
+        EndVidModeCreate(); /* rebuild the window if window size changed and not in full screen */
     } else if (VideoGLContext20) {
         /* SDL 1.2 (infuriatingly!) destroys the GL context on each resize, so we will too */
         SDL20_GL_MakeCurrent(NULL, NULL);
@@ -2887,9 +3093,11 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
         VideoSurface12->flags |= SDL12_OPENGL;
     } else {
         /* always use a renderer for non-OpenGL windows. */
+        const char *env = SDL20_getenv("SDL12COMPAT_SYNC_TO_VBLANK");
+        const SDL_bool want_vsync = (env && SDL20_atoi(env)) ? SDL_TRUE : SDL_FALSE;
         SDL_RendererInfo rinfo;
         SDL_assert(!VideoGLContext20);  /* either a new window or we destroyed all this */
-        if (!VideoRenderer20) {
+        if (!VideoRenderer20 && want_vsync) {
             VideoRenderer20 = SDL20_CreateRenderer(VideoWindow20, -1, SDL_RENDERER_ACCELERATED|SDL_RENDERER_PRESENTVSYNC);
         }
         if (!VideoRenderer20) {
@@ -2903,10 +3111,9 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
         }
 
         SDL20_RenderSetLogicalSize(VideoRenderer20, width, height);
-        SDL20_SetRenderDrawColor(VideoRenderer20, 0, 0, 0, 255);
+        SDL20_SetRenderDrawColor(VideoRenderer20, 0, 0, 0, 255);  /* leave this black always, we only use it to clear the framebuffer. */
         SDL20_RenderClear(VideoRenderer20);
         SDL20_RenderPresent(VideoRenderer20);
-        SDL20_SetRenderDrawColor(VideoRenderer20, 255, 255, 255, 255);
 
         if (SDL20_GetRendererInfo(VideoRenderer20, &rinfo) < 0) {
             return EndVidModeCreate();
@@ -2936,6 +3143,9 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
 
         VideoSurface12->flags &= ~SDL12_OPENGL;
         VideoSurface12->flags |= SDL12_DOUBLEBUF;
+        // some apps check for the presence/lack of double buffering via MUSTLOCK
+        // so set SDL12_HWSURFACE so they are less confused
+        VideoSurface12->flags |= SDL12_HWSURFACE;
         VideoSurface12->surface20->pixels = SDL20_malloc(height * VideoSurface12->pitch);
         VideoSurface12->pixels = VideoSurface12->surface20->pixels;
         if (!VideoSurface12->pixels) {
@@ -3236,6 +3446,8 @@ PresentScreen(void)
     }
 
     SDL20_UnlockTexture(VideoTexture20);
+
+    SDL20_RenderClear(VideoRenderer20);
     SDL20_RenderCopy(VideoRenderer20, VideoTexture20, NULL, NULL);
     SDL20_RenderPresent(VideoRenderer20);
     VideoSurfaceLastPresentTicks = SDL20_GetTicks();
@@ -3344,7 +3556,7 @@ SDL_WM_GetCaption(const char **title, const char **icon)
 DECLSPEC void SDLCALL
 SDL_WM_SetIcon(SDL12_Surface *icon12, Uint8 *mask)
 {
-    SDL_BlendMode blendmode;
+    SDL_BlendMode oldmode;
     Uint32 rmask, gmask, bmask, amask;
     SDL_Surface *icon20;
     int bpp;
@@ -3352,27 +3564,25 @@ SDL_WM_SetIcon(SDL12_Surface *icon12, Uint8 *mask)
 
     if (VideoWindow20) {
         SDL20_SetWindowIcon(VideoWindow20, icon12->surface20);
+        return;
     }
-return;
 
     // take the mask and zero out those alpha values.
-    blendmode = SDL_BLENDMODE_NONE;
-    if (SDL20_GetSurfaceBlendMode(icon12->surface20, &blendmode) < 0) {
-        return;  // oh well.
+    oldmode = SDL_BLENDMODE_NONE;
+    if (SDL20_GetSurfaceBlendMode(icon12->surface20, &oldmode) < 0) {
+        return; // oh well.
     }
-
     if (!SDL20_PixelFormatEnumToMasks(SDL_PIXELFORMAT_ARGB8888, &bpp, &rmask, &gmask, &bmask, &amask)) {
-        return;  // oh well.
+        return; // oh well.
     }
-
     icon20 = SDL20_CreateRGBSurface(0, icon12->w, icon12->h, bpp, rmask, gmask, bmask, amask);
     if (!icon20) {
-        return;  // oh well.
+        return; // oh well.
     }
 
     SDL20_SetSurfaceBlendMode(icon12->surface20, SDL_BLENDMODE_NONE);
     ret = SDL20_UpperBlit(icon12->surface20, NULL, icon20, NULL);
-    SDL20_SetSurfaceBlendMode(icon12->surface20, blendmode);
+    SDL20_SetSurfaceBlendMode(icon12->surface20, oldmode);
     if (ret == 0) {
         if (mask) {
             const int w = icon12->w;
@@ -3453,7 +3663,16 @@ UpdateRelativeMouseMode(void)
 {
     // in SDL 1.2, hiding+grabbing the cursor was like SDL2's relative mouse mode.
     if (VideoWindow20) {
-        SDL20_SetRelativeMouseMode((VideoWindowGrabbed && VideoCursorHidden) ? SDL_TRUE : SDL_FALSE);
+        const SDL_bool enable = (VideoWindowGrabbed && VideoCursorHidden) ? SDL_TRUE : SDL_FALSE;
+        if (MouseInputIsRelative != enable) {
+            MouseInputIsRelative = enable;
+            if (MouseInputIsRelative) {
+                // reset position, we'll have to track it ourselves in SDL_MOUSEMOTION events, since 1.2
+                //  would give you window coordinates, even in relative mode.
+                SDL_GetMouseState(&MousePositionWhenRelative.x, &MousePositionWhenRelative.y);
+            }
+            SDL20_SetRelativeMouseMode(MouseInputIsRelative);
+        }
     }
 }
 
@@ -3491,7 +3710,12 @@ SDL_WM_GrabInput(SDL12_GrabMode mode)
 DECLSPEC void SDLCALL
 SDL_WarpMouse(Uint16 x, Uint16 y)
 {
-    SDL20_WarpMouseInWindow(VideoWindow20, x, y);
+    if (MouseInputIsRelative) {  /* we have to track this ourselves, in case app calls SDL_GetMouseState(). */
+        MousePositionWhenRelative.x = (int) x;
+        MousePositionWhenRelative.y = (int) y;
+    } else {
+        SDL20_WarpMouseInWindow(VideoWindow20, x, y);
+    }
 }
 
 DECLSPEC Uint8 SDLCALL
@@ -3602,9 +3826,10 @@ SDL_SetColors(SDL12_Surface *surface12, const SDL_Color * colors, int firstcolor
 DECLSPEC int SDLCALL
 SDL_GetWMInfo(SDL_SysWMinfo * info)
 {
-    FIXME("write me");
     //return SDL20_GetWindowWMInfo(VideoWindow20, info);
-    return SDL20_Unsupported();
+    FIXME("write me");
+    SDL20_Unsupported();
+    return 0; /* some programs only test against 0, not -1 */
 }
 
 DECLSPEC SDL12_Overlay * SDLCALL
@@ -3770,8 +3995,10 @@ SDL_GetKeyRepeat(int *delay, int *interval)
 DECLSPEC int SDLCALL
 SDL_EnableUNICODE(int enable)
 {
-    FIXME("write me");
-    return SDL20_Unsupported();
+    int old = EnabledUnicode;
+    FIXME("implement properly");
+    EnabledUnicode = enable;
+    return old;
 }
 
 /* SDL 1.2 limited timers to a 10ms resolution. SDL 2.0 doesn't, so we might
@@ -3853,13 +4080,33 @@ DECLSPEC int SDLCALL SDL_CDStop(SDL12_CD *cdrom) { return SDL20_Unsupported(); }
 DECLSPEC int SDLCALL SDL_CDEject(SDL12_CD *cdrom) { return SDL20_Unsupported(); }
 DECLSPEC void SDLCALL SDL_CDClose(SDL12_CD *cdrom) {}
 
-
+#if (defined(_WIN32) || defined(__OS2__)) && !defined(SDL_PASSED_BEGINTHREAD_ENDTHREAD)
+#error SDL_PASSED_BEGINTHREAD_ENDTHREAD not defined
+#endif
 #ifdef SDL_PASSED_BEGINTHREAD_ENDTHREAD
+#ifdef _WIN32
+/* Official Windows versions of SDL-1.2 >= 1.2.10 were always built
+ * with HAVE_LIBC, i.e.: *without* SDL_PASSED_BEGINTHREAD_ENDTHREAD
+ * defined, in order to keep binary compatibility with SDL <= 1.2.9.
+ *
+ * On the other hand SDL2 >= 2.0.12, as we dictate for Windows does
+ * always define SDL_PASSED_BEGINTHREAD_ENDTHREAD, in order to keep
+ * SDL2 versions built with and without libc binary compatible with
+ * each other.
+ *
+ * Therefore, we have to do the following trick below. */
+DECLSPEC SDL_Thread * SDLCALL
+SDL_CreateThread(int (SDLCALL *fn)(void *), void *data)
+{
+    return SDL20_CreateThread(fn, NULL, data, NULL, NULL);
+}
+#else
 DECLSPEC SDL_Thread * SDLCALL
 SDL_CreateThread(int (SDLCALL *fn)(void *), void *data, pfnSDL_CurrentBeginThread pfnBeginThread, pfnSDL_CurrentEndThread pfnEndThread)
 {
     return SDL20_CreateThread(fn, NULL, data, pfnBeginThread, pfnEndThread);
 }
+#endif
 #else
 DECLSPEC SDL_Thread * SDLCALL
 SDL_CreateThread(int (SDLCALL *fn)(void *), void *data)
@@ -3884,9 +4131,8 @@ DECLSPEC void SDLCALL
 SDL_KillThread(SDL_Thread *thread)
 {
     FIXME("Removed from 2.0; do nothing. We can't even report failure.");
-    fprintf(stderr,
-        "WARNING: this app used SDL_KillThread(), an unforgivable curse.\n"
-        "This program should be fixed. No thread was actually harmed.\n");
+    SDL20_Log("WARNING: this app used SDL_KillThread(), an unforgivable curse.\n"
+              "This program should be fixed. No thread was actually harmed.\n");
 }
 
 typedef struct SDL12_TimerID_Data
@@ -4026,7 +4272,7 @@ RWops20to12(SDL_RWops *rwops20)
 DECLSPEC SDL12_RWops * SDLCALL
 SDL_RWFromFile(const char *file, const char *mode)
 {
-    if ( !file || !*file || !mode || !*mode ) {
+    if (!file || !*file || !mode || !*mode) {
         SDL_SetError("SDL_RWFromFile(): No file or no mode specified");
         return NULL;
     }
@@ -4089,15 +4335,15 @@ RWops12to20_size(struct SDL_RWops *rwops20)
     if (size != -1)
         return size;
 
-    pos = rwops12->seek(rwops12, 0, SEEK_CUR);
+    pos = rwops12->seek(rwops12, 0, RW_SEEK_CUR);
     if (pos == -1)
         return -1;
 
-    size = (Sint64) rwops12->seek(rwops12, 0, SEEK_END);
+    size = (Sint64) rwops12->seek(rwops12, 0, RW_SEEK_END);
     if (size == -1)
         return -1;
 
-    rwops12->seek(rwops12, pos, SEEK_SET);  FIXME("...and if this fails?");
+    rwops12->seek(rwops12, pos, RW_SEEK_SET);  FIXME("...and if this fails?");
     rwops20->hidden.unknown.data2 = (void *) ((size_t) size);
     return size;
 }
@@ -4272,7 +4518,7 @@ SDL_GL_DisableContext(void)
 DECLSPEC void SDLCALL
 SDL_GL_EnableContext_Thread(void)
 {
-    const SDL_bool enable = (VideoGLContext20 && VideoWindow20);
+    const SDL_bool enable = (VideoGLContext20 && VideoWindow20)? SDL_TRUE : SDL_FALSE;
     SDL20_GL_MakeCurrent(enable ? VideoWindow20 : NULL, enable ? VideoGLContext20 : NULL);
 }
 

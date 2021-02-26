@@ -1,0 +1,76 @@
+#  OpenWatcom makefile to build SDL for OS/2
+
+!ifndef %WATCOM
+!error Environment variable WATCOM is not specified!
+!endif
+
+DLLNAME = SDL12
+VERSION = 1.2.50
+LIBHOME = .
+
+# change SDL2INC to point to the SDL2 headers.
+SDL2INC = -IC:\SDL2DEV/h/SDL2
+INCPATH = -I$(%WATCOM)/h/os2 -I$(%WATCOM)/h $(SDL2INC)
+LIBNAME = $(DLLNAME)
+
+DLLFILE = $(LIBHOME)/$(LIBNAME).dll
+LIBFILE = $(LIBHOME)/$(LIBNAME).lib
+LNKFILE=$(LIBNAME).lnk
+
+CFLAGS_DEF=-bt=os2 -d0 -zq -bm -5s -fp5 -fpi87 -sg -oteanbmier $(INCPATH)
+CFLAGS_DLL=$(CFLAGS_DEF) -bd
+
+# Special flags for building SDL
+CFLAGS=$(CFLAGS_DLL) -otexan -wx -ei
+# newer OpenWatcom versions enable W303 by default
+CFLAGS+= -wcd=303
+
+DESCRIPTION = Simple DirectMedia Layer 1.2
+
+object_files= SDL12_compat.obj
+
+.extensions:
+.extensions: .lib .dll .obj .c .asm
+
+.c.obj:
+	wcc386 $(CFLAGS) -fo=$^@ $<
+
+all: $(DLLFILE) $(LIBFILE) .symbolic
+
+$(DLLFILE): compiling_info $(object_files) $(LNKFILE)
+	@echo * Linking: $@
+	@wlink @$(LNKFILE)
+
+$(LIBFILE): $(DLLFILE)
+	@echo * Creating LIB file: $@
+	wlib -q -b -n -c -pa -s -t -zld -ii -io $* $(DLLFILE)
+
+compiling_info : .symbolic
+	@echo * Compiling...
+
+$(LNKFILE):
+	@echo * Creating linker file: $@
+	@%create $@
+	@%append $@ SYSTEM os2v2_dll INITINSTANCE TERMINSTANCE
+	@%append $@ NAME $(DLLFILE)
+	@for %i in ($(object_files)) do @%append $@ FILE %i
+	@%append $@ OPTION QUIET
+	@%append $@ OPTION IMPF=$^&.exp
+	@%append $@ OPTION MAP=$^&.map
+	@%append $@ OPTION DESCRIPTION '@$#libsdl org:$(VERSION)$#@$(DESCRIPTION)'
+	@%append $@ OPTION ELIMINATE
+	@%append $@ OPTION MANYAUTODATA
+	@%append $@ OPTION OSNAME='OS/2 and eComStation'
+	@%append $@ OPTION SHOWDEAD
+
+clean: .SYMBOLIC
+	@echo * Clean: $(LIBNAME) $(VERSION)
+	@if exist *.obj rm *.obj
+	@if exist *.map rm *.map
+	@if exist *.exp rm *.exp
+	@if exist $(LNKFILE) rm $(LNKFILE)
+
+distclean: clean .SYMBOLIC
+	@if exist *.err rm *.err
+	@if exist $(DLLFILE) rm $(DLLFILE)
+	@if exist $(LIBFILE) rm $(LIBFILE)

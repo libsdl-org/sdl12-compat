@@ -26,14 +26,26 @@
 #ifdef __MACOSX__
 #include <Cocoa/Cocoa.h>
 
+#if __GNUC__ >= 4
+#define SDL12_PRIVATE __attribute__((visibility("hidden")))
+#else
+#define SDL12_PRIVATE __private_extern__
+#endif
+
 /* This has to be in a separate, Objective-C source file because it calls
    into Cocoa. The issue is that SDL 1.2 apps on macOS are statically linked
    with SDLmain, which does something mac-specific that conflicts with SDL2
    before the app's main() is even called, and we have to counteract that. */
 
-void sdl12_compat_macos_init(void)
+SDL12_PRIVATE void sdl12_compat_macos_init(void)
 {
     [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
+}
+
+SDL12_PRIVATE void error_dialog(const char *errorMsg)
+{
+    NSString* msg = [NSString stringWithCString:errorMsg encoding:NSASCIIStringEncoding];
+    NSRunCriticalAlertPanel (@"Error", @"%@", @"OK", nil, nil, msg);
 }
 #endif
 
