@@ -73,18 +73,17 @@ endif()
 
 # test programs...
 
+include(FindSDL)
 if(NOT (WIN32 OR APPLE OR CYGWIN OR HAIKU OR BEOS))
   find_library(MATH_LIBRARY m)
 endif()
-
-include(FindSDL)
 
 macro(test_program _NAME _SRCS)
     add_executable(${_NAME} ${_SRCS})
     target_include_directories(${_NAME} PRIVATE ${SDL_INCLUDE_DIR})
     target_link_libraries(${_NAME} SDL)
     if(MATH_LIBRARY)
-       target_link_libraries(${_NAME} m)
+      target_link_libraries(${_NAME} ${MATH_LIBRARY})
     endif()
 endmacro()
 
