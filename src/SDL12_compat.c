@@ -3093,9 +3093,11 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
         VideoSurface12->flags |= SDL12_OPENGL;
     } else {
         /* always use a renderer for non-OpenGL windows. */
+        const char *env = SDL20_getenv("SDL12COMPAT_SYNC_TO_VBLANK");
+        const SDL_bool want_vsync = (env && SDL20_atoi(env)) ? SDL_TRUE : SDL_FALSE;
         SDL_RendererInfo rinfo;
         SDL_assert(!VideoGLContext20);  /* either a new window or we destroyed all this */
-        if (!VideoRenderer20) {
+        if (!VideoRenderer20 && want_vsync) {
             VideoRenderer20 = SDL20_CreateRenderer(VideoWindow20, -1, SDL_RENDERER_ACCELERATED|SDL_RENDERER_PRESENTVSYNC);
         }
         if (!VideoRenderer20) {
