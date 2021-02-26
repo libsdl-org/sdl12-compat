@@ -757,6 +757,8 @@ static Uint8 EventStates[SDL12_NUMEVENTS];
 static int SwapInterval = 0;
 static JoystickOpenedItem JoystickOpenList[16];
 static Uint8 KeyState[SDLK12_LAST];
+static SDL_bool MouseInputIsRelative = SDL_FALSE;
+static SDL_Point MousePositionWhenRelative = { 0, 0 };
 
 // !!! FIXME: need a mutex for the event queue.
 #define SDL12_MAXEVENTS 128
@@ -1744,7 +1746,12 @@ static Uint8 MouseButtonState20to12(const Uint32 state20)
 DECLSPEC Uint8 SDLCALL
 SDL_GetMouseState(int *x, int *y)
 {
-    return MouseButtonState20to12(SDL20_GetMouseState(x, y));
+    const Uint8 buttons = MouseButtonState20to12(SDL20_GetMouseState(x, y));
+    if (MouseInputIsRelative) {
+        if (x) { *x = MousePositionWhenRelative.x; }
+        if (y) { *y = MousePositionWhenRelative.y; }
+    }
+    return buttons;
 }
 
 DECLSPEC Uint8 SDLCALL
@@ -2211,6 +2218,20 @@ EventFilter20to12(void *data, SDL_Event *event20)
             event12.motion.y = (Uint16) event20->motion.y;
             event12.motion.xrel = (Sint16) event20->motion.xrel;
             event12.motion.yrel = (Sint16) event20->motion.yrel;
+            if (MouseInputIsRelative) {
+                /* in relative mode, clamp fake absolute position to the window dimensions. */
+                #define ADJUST_RELATIVE(axis, rel, dim) { \
+                    MousePositionWhenRelative.axis += event20->motion.rel; \
+                    if (MousePositionWhenRelative.axis <= 0) { \
+                        MousePositionWhenRelative.axis = 0; \
+                    } else if (MousePositionWhenRelative.axis >= VideoSurface12->dim) { \
+                        MousePositionWhenRelative.axis = (VideoSurface12->dim - 1); \
+                    } \
+                }
+                ADJUST_RELATIVE(x, xrel, w);
+                ADJUST_RELATIVE(y, yrel, h);
+                #undef ADJUST_RELATIVE
+            }
             break;
 
         case SDL_MOUSEBUTTONDOWN:
@@ -2891,6 +2912,11 @@ EndVidModeCreate(void)
         SDL20_FreeSurface(VideoConvertSurface20);
         VideoConvertSurface20 = NULL;
     }
+
+    MouseInputIsRelative = SDL_FALSE;
+    MousePositionWhenRelative.x = 0;
+    MousePositionWhenRelative.y = 0;
+
     return NULL;
 }
 
@@ -3638,7 +3664,16 @@ UpdateRelativeMouseMode(void)
 {
     // in SDL 1.2, hiding+grabbing the cursor was like SDL2's relative mouse mode.
     if (VideoWindow20) {
-        SDL20_SetRelativeMouseMode((VideoWindowGrabbed && VideoCursorHidden) ? SDL_TRUE : SDL_FALSE);
+        const SDL_bool enable = (VideoWindowGrabbed && VideoCursorHidden) ? SDL_TRUE : SDL_FALSE;
+        if (MouseInputIsRelative != enable) {
+            MouseInputIsRelative = enable;
+            if (MouseInputIsRelative) {
+                // reset position, we'll have to track it ourselves in SDL_MOUSEMOTION events, since 1.2
+                //  would give you window coordinates, even in relative mode.
+                SDL_GetMouseState(&MousePositionWhenRelative.x, &MousePositionWhenRelative.y);
+            }
+            SDL20_SetRelativeMouseMode(MouseInputIsRelative);
+        }
     }
 }
 
@@ -3676,7 +3711,12 @@ SDL_WM_GrabInput(SDL12_GrabMode mode)
 DECLSPEC void SDLCALL
 SDL_WarpMouse(Uint16 x, Uint16 y)
 {
-    SDL20_WarpMouseInWindow(VideoWindow20, x, y);
+    if (MouseInputIsRelative) {  /* we have to track this ourselves, in case app calls SDL_GetMouseState(). */
+        MousePositionWhenRelative.x = (int) x;
+        MousePositionWhenRelative.y = (int) y;
+    } else {
+        SDL20_WarpMouseInWindow(VideoWindow20, x, y);
+    }
 }
 
 DECLSPEC Uint8 SDLCALL
