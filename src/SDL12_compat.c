@@ -2181,16 +2181,16 @@ EventFilter20to12(void *data, SDL_Event *event20)
             break;
 
         // !!! FIXME: this is sort of a mess to convert.
-        case SDL_SYSWMEVENT: FIXME("write me"); return 0;
+        case SDL_SYSWMEVENT: FIXME("write me"); return 1;
 
         case SDL_KEYUP:
         case SDL_KEYDOWN:
             if (event20->key.repeat) {
-                return 0;  /* ignore 2.0-style key repeat events */
+                return 1;  /* ignore 2.0-style key repeat events */
             }
             event12.key.keysym.sym = Keysym20to12(event20->key.keysym.sym);
             if (event12.key.keysym.sym == SDLK12_UNKNOWN) {
-                return 0;  /* drop it if we can't map it */
+                return 1;  /* drop it if we can't map it */
             }
 
             KeyState[event12.key.keysym.sym] = event20->key.state;
@@ -2207,8 +2207,8 @@ EventFilter20to12(void *data, SDL_Event *event20)
             event12.key.keysym.unicode = (EnabledUnicode)? event12.key.keysym.sym : 0;
             break;
 
-        case SDL_TEXTEDITING: FIXME("write me"); return 0;
-        case SDL_TEXTINPUT: FIXME("write me"); return 0;
+        case SDL_TEXTEDITING: FIXME("write me"); return 1;
+        case SDL_TEXTINPUT: FIXME("write me"); return 1;
 
         case SDL_MOUSEMOTION:
             event12.type = SDL12_MOUSEMOTION;
@@ -2328,12 +2328,18 @@ EventFilter20to12(void *data, SDL_Event *event20)
         //case SDL_DROPFILE:
 
         default:
-            return 0;  /* drop everything else. */
+            return 1;  /* drop everything else. */
     }
 
     PushEventIfNotFiltered(&event12);
 
-    return 0;  /* always drop it from the 2.0 event queue. */
+    /* always pass it to the 2.0 event queue, as internal watchers (like the render API)
+       might need to see these events to deal with logical scaling, etc. We've already
+       copied it to the separate 1.2 event queue, and run the app's 1.2 event filter.
+       Next time we call 1.2's SDL_PollEvent or SDL_PumpEvents(), we'll throw away the
+       entire SDL2 event queue, as everything that cares about those will have then
+       had a chance to examine it. */
+    return 1;
 }
 
 DECLSPEC void SDLCALL
@@ -3516,6 +3522,8 @@ SDL_Flip(SDL12_Surface *surface12)
 DECLSPEC void SDLCALL
 SDL_PumpEvents(void)
 {
+    SDL_Event e;
+
     // If the app is doing dirty rectangles, we set a flag and present the
     //  screen surface when they pump for new events if we're close to 60Hz,
     //  which we consider a sign that they are done rendering for the current
@@ -3523,7 +3531,7 @@ SDL_PumpEvents(void)
     if (VideoSurfacePresentTicks && SDL_TICKS_PASSED(SDL20_GetTicks(), VideoSurfacePresentTicks)) {
         PresentScreen();
     }
-    SDL20_PumpEvents();
+    while (SDL20_PollEvent(&e)) {  /* spin to drain the SDL2 event queue. */ }
 }
 
 DECLSPEC void SDLCALL
