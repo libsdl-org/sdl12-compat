@@ -3111,10 +3111,9 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
         }
 
         SDL20_RenderSetLogicalSize(VideoRenderer20, width, height);
-        SDL20_SetRenderDrawColor(VideoRenderer20, 0, 0, 0, 255);
+        SDL20_SetRenderDrawColor(VideoRenderer20, 0, 0, 0, 255);  /* leave this black always, we only use it to clear the framebuffer. */
         SDL20_RenderClear(VideoRenderer20);
         SDL20_RenderPresent(VideoRenderer20);
-        SDL20_SetRenderDrawColor(VideoRenderer20, 255, 255, 255, 255);
 
         if (SDL20_GetRendererInfo(VideoRenderer20, &rinfo) < 0) {
             return EndVidModeCreate();
@@ -3448,9 +3447,7 @@ PresentScreen(void)
 
     SDL20_UnlockTexture(VideoTexture20);
 
-    SDL20_SetRenderDrawColor(VideoRenderer20, 0, 0, 0, 255);
     SDL20_RenderClear(VideoRenderer20);
-    SDL20_SetRenderDrawColor(VideoRenderer20, 255, 255, 255, 255);
     SDL20_RenderCopy(VideoRenderer20, VideoTexture20, NULL, NULL);
     SDL20_RenderPresent(VideoRenderer20);
     VideoSurfaceLastPresentTicks = SDL20_GetTicks();
