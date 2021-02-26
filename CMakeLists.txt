@@ -1,3 +1,7 @@
+# NOTE:  If you installed SDL2 at an unusual place and FindSDL2 fails,
+#        you can define SDL2_INCLUDE_DIRS on the cmdline. For example:
+#        cmake -DSDL2_INCLUDE_DIRS=/opt/SDL2/include/SDL2 [other opts]
+
 cmake_minimum_required(VERSION 3.0.0)
 project(sdl12_compat)
 
@@ -18,8 +22,6 @@ add_library(SDL SHARED ${SDL12COMPAT_SRCS})
 
 include("cmake/modules/FindSDL2.cmake")
 target_include_directories(SDL PRIVATE ${SDL2_INCLUDE_DIRS})
-#target_include_directories(SDL PRIVATE "/usr/X11/include")  # !!! FIXME
-add_definitions("-D_THREAD_SAFE")  # !!! FIXME
 
 # avoid DLL having 'lib' prefix with Windows MinGW builds
 if(WIN32)
@@ -68,13 +70,22 @@ if(MSVC)
     endforeach(flag_var)
 endif()
 
+
 # test programs...
+
+if(NOT (WIN32 OR APPLE OR CYGWIN OR HAIKU OR BEOS))
+  find_library(MATH_LIBRARY m)
+endif()
+
+include(FindSDL)
+
 macro(test_program _NAME _SRCS)
     add_executable(${_NAME} ${_SRCS})
-    target_include_directories(${_NAME} PUBLIC ${SDL2_INCLUDE_DIRS})
-#    target_include_directories(${_NAME} PUBLIC "/usr/X11/include")  # !!! FIXME
+    target_include_directories(${_NAME} PRIVATE ${SDL_INCLUDE_DIR})
     target_link_libraries(${_NAME} SDL)
-    target_link_libraries(${_NAME} m)
+    if(MATH_LIBRARY)
+       target_link_libraries(${_NAME} m)
+    endif()
 endmacro()
 
 test_program(testsprite "test/testsprite.c")
