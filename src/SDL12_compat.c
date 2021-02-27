@@ -859,22 +859,22 @@ static int
 LoadSDL20(void)
 {
     int okay = 1;
-    if (!Loaded_SDL20)
-    {
+    if (!Loaded_SDL20) {
         okay = LoadSDL20Library();
         if (!okay) {
             strcpy_fn(loaderror, "Failed loading SDL2 library.");
-        }
-        #define SDL20_SYM(rc,fn,params,args,ret) SDL20_##fn = (SDL20_##fn##_t) LoadSDL20Symbol("SDL_" #fn, &okay);
-        #include "SDL20_syms.h"
-        if (!okay)
-            UnloadSDL20();
-        else {
-            SDL_version v;
-            SDL20_GetVersion(&v);
-            okay = (SDL_VERSIONNUM(v.major,v.minor,v.patch) >= SDL20_REQUIRED_VER);
+        } else {
+            #define SDL20_SYM(rc,fn,params,args,ret) SDL20_##fn = (SDL20_##fn##_t) LoadSDL20Symbol("SDL_" #fn, &okay);
+            #include "SDL20_syms.h"
+            if (okay) {
+                SDL_version v;
+                SDL20_GetVersion(&v);
+                okay = (SDL_VERSIONNUM(v.major,v.minor,v.patch) >= SDL20_REQUIRED_VER);
+                if (!okay) {
+                    sprintf_fn(loaderror, "SDL2 %d.%d.%d library is too old.", v.major, v.minor, v.patch);
+                }
+            }
             if (!okay) {
-                sprintf_fn(loaderror, "SDL2 %d.%d.%d library is too old.", v.major, v.minor, v.patch);
                 UnloadSDL20();
             }
         }
@@ -1540,8 +1540,7 @@ SDL_SetError(const char *fmt, ...)
     str = (char *) SDL20_malloc(len + 1);
     if (!str)
         SDL20_OutOfMemory();
-    else
-    {
+    else {
         va_start(ap, fmt);
         SDL20_vsnprintf(str, len + 1, fmt, ap);
         va_end(ap);
@@ -1553,9 +1552,8 @@ SDL_SetError(const char *fmt, ...)
 DECLSPEC const char * SDLCALL
 SDL_GetError(void)
 {
-    if (SDL20_GetError == NULL)
-    {
-        static const char noload_errstr[] = "The SDL 2.0 library that the 1.2 compatibility layer needs isn't loaded";
+    if (SDL20_GetError == NULL) {
+        static const char noload_errstr[] = "SDL2 library isn't loaded.";
         return noload_errstr;
     }
     return SDL20_GetError();
