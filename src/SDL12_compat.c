@@ -2968,6 +2968,9 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
         if (SDL20_Init(SDL_INIT_VIDEO) < 0) {
             return NULL;
         }
+        if (Init12Video() < 0) {
+            return NULL;
+        }
     }
 
     if ((flags12 & SDL12_OPENGLBLIT) == SDL12_OPENGLBLIT) {
