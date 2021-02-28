@@ -1261,7 +1261,7 @@ Init12VidModes(void)
     for (i = 0; i < total; ++i) {
         SDL_DisplayMode mode;
 
-        if (SDL20_GetDisplayMode(VideoDisplayIndex, i, &mode) == -1) {
+        if (SDL20_GetDisplayMode(VideoDisplayIndex, i, &mode) < 0) {
             continue;
         } else if (!mode.w || !mode.h) {
             SDL_assert(0 && "Can this actually happen?");
@@ -1349,7 +1349,7 @@ Init12Video(void)
     VideoCursorHidden = SDL_FALSE;
     SDL20_ShowCursor(1);
 
-    if (Init12VidModes() == -1) {
+    if (Init12VidModes() < 0) {
         return -1;
     }
 
@@ -1402,7 +1402,7 @@ SDL_InitSubSystem(Uint32 sdl12flags)
 
     rc = SDL20_Init(sdl20flags);
     if ((rc == 0) && (sdl20flags & SDL_INIT_VIDEO)) {
-        if (Init12Video() == -1) {
+        if (Init12Video() < 0) {
             FIXME("should we deinit other subsystems?");
             return -1;
         }
@@ -1640,7 +1640,7 @@ SDL_PeepEvents(SDL12_Event *events12, int numevents, SDL_eventaction action, Uin
         int i;
         for (i = 0; i < numevents; i++)
         {
-            if (SDL_PushEvent(&events12[i]) == -1)
+            if (SDL_PushEvent(&events12[i]) < 0)
                 break;  /* out of space for more events. */
         }
         return i;
@@ -2425,14 +2425,14 @@ Surface20to12(SDL_Surface *surface20)
     format12->Amask = surface20->format->Amask;
 
     if (SDL20_HasColorKey(surface20)) {
-        if (SDL20_GetColorKey(surface20, &format12->colorkey) == -1) {
+        if (SDL20_GetColorKey(surface20, &format12->colorkey) < 0) {
             format12->colorkey = 0;
         } else {
             surface12->flags |= SDL12_SRCCOLORKEY;
         }
     }
 
-    if (SDL20_GetSurfaceAlphaMod(surface20, &format12->alpha) == -1) {
+    if (SDL20_GetSurfaceAlphaMod(surface20, &format12->alpha) < 0) {
         format12->alpha = 255;
     }
 
@@ -2651,7 +2651,7 @@ SDL_FillRect(SDL12_Surface *dst, SDL12_Rect *dstrect12, Uint32 color)
 {
     SDL_Rect dstrect20;
     const int retval = SDL20_FillRect(dst->surface20, dstrect12 ? Rect12to20(dstrect12, &dstrect20) : NULL, color);
-    if (retval != -1)
+    if (retval == 0)
     {
         if (dstrect12) {  /* 1.2 stores the clip intersection in dstrect */
             SDL_Rect intersected20;
@@ -3886,7 +3886,7 @@ SDL_GL_LoadLibrary(const char *libname)
        behavior, even if you were going to load a different library this time.
        Oh well. */
     const int rc = SDL20_GL_LoadLibrary(libname);
-    if (rc == -1) {
+    if (rc < 0) {
         const char *err = SDL20_GetError();
         char *dup;
 
@@ -4496,7 +4496,7 @@ SDL_OpenAudio(SDL_AudioSpec *want, SDL_AudioSpec *obtained)
     retval = SDL20_OpenAudio(want, obtained);
     want->callback = data->app_callback;
     want->userdata = data->app_userdata;
-    if (retval == -1) {
+    if (retval < 0) {
         SDL20_free(data);
     } else {
         FIXME("memory leak on callback data");
