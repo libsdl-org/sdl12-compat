@@ -88,6 +88,7 @@
 #define SDL_LoadWAV_RW IGNORE_THIS_VERSION_OF_SDL_LoadWAV_RW
 #define SDL_UpperBlit IGNORE_THIS_VERSION_OF_SDL_UpperBlit
 #define SDL_LowerBlit IGNORE_THIS_VERSION_OF_SDL_LowerBlit
+#define SDL_SoftStretch IGNORE_THIS_VERSION_OF_SDL_SoftStretch
 #define SDL_ConvertSurface IGNORE_THIS_VERSION_OF_SDL_ConvertSurface
 #define SDL_SetColorKey IGNORE_THIS_VERSION_OF_SDL_SetColorKey
 #define SDL_LockSurface IGNORE_THIS_VERSION_OF_SDL_LockSurface
@@ -191,6 +192,7 @@ typedef void (__cdecl *pfnSDL_CurrentEndThread) (unsigned);
 #undef SDL_LoadWAV_RW
 #undef SDL_UpperBlit
 #undef SDL_LowerBlit
+#undef SDL_SoftStretch
 #undef SDL_ConvertSurface
 #undef SDL_SetColorKey
 #undef SDL_LockSurface

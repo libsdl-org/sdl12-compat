@@ -3367,6 +3367,16 @@ SDL_LowerBlit(SDL12_Surface *src12, SDL12_Rect *srcrect12, SDL12_Surface *dst12,
 }
 
 DECLSPEC int SDLCALL
+SDL_SoftStretch(SDL12_Surface *src12, SDL12_Rect *srcrect12, SDL12_Surface *dst12, SDL12_Rect *dstrect12)
+{
+    SDL_Rect srcrect20, dstrect20;
+    return SDL20_SoftStretch(src12->surface20,
+                             srcrect12 ? Rect12to20(srcrect12, &srcrect20) : NULL,
+                             dst12->surface20,
+                             dstrect12 ? Rect12to20(dstrect12, &dstrect20) : NULL);
+}
+
+DECLSPEC int SDLCALL
 SDL_SetAlpha(SDL12_Surface *surface12, Uint32 flags12, Uint8 value)
 {
     const SDL_bool addkey = (flags12 & SDL12_SRCALPHA) ? SDL_TRUE : SDL_FALSE;
