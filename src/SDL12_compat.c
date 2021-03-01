@@ -3298,8 +3298,7 @@ SDL_UpperBlit(SDL12_Surface *src12, SDL12_Rect *srcrect12, SDL12_Surface *dst12,
     int retval;
 
     if ((src12 == NULL) || (dst12 == NULL)) {
-        SDL_SetError("SDL_UpperBlit: passed a NULL surface");
-        return -1;
+        return SDL20_SetError("SDL_UpperBlit: passed a NULL surface");
     } else if (SaveDestAlpha(src12, dst12, &dstalpha) < 0) {
         return -1;
     }
@@ -4285,7 +4284,7 @@ DECLSPEC SDL12_RWops * SDLCALL
 SDL_RWFromFile(const char *file, const char *mode)
 {
     if (!file || !*file || !mode || !*mode) {
-        SDL_SetError("SDL_RWFromFile(): No file or no mode specified");
+        SDL20_SetError("SDL_RWFromFile(): No file or no mode specified");
         return NULL;
     }
     return RWops20to12(SDL20_RWFromFile(file, mode));
