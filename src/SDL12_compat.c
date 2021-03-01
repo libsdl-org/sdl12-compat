@@ -962,6 +962,25 @@ unsigned _System LibMain(unsigned hmod, unsigned termination)
     #error Please define your platform
 #endif
 
+#ifdef _WIN32
+DECLSPEC void SDLCALL
+SDL_SetModuleHandle(void *handle)
+{
+    /* handled internally by SDL2 - nothing to do.. */
+}
+
+DECLSPEC int SDLCALL
+SDL_RegisterApp(char *name, Uint32 style, void *hInst)
+{
+    return 0;
+}
+
+DECLSPEC void SDLCALL
+SDL_UnregisterApp(void)
+{
+}
+#endif
+
 DECLSPEC const SDL_version * SDLCALL
 SDL_Linked_Version(void)
 {
