@@ -3363,7 +3363,7 @@ SDL_LowerBlit(SDL12_Surface *src12, SDL12_Rect *srcrect12, SDL12_Surface *dst12,
         Rect20to12(&srcrect20, srcrect12);
     }
 
-    if (srcrect12) {
+    if (dstrect12) {
         Rect20to12(&dstrect20, dstrect12);
     }
 
