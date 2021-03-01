@@ -4360,7 +4360,9 @@ static Sint64 SDLCALL
 RWops12to20_seek(struct SDL_RWops *rwops20, Sint64 offset, int whence)
 {
     SDL12_RWops *rwops12 = (SDL12_RWops *) rwops20->hidden.unknown.data1;
-    FIXME("fail if (offset) is too big");
+    if (offset < -2147483648 || offset > 2147483647) {
+        return SDL20_InvalidParamError("offset");
+    }
     return (Sint64) rwops12->seek(rwops12, (int) offset, whence);
 }
 
@@ -4368,7 +4370,10 @@ static size_t SDLCALL
 RWops12to20_read(struct SDL_RWops *rwops20, void *ptr, size_t size, size_t maxnum)
 {
     SDL12_RWops *rwops12 = (SDL12_RWops *) rwops20->hidden.unknown.data1;
-    FIXME("fail if (size) or (maxnum) is too big");
+    if (size > 2147483647 || maxnum > 2147483647) {
+        SDL20_InvalidParamError("size' or 'num");
+        return 0;
+    }
     return (size_t) rwops12->read(rwops12, ptr, (int) size, (int) maxnum);
 }
 
@@ -4376,7 +4381,10 @@ static size_t SDLCALL
 RWops12to20_write(struct SDL_RWops *rwops20, const void *ptr, size_t size, size_t num)
 {
     SDL12_RWops *rwops12 = (SDL12_RWops *) rwops20->hidden.unknown.data1;
-    FIXME("fail if (size) or (maxnum) is too big");
+    if (size > 2147483647 || num > 2147483647) {
+        SDL20_InvalidParamError("size' or 'num");
+        return 0;
+    }
     return (size_t) rwops12->write(rwops12, ptr, (int) size, (int) num);
 }
 
