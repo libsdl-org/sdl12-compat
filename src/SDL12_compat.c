@@ -4387,12 +4387,10 @@ static int SDLCALL
 RWops12to20_close(struct SDL_RWops *rwops20)
 {
     int rc = 0;
-    if (rwops20)
-    {
+    if (rwops20) {
         SDL12_RWops *rwops12 = (SDL12_RWops *) rwops20->hidden.unknown.data1;
         rc = rwops12->close(rwops12);
-        if (rc == 0)
-            SDL20_FreeRW(rwops20);
+        SDL20_FreeRW(rwops20);
     }
     return rc;
 }
