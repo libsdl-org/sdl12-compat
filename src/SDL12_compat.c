@@ -52,61 +52,7 @@
 #undef snprintf
 #undef vsnprintf
 
-// !!! IMPLEMENT_ME SDL_CDClose
-// !!! IMPLEMENT_ME SDL_CDEject
-// !!! IMPLEMENT_ME SDL_CDName
-// !!! IMPLEMENT_ME SDL_CDNumDrives
-// !!! IMPLEMENT_ME SDL_CDOpen
-// !!! IMPLEMENT_ME SDL_CDPause
-// !!! IMPLEMENT_ME SDL_CDPlay
-// !!! IMPLEMENT_ME SDL_CDPlayTracks
-// !!! IMPLEMENT_ME SDL_CDResume
-// !!! IMPLEMENT_ME SDL_CDStatus
-// !!! IMPLEMENT_ME SDL_CDStop
-// !!! IMPLEMENT_ME SDL_CreateYUVOverlay
-
-// !!! IMPLEMENT_ME SDL_DisplayFormatAlpha
-// !!! IMPLEMENT_ME SDL_DisplayYUVOverlay
-// !!! IMPLEMENT_ME SDL_EnableKeyRepeat
-// !!! IMPLEMENT_ME SDL_EnableUNICODE
-// !!! IMPLEMENT_ME SDL_FreeYUVOverlay
-
-// !!! IMPLEMENT_ME SDL_GL_Lock
-// !!! IMPLEMENT_ME SDL_GL_Unlock
-// !!! IMPLEMENT_ME SDL_GL_UpdateRects
-
-// !!! IMPLEMENT_ME SDL_GetKeyName
-// !!! IMPLEMENT_ME SDL_GetKeyState
-// !!! IMPLEMENT_ME SDL_GetModState
-// !!! IMPLEMENT_ME SDL_GetRelativeMouseState
-
-// !!! IMPLEMENT_ME SDL_GetVideoSurface
-// !!! IMPLEMENT_ME SDL_GetWMInfo
-
-// !!! IMPLEMENT_ME SDL_LockSurface
-// !!! IMPLEMENT_ME SDL_LockYUVOverlay
-// !!! IMPLEMENT_ME SDL_LowerBlit
-
-// !!! IMPLEMENT_ME SDL_SetAlpha
-// !!! IMPLEMENT_ME SDL_SetColorKey
-// !!! IMPLEMENT_ME SDL_SetColors
-
-// !!! IMPLEMENT_ME SDL_SetModState
-// !!! IMPLEMENT_ME SDL_SetPalette
-// !!! IMPLEMENT_ME SDL_SetVideoMode
-// !!! IMPLEMENT_ME SDL_SoftStretch
-// !!! IMPLEMENT_ME SDL_UnlockSurface
-// !!! IMPLEMENT_ME SDL_UnlockYUVOverlay
-// !!! IMPLEMENT_ME SDL_UpdateRects
-// !!! IMPLEMENT_ME SDL_UpperBlit
-
-// !!! FIXME: should SDL_VideoInit really be a passthrough?
-// !!! FIXME: should SDL_VideoQuit really be a passthrough?
-
-// !!! IMPLEMENT_ME SDL_WM_SetIcon
-// !!! IMPLEMENT_ME SDL_WM_ToggleFullScreen
-
-// !!! IMPLEMENT_ME X11_KeyToUnicode
+/* !!! IMPLEMENT_ME X11_KeyToUnicode ? */
 
 #define SDL_BlitSurface SDL_UpperBlit
 
@@ -157,9 +103,8 @@
 #define SDL12_LOGPAL 1
 #define SDL12_PHYSPAL 2
 
-// this will be in SDL 2.0.10, but here it is in case your headers are missing it.
 #ifndef SDL_SIMD_ALIGNED
-#define SDL_SIMD_ALIGNED    0x00000008
+#define SDL_SIMD_ALIGNED 0x00000008
 #endif
 
 typedef struct SDL12_Rect
@@ -1241,7 +1186,7 @@ PixelFormat20to12(SDL12_PixelFormat *format12, SDL12_Palette *palette12, const S
     format12->Gmask = format20->Gmask;
     format12->Bmask = format20->Bmask;
     format12->Amask = format20->Amask;
-    format12->colorkey = 0;  // this is a surface, not pixelformat, properties in SDL2.
+    format12->colorkey = 0; // this is a surface, not pixelformat, properties in SDL2.
     format12->alpha = 255;  // this is a surface, not pixelformat, properties in SDL2.
     return format12;
 }
