@@ -906,6 +906,10 @@ unsigned _System LibMain(unsigned hmod, unsigned termination)
 #endif
 
 #ifdef _WIN32
+/* SDL_main functions:
+ * SDL2 doesn't define SDL_MAIN_NEEDED for _WIN32,
+ * therefore no need to call SDL_SetMainReady().
+ */
 DECLSPEC void SDLCALL
 SDL_SetModuleHandle(void *handle)
 {
@@ -1193,7 +1197,6 @@ static int
 GetVideoDisplay(void)
 {
     const char *variable;
-    FIXME("cache this value during SDL_Init() so it doesn't change.");
     variable = SDL20_getenv("SDL_VIDEO_FULLSCREEN_DISPLAY");
     if (!variable) {
         variable = SDL20_getenv("SDL_VIDEO_FULLSCREEN_HEAD");
@@ -1323,7 +1326,7 @@ Init12Video(void)
         VideoInfo12.vfmt = PixelFormat20to12(&VideoInfoVfmt12, &VideoInfoPalette12, VideoInfoVfmt20);
         VideoInfo12.current_w = mode.w;
         VideoInfo12.current_h = mode.h;
-        VideoInfo12.wm_available = 1;  FIXME("not sure if we can determine this in SDL2...?");
+        VideoInfo12.wm_available = 1;  /* FIXME ? */
         VideoInfo12.video_mem = 1024 * 256;  /* good enough. */
     }
 
@@ -1335,8 +1338,6 @@ SDL_InitSubSystem(Uint32 sdl12flags)
 {
     Uint32 sdl20flags = 0;
     int rc;
-
-    FIXME("there is never a parachute in SDL2, should we catch segfaults ourselves?");
 
     FIXME("support event thread where it makes sense to do so?");
 
@@ -1366,7 +1367,6 @@ SDL_InitSubSystem(Uint32 sdl12flags)
     rc = SDL20_Init(sdl20flags);
     if ((rc == 0) && (sdl20flags & SDL_INIT_VIDEO)) {
         if (Init12Video() < 0) {
-            FIXME("should we deinit other subsystems?");
             return -1;
         }
     }
@@ -1377,7 +1377,7 @@ SDL_InitSubSystem(Uint32 sdl12flags)
 DECLSPEC int SDLCALL
 SDL_Init(Uint32 sdl12flags)
 {
-    FIXME("what was different in 1.2?");
+    FIXME("there is never a parachute in SDL2, should we catch segfaults ourselves?");
     return SDL_InitSubSystem(sdl12flags);   /* there's no difference betwee Init and InitSubSystem in SDL2. */
 }
 
@@ -4112,7 +4112,6 @@ SDL_mutexV(SDL_mutex *mutex)
 DECLSPEC void SDLCALL
 SDL_KillThread(SDL_Thread *thread)
 {
-    FIXME("Removed from 2.0; do nothing. We can't even report failure.");
     SDL20_Log("WARNING: this app used SDL_KillThread(), an unforgivable curse.\n"
               "This program should be fixed. No thread was actually harmed.\n");
 }
@@ -4161,8 +4160,8 @@ SDL_AddTimer(Uint32 interval, SDL12_NewTimerCallback callback, void *param)
 DECLSPEC SDL_bool SDLCALL
 SDL_RemoveTimer(SDL12_TimerID data)
 {
-    // !!! FIXME: classic 1.2 will safely return SDL_FALSE if this is a bogus
-    // !!! FIXME:  timer. This code will dereference a bogus pointer.
+    /* !!! FIXME:  1.2 will safely return SDL_FALSE if this is a
+     * bogus timer. This code will dereference a bogus pointer. */
     const SDL_bool retval = SDL20_RemoveTimer(data->timer_id);
     if (retval) {
         SDL_free(data);
