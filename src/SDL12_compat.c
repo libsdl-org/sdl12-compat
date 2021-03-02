@@ -4546,19 +4546,19 @@ SDL_OpenAudio(SDL_AudioSpec *want, SDL_AudioSpec *obtained)
 /* !!! FIXME: these are just stubs for now, but Sam thinks that maybe these
 were added at Loki for Heavy Gear 2's UI. They just make GL calls. */
 DECLSPEC void SDLCALL
-SDL_GL_Lock()
+SDL_GL_Lock(void)
 {
     FIXME("write me");
 }
 
 DECLSPEC void SDLCALL
-SDL_GL_UpdateRects(int numrects, SDL_Rect *rects)
+SDL_GL_UpdateRects(int numrects, SDL12_Rect *rects)
 {
     FIXME("write me");
 }
 
 DECLSPEC void SDLCALL
-SDL_GL_Unlock()
+SDL_GL_Unlock(void)
 {
     FIXME("write me");
 }
