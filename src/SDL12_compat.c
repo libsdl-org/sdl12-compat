@@ -21,9 +21,6 @@
 
 /* This file contains functions for backwards compatibility with SDL 1.2 */
 
-// !!! FIXME: clean up code conventions
-// !!! FIXME: grep for VideoWindow20 places that might care if it's NULL
-
 #include "SDL20_include_wrapper.h"
 
 #if !SDL_VERSION_ATLEAST(2,0,0)
@@ -674,9 +671,10 @@ typedef struct
     SDL_Joystick *joystick;
 } JoystickOpenedItem;
 
-// !!! FIXME: go through all of these.
+/* !!! FIXME: grep for VideoWindow20 places that might care if it's NULL */
+/* !!! FIXME: go through all of these. */
 static VideoModeList *VideoModes = NULL;
-static int VideoModesCount = 0;  // this counts items in VideoModeList, not total video modes.
+static int VideoModesCount = 0;  /* this counts items in VideoModeList, not total video modes. */
 static SDL12_VideoInfo VideoInfo12;
 static SDL12_Palette VideoInfoPalette12;
 static SDL12_PixelFormat VideoInfoVfmt12;
@@ -706,7 +704,7 @@ static Uint8 KeyState[SDLK12_LAST];
 static SDL_bool MouseInputIsRelative = SDL_FALSE;
 static SDL_Point MousePositionWhenRelative = { 0, 0 };
 
-// !!! FIXME: need a mutex for the event queue.
+/* !!! FIXME: need a mutex for the event queue. */
 #define SDL12_MAXEVENTS 128
 typedef struct EventQueueType
 {
@@ -1186,8 +1184,8 @@ PixelFormat20to12(SDL12_PixelFormat *format12, SDL12_Palette *palette12, const S
     format12->Gmask = format20->Gmask;
     format12->Bmask = format20->Bmask;
     format12->Amask = format20->Amask;
-    format12->colorkey = 0; // this is a surface, not pixelformat, properties in SDL2.
-    format12->alpha = 255;  // this is a surface, not pixelformat, properties in SDL2.
+    format12->colorkey = 0; /* this is a surface, not pixelformat, properties in SDL2. */
+    format12->alpha = 255;  /* this is a surface, not pixelformat, properties in SDL2. */
     return format12;
 }
 
@@ -1218,7 +1216,7 @@ Init12VidModes(void)
     int i, j;
 
     if (VideoModesCount > 0) {
-        return 0;  // already did this.
+        return 0;  /* already did this. */
     }
 
     SDL_assert(VideoModes == NULL);
@@ -1233,7 +1231,7 @@ Init12VidModes(void)
             continue;
         }
 
-        if (!vmode || (mode.format != vmode->format)) {  // SDL20_GetDisplayMode() sorts on bpp first. We know when to change arrays.
+        if (!vmode || (mode.format != vmode->format)) {  /* SDL20_GetDisplayMode() sorts on bpp first. We know when to change arrays. */
             ptr = (VideoModeList *) SDL20_realloc(VideoModes, sizeof (VideoModeList) * (VideoModesCount+1));
             if (!ptr) {
                 return SDL20_OutOfMemory();
@@ -1274,7 +1272,7 @@ Init12VidModes(void)
         vmode->nummodes++;
     }
 
-    // link up modes12 for SDL_ListModes()'s use...
+    /* link up modes12 for SDL_ListModes()'s use... */
     for (i = 0, vmode = VideoModes; i < VideoModesCount; i++, vmode++) {
         const int nummodes = vmode->nummodes;
         vmode->modes12 = (SDL12_Rect **) SDL20_calloc(sizeof (SDL12_Rect *), nummodes + 1);
@@ -1359,7 +1357,7 @@ SDL_InitSubSystem(Uint32 sdl12flags)
     SETFLAG(NOPARACHUTE);
     #undef SETFLAG
 
-    // There's no CDROM in 2.0, but we'll just pretend it succeeded.
+    /* There's no CDROM in 2.0, but we'll just pretend it succeeded. */
     if (sdl12flags & SDL12_INIT_CDROM)
         CDRomInit = 1;
 
@@ -1727,246 +1725,246 @@ DECLSPEC char * SDLCALL
 SDL_GetKeyName(SDL12Key key)
 {
     switch (key) {
-        #define CASESDLK12TONAME(k, n) case k: return (char *) n
-	    CASESDLK12TONAME(SDLK12_BACKSPACE, "backspace");
-	    CASESDLK12TONAME(SDLK12_TAB, "tab");
-	    CASESDLK12TONAME(SDLK12_CLEAR, "clear");
-	    CASESDLK12TONAME(SDLK12_RETURN, "return");
-	    CASESDLK12TONAME(SDLK12_PAUSE, "pause");
-	    CASESDLK12TONAME(SDLK12_ESCAPE, "escape");
-	    CASESDLK12TONAME(SDLK12_SPACE, "space");
-	    CASESDLK12TONAME(SDLK12_EXCLAIM, "!");
-	    CASESDLK12TONAME(SDLK12_QUOTEDBL, "\"");
-	    CASESDLK12TONAME(SDLK12_HASH, "#");
-	    CASESDLK12TONAME(SDLK12_DOLLAR, "$");
-	    CASESDLK12TONAME(SDLK12_AMPERSAND, "&");
-	    CASESDLK12TONAME(SDLK12_QUOTE, "'");
-	    CASESDLK12TONAME(SDLK12_LEFTPAREN, "(");
-	    CASESDLK12TONAME(SDLK12_RIGHTPAREN, ")");
-	    CASESDLK12TONAME(SDLK12_ASTERISK, "*");
-	    CASESDLK12TONAME(SDLK12_PLUS, "+");
-	    CASESDLK12TONAME(SDLK12_COMMA, ",");
-	    CASESDLK12TONAME(SDLK12_MINUS, "-");
-	    CASESDLK12TONAME(SDLK12_PERIOD, ".");
-	    CASESDLK12TONAME(SDLK12_SLASH, "/");
-	    CASESDLK12TONAME(SDLK12_0, "0");
-	    CASESDLK12TONAME(SDLK12_1, "1");
-	    CASESDLK12TONAME(SDLK12_2, "2");
-	    CASESDLK12TONAME(SDLK12_3, "3");
-	    CASESDLK12TONAME(SDLK12_4, "4");
-	    CASESDLK12TONAME(SDLK12_5, "5");
-	    CASESDLK12TONAME(SDLK12_6, "6");
-	    CASESDLK12TONAME(SDLK12_7, "7");
-	    CASESDLK12TONAME(SDLK12_8, "8");
-	    CASESDLK12TONAME(SDLK12_9, "9");
-	    CASESDLK12TONAME(SDLK12_COLON, ":");
-	    CASESDLK12TONAME(SDLK12_SEMICOLON, ");");
-	    CASESDLK12TONAME(SDLK12_LESS, "<");
-	    CASESDLK12TONAME(SDLK12_EQUALS, "=");
-	    CASESDLK12TONAME(SDLK12_GREATER, ">");
-	    CASESDLK12TONAME(SDLK12_QUESTION, "?");
-	    CASESDLK12TONAME(SDLK12_AT, "@");
-	    CASESDLK12TONAME(SDLK12_LEFTBRACKET, "[");
-	    CASESDLK12TONAME(SDLK12_BACKSLASH, "\\");
-	    CASESDLK12TONAME(SDLK12_RIGHTBRACKET, "]");
-	    CASESDLK12TONAME(SDLK12_CARET, "^");
-	    CASESDLK12TONAME(SDLK12_UNDERSCORE, "_");
-	    CASESDLK12TONAME(SDLK12_BACKQUOTE, "`");
-	    CASESDLK12TONAME(SDLK12_a, "a");
-	    CASESDLK12TONAME(SDLK12_b, "b");
-	    CASESDLK12TONAME(SDLK12_c, "c");
-	    CASESDLK12TONAME(SDLK12_d, "d");
-	    CASESDLK12TONAME(SDLK12_e, "e");
-	    CASESDLK12TONAME(SDLK12_f, "f");
-	    CASESDLK12TONAME(SDLK12_g, "g");
-	    CASESDLK12TONAME(SDLK12_h, "h");
-	    CASESDLK12TONAME(SDLK12_i, "i");
-	    CASESDLK12TONAME(SDLK12_j, "j");
-	    CASESDLK12TONAME(SDLK12_k, "k");
-	    CASESDLK12TONAME(SDLK12_l, "l");
-	    CASESDLK12TONAME(SDLK12_m, "m");
-	    CASESDLK12TONAME(SDLK12_n, "n");
-	    CASESDLK12TONAME(SDLK12_o, "o");
-	    CASESDLK12TONAME(SDLK12_p, "p");
-	    CASESDLK12TONAME(SDLK12_q, "q");
-	    CASESDLK12TONAME(SDLK12_r, "r");
-	    CASESDLK12TONAME(SDLK12_s, "s");
-	    CASESDLK12TONAME(SDLK12_t, "t");
-	    CASESDLK12TONAME(SDLK12_u, "u");
-	    CASESDLK12TONAME(SDLK12_v, "v");
-	    CASESDLK12TONAME(SDLK12_w, "w");
-	    CASESDLK12TONAME(SDLK12_x, "x");
-	    CASESDLK12TONAME(SDLK12_y, "y");
-	    CASESDLK12TONAME(SDLK12_z, "z");
-	    CASESDLK12TONAME(SDLK12_DELETE, "delete");
+    #define CASESDLK12TONAME(k, n) case k: return (char *) n
+    CASESDLK12TONAME(SDLK12_BACKSPACE, "backspace");
+    CASESDLK12TONAME(SDLK12_TAB, "tab");
+    CASESDLK12TONAME(SDLK12_CLEAR, "clear");
+    CASESDLK12TONAME(SDLK12_RETURN, "return");
+    CASESDLK12TONAME(SDLK12_PAUSE, "pause");
+    CASESDLK12TONAME(SDLK12_ESCAPE, "escape");
+    CASESDLK12TONAME(SDLK12_SPACE, "space");
+    CASESDLK12TONAME(SDLK12_EXCLAIM, "!");
+    CASESDLK12TONAME(SDLK12_QUOTEDBL, "\"");
+    CASESDLK12TONAME(SDLK12_HASH, "#");
+    CASESDLK12TONAME(SDLK12_DOLLAR, "$");
+    CASESDLK12TONAME(SDLK12_AMPERSAND, "&");
+    CASESDLK12TONAME(SDLK12_QUOTE, "'");
+    CASESDLK12TONAME(SDLK12_LEFTPAREN, "(");
+    CASESDLK12TONAME(SDLK12_RIGHTPAREN, ")");
+    CASESDLK12TONAME(SDLK12_ASTERISK, "*");
+    CASESDLK12TONAME(SDLK12_PLUS, "+");
+    CASESDLK12TONAME(SDLK12_COMMA, ",");
+    CASESDLK12TONAME(SDLK12_MINUS, "-");
+    CASESDLK12TONAME(SDLK12_PERIOD, ".");
+    CASESDLK12TONAME(SDLK12_SLASH, "/");
+    CASESDLK12TONAME(SDLK12_0, "0");
+    CASESDLK12TONAME(SDLK12_1, "1");
+    CASESDLK12TONAME(SDLK12_2, "2");
+    CASESDLK12TONAME(SDLK12_3, "3");
+    CASESDLK12TONAME(SDLK12_4, "4");
+    CASESDLK12TONAME(SDLK12_5, "5");
+    CASESDLK12TONAME(SDLK12_6, "6");
+    CASESDLK12TONAME(SDLK12_7, "7");
+    CASESDLK12TONAME(SDLK12_8, "8");
+    CASESDLK12TONAME(SDLK12_9, "9");
+    CASESDLK12TONAME(SDLK12_COLON, ":");
+    CASESDLK12TONAME(SDLK12_SEMICOLON, ");");
+    CASESDLK12TONAME(SDLK12_LESS, "<");
+    CASESDLK12TONAME(SDLK12_EQUALS, "=");
+    CASESDLK12TONAME(SDLK12_GREATER, ">");
+    CASESDLK12TONAME(SDLK12_QUESTION, "?");
+    CASESDLK12TONAME(SDLK12_AT, "@");
+    CASESDLK12TONAME(SDLK12_LEFTBRACKET, "[");
+    CASESDLK12TONAME(SDLK12_BACKSLASH, "\\");
+    CASESDLK12TONAME(SDLK12_RIGHTBRACKET, "]");
+    CASESDLK12TONAME(SDLK12_CARET, "^");
+    CASESDLK12TONAME(SDLK12_UNDERSCORE, "_");
+    CASESDLK12TONAME(SDLK12_BACKQUOTE, "`");
+    CASESDLK12TONAME(SDLK12_a, "a");
+    CASESDLK12TONAME(SDLK12_b, "b");
+    CASESDLK12TONAME(SDLK12_c, "c");
+    CASESDLK12TONAME(SDLK12_d, "d");
+    CASESDLK12TONAME(SDLK12_e, "e");
+    CASESDLK12TONAME(SDLK12_f, "f");
+    CASESDLK12TONAME(SDLK12_g, "g");
+    CASESDLK12TONAME(SDLK12_h, "h");
+    CASESDLK12TONAME(SDLK12_i, "i");
+    CASESDLK12TONAME(SDLK12_j, "j");
+    CASESDLK12TONAME(SDLK12_k, "k");
+    CASESDLK12TONAME(SDLK12_l, "l");
+    CASESDLK12TONAME(SDLK12_m, "m");
+    CASESDLK12TONAME(SDLK12_n, "n");
+    CASESDLK12TONAME(SDLK12_o, "o");
+    CASESDLK12TONAME(SDLK12_p, "p");
+    CASESDLK12TONAME(SDLK12_q, "q");
+    CASESDLK12TONAME(SDLK12_r, "r");
+    CASESDLK12TONAME(SDLK12_s, "s");
+    CASESDLK12TONAME(SDLK12_t, "t");
+    CASESDLK12TONAME(SDLK12_u, "u");
+    CASESDLK12TONAME(SDLK12_v, "v");
+    CASESDLK12TONAME(SDLK12_w, "w");
+    CASESDLK12TONAME(SDLK12_x, "x");
+    CASESDLK12TONAME(SDLK12_y, "y");
+    CASESDLK12TONAME(SDLK12_z, "z");
+    CASESDLK12TONAME(SDLK12_DELETE, "delete");
 
-	    CASESDLK12TONAME(SDLK12_WORLD_0, "world 0");
-	    CASESDLK12TONAME(SDLK12_WORLD_1, "world 1");
-	    CASESDLK12TONAME(SDLK12_WORLD_2, "world 2");
-	    CASESDLK12TONAME(SDLK12_WORLD_3, "world 3");
-	    CASESDLK12TONAME(SDLK12_WORLD_4, "world 4");
-	    CASESDLK12TONAME(SDLK12_WORLD_5, "world 5");
-	    CASESDLK12TONAME(SDLK12_WORLD_6, "world 6");
-	    CASESDLK12TONAME(SDLK12_WORLD_7, "world 7");
-	    CASESDLK12TONAME(SDLK12_WORLD_8, "world 8");
-	    CASESDLK12TONAME(SDLK12_WORLD_9, "world 9");
-	    CASESDLK12TONAME(SDLK12_WORLD_10, "world 10");
-	    CASESDLK12TONAME(SDLK12_WORLD_11, "world 11");
-	    CASESDLK12TONAME(SDLK12_WORLD_12, "world 12");
-	    CASESDLK12TONAME(SDLK12_WORLD_13, "world 13");
-	    CASESDLK12TONAME(SDLK12_WORLD_14, "world 14");
-	    CASESDLK12TONAME(SDLK12_WORLD_15, "world 15");
-	    CASESDLK12TONAME(SDLK12_WORLD_16, "world 16");
-	    CASESDLK12TONAME(SDLK12_WORLD_17, "world 17");
-	    CASESDLK12TONAME(SDLK12_WORLD_18, "world 18");
-	    CASESDLK12TONAME(SDLK12_WORLD_19, "world 19");
-	    CASESDLK12TONAME(SDLK12_WORLD_20, "world 20");
-	    CASESDLK12TONAME(SDLK12_WORLD_21, "world 21");
-	    CASESDLK12TONAME(SDLK12_WORLD_22, "world 22");
-	    CASESDLK12TONAME(SDLK12_WORLD_23, "world 23");
-	    CASESDLK12TONAME(SDLK12_WORLD_24, "world 24");
-	    CASESDLK12TONAME(SDLK12_WORLD_25, "world 25");
-	    CASESDLK12TONAME(SDLK12_WORLD_26, "world 26");
-	    CASESDLK12TONAME(SDLK12_WORLD_27, "world 27");
-	    CASESDLK12TONAME(SDLK12_WORLD_28, "world 28");
-	    CASESDLK12TONAME(SDLK12_WORLD_29, "world 29");
-	    CASESDLK12TONAME(SDLK12_WORLD_30, "world 30");
-	    CASESDLK12TONAME(SDLK12_WORLD_31, "world 31");
-	    CASESDLK12TONAME(SDLK12_WORLD_32, "world 32");
-	    CASESDLK12TONAME(SDLK12_WORLD_33, "world 33");
-	    CASESDLK12TONAME(SDLK12_WORLD_34, "world 34");
-	    CASESDLK12TONAME(SDLK12_WORLD_35, "world 35");
-	    CASESDLK12TONAME(SDLK12_WORLD_36, "world 36");
-	    CASESDLK12TONAME(SDLK12_WORLD_37, "world 37");
-	    CASESDLK12TONAME(SDLK12_WORLD_38, "world 38");
-	    CASESDLK12TONAME(SDLK12_WORLD_39, "world 39");
-	    CASESDLK12TONAME(SDLK12_WORLD_40, "world 40");
-	    CASESDLK12TONAME(SDLK12_WORLD_41, "world 41");
-	    CASESDLK12TONAME(SDLK12_WORLD_42, "world 42");
-	    CASESDLK12TONAME(SDLK12_WORLD_43, "world 43");
-	    CASESDLK12TONAME(SDLK12_WORLD_44, "world 44");
-	    CASESDLK12TONAME(SDLK12_WORLD_45, "world 45");
-	    CASESDLK12TONAME(SDLK12_WORLD_46, "world 46");
-	    CASESDLK12TONAME(SDLK12_WORLD_47, "world 47");
-	    CASESDLK12TONAME(SDLK12_WORLD_48, "world 48");
-	    CASESDLK12TONAME(SDLK12_WORLD_49, "world 49");
-	    CASESDLK12TONAME(SDLK12_WORLD_50, "world 50");
-	    CASESDLK12TONAME(SDLK12_WORLD_51, "world 51");
-	    CASESDLK12TONAME(SDLK12_WORLD_52, "world 52");
-	    CASESDLK12TONAME(SDLK12_WORLD_53, "world 53");
-	    CASESDLK12TONAME(SDLK12_WORLD_54, "world 54");
-	    CASESDLK12TONAME(SDLK12_WORLD_55, "world 55");
-	    CASESDLK12TONAME(SDLK12_WORLD_56, "world 56");
-	    CASESDLK12TONAME(SDLK12_WORLD_57, "world 57");
-	    CASESDLK12TONAME(SDLK12_WORLD_58, "world 58");
-	    CASESDLK12TONAME(SDLK12_WORLD_59, "world 59");
-	    CASESDLK12TONAME(SDLK12_WORLD_60, "world 60");
-	    CASESDLK12TONAME(SDLK12_WORLD_61, "world 61");
-	    CASESDLK12TONAME(SDLK12_WORLD_62, "world 62");
-	    CASESDLK12TONAME(SDLK12_WORLD_63, "world 63");
-	    CASESDLK12TONAME(SDLK12_WORLD_64, "world 64");
-	    CASESDLK12TONAME(SDLK12_WORLD_65, "world 65");
-	    CASESDLK12TONAME(SDLK12_WORLD_66, "world 66");
-	    CASESDLK12TONAME(SDLK12_WORLD_67, "world 67");
-	    CASESDLK12TONAME(SDLK12_WORLD_68, "world 68");
-	    CASESDLK12TONAME(SDLK12_WORLD_69, "world 69");
-	    CASESDLK12TONAME(SDLK12_WORLD_70, "world 70");
-	    CASESDLK12TONAME(SDLK12_WORLD_71, "world 71");
-	    CASESDLK12TONAME(SDLK12_WORLD_72, "world 72");
-	    CASESDLK12TONAME(SDLK12_WORLD_73, "world 73");
-	    CASESDLK12TONAME(SDLK12_WORLD_74, "world 74");
-	    CASESDLK12TONAME(SDLK12_WORLD_75, "world 75");
-	    CASESDLK12TONAME(SDLK12_WORLD_76, "world 76");
-	    CASESDLK12TONAME(SDLK12_WORLD_77, "world 77");
-	    CASESDLK12TONAME(SDLK12_WORLD_78, "world 78");
-	    CASESDLK12TONAME(SDLK12_WORLD_79, "world 79");
-	    CASESDLK12TONAME(SDLK12_WORLD_80, "world 80");
-	    CASESDLK12TONAME(SDLK12_WORLD_81, "world 81");
-	    CASESDLK12TONAME(SDLK12_WORLD_82, "world 82");
-	    CASESDLK12TONAME(SDLK12_WORLD_83, "world 83");
-	    CASESDLK12TONAME(SDLK12_WORLD_84, "world 84");
-	    CASESDLK12TONAME(SDLK12_WORLD_85, "world 85");
-	    CASESDLK12TONAME(SDLK12_WORLD_86, "world 86");
-	    CASESDLK12TONAME(SDLK12_WORLD_87, "world 87");
-	    CASESDLK12TONAME(SDLK12_WORLD_88, "world 88");
-	    CASESDLK12TONAME(SDLK12_WORLD_89, "world 89");
-	    CASESDLK12TONAME(SDLK12_WORLD_90, "world 90");
-	    CASESDLK12TONAME(SDLK12_WORLD_91, "world 91");
-	    CASESDLK12TONAME(SDLK12_WORLD_92, "world 92");
-	    CASESDLK12TONAME(SDLK12_WORLD_93, "world 93");
-	    CASESDLK12TONAME(SDLK12_WORLD_94, "world 94");
-	    CASESDLK12TONAME(SDLK12_WORLD_95, "world 95");
+    CASESDLK12TONAME(SDLK12_WORLD_0, "world 0");
+    CASESDLK12TONAME(SDLK12_WORLD_1, "world 1");
+    CASESDLK12TONAME(SDLK12_WORLD_2, "world 2");
+    CASESDLK12TONAME(SDLK12_WORLD_3, "world 3");
+    CASESDLK12TONAME(SDLK12_WORLD_4, "world 4");
+    CASESDLK12TONAME(SDLK12_WORLD_5, "world 5");
+    CASESDLK12TONAME(SDLK12_WORLD_6, "world 6");
+    CASESDLK12TONAME(SDLK12_WORLD_7, "world 7");
+    CASESDLK12TONAME(SDLK12_WORLD_8, "world 8");
+    CASESDLK12TONAME(SDLK12_WORLD_9, "world 9");
+    CASESDLK12TONAME(SDLK12_WORLD_10, "world 10");
+    CASESDLK12TONAME(SDLK12_WORLD_11, "world 11");
+    CASESDLK12TONAME(SDLK12_WORLD_12, "world 12");
+    CASESDLK12TONAME(SDLK12_WORLD_13, "world 13");
+    CASESDLK12TONAME(SDLK12_WORLD_14, "world 14");
+    CASESDLK12TONAME(SDLK12_WORLD_15, "world 15");
+    CASESDLK12TONAME(SDLK12_WORLD_16, "world 16");
+    CASESDLK12TONAME(SDLK12_WORLD_17, "world 17");
+    CASESDLK12TONAME(SDLK12_WORLD_18, "world 18");
+    CASESDLK12TONAME(SDLK12_WORLD_19, "world 19");
+    CASESDLK12TONAME(SDLK12_WORLD_20, "world 20");
+    CASESDLK12TONAME(SDLK12_WORLD_21, "world 21");
+    CASESDLK12TONAME(SDLK12_WORLD_22, "world 22");
+    CASESDLK12TONAME(SDLK12_WORLD_23, "world 23");
+    CASESDLK12TONAME(SDLK12_WORLD_24, "world 24");
+    CASESDLK12TONAME(SDLK12_WORLD_25, "world 25");
+    CASESDLK12TONAME(SDLK12_WORLD_26, "world 26");
+    CASESDLK12TONAME(SDLK12_WORLD_27, "world 27");
+    CASESDLK12TONAME(SDLK12_WORLD_28, "world 28");
+    CASESDLK12TONAME(SDLK12_WORLD_29, "world 29");
+    CASESDLK12TONAME(SDLK12_WORLD_30, "world 30");
+    CASESDLK12TONAME(SDLK12_WORLD_31, "world 31");
+    CASESDLK12TONAME(SDLK12_WORLD_32, "world 32");
+    CASESDLK12TONAME(SDLK12_WORLD_33, "world 33");
+    CASESDLK12TONAME(SDLK12_WORLD_34, "world 34");
+    CASESDLK12TONAME(SDLK12_WORLD_35, "world 35");
+    CASESDLK12TONAME(SDLK12_WORLD_36, "world 36");
+    CASESDLK12TONAME(SDLK12_WORLD_37, "world 37");
+    CASESDLK12TONAME(SDLK12_WORLD_38, "world 38");
+    CASESDLK12TONAME(SDLK12_WORLD_39, "world 39");
+    CASESDLK12TONAME(SDLK12_WORLD_40, "world 40");
+    CASESDLK12TONAME(SDLK12_WORLD_41, "world 41");
+    CASESDLK12TONAME(SDLK12_WORLD_42, "world 42");
+    CASESDLK12TONAME(SDLK12_WORLD_43, "world 43");
+    CASESDLK12TONAME(SDLK12_WORLD_44, "world 44");
+    CASESDLK12TONAME(SDLK12_WORLD_45, "world 45");
+    CASESDLK12TONAME(SDLK12_WORLD_46, "world 46");
+    CASESDLK12TONAME(SDLK12_WORLD_47, "world 47");
+    CASESDLK12TONAME(SDLK12_WORLD_48, "world 48");
+    CASESDLK12TONAME(SDLK12_WORLD_49, "world 49");
+    CASESDLK12TONAME(SDLK12_WORLD_50, "world 50");
+    CASESDLK12TONAME(SDLK12_WORLD_51, "world 51");
+    CASESDLK12TONAME(SDLK12_WORLD_52, "world 52");
+    CASESDLK12TONAME(SDLK12_WORLD_53, "world 53");
+    CASESDLK12TONAME(SDLK12_WORLD_54, "world 54");
+    CASESDLK12TONAME(SDLK12_WORLD_55, "world 55");
+    CASESDLK12TONAME(SDLK12_WORLD_56, "world 56");
+    CASESDLK12TONAME(SDLK12_WORLD_57, "world 57");
+    CASESDLK12TONAME(SDLK12_WORLD_58, "world 58");
+    CASESDLK12TONAME(SDLK12_WORLD_59, "world 59");
+    CASESDLK12TONAME(SDLK12_WORLD_60, "world 60");
+    CASESDLK12TONAME(SDLK12_WORLD_61, "world 61");
+    CASESDLK12TONAME(SDLK12_WORLD_62, "world 62");
+    CASESDLK12TONAME(SDLK12_WORLD_63, "world 63");
+    CASESDLK12TONAME(SDLK12_WORLD_64, "world 64");
+    CASESDLK12TONAME(SDLK12_WORLD_65, "world 65");
+    CASESDLK12TONAME(SDLK12_WORLD_66, "world 66");
+    CASESDLK12TONAME(SDLK12_WORLD_67, "world 67");
+    CASESDLK12TONAME(SDLK12_WORLD_68, "world 68");
+    CASESDLK12TONAME(SDLK12_WORLD_69, "world 69");
+    CASESDLK12TONAME(SDLK12_WORLD_70, "world 70");
+    CASESDLK12TONAME(SDLK12_WORLD_71, "world 71");
+    CASESDLK12TONAME(SDLK12_WORLD_72, "world 72");
+    CASESDLK12TONAME(SDLK12_WORLD_73, "world 73");
+    CASESDLK12TONAME(SDLK12_WORLD_74, "world 74");
+    CASESDLK12TONAME(SDLK12_WORLD_75, "world 75");
+    CASESDLK12TONAME(SDLK12_WORLD_76, "world 76");
+    CASESDLK12TONAME(SDLK12_WORLD_77, "world 77");
+    CASESDLK12TONAME(SDLK12_WORLD_78, "world 78");
+    CASESDLK12TONAME(SDLK12_WORLD_79, "world 79");
+    CASESDLK12TONAME(SDLK12_WORLD_80, "world 80");
+    CASESDLK12TONAME(SDLK12_WORLD_81, "world 81");
+    CASESDLK12TONAME(SDLK12_WORLD_82, "world 82");
+    CASESDLK12TONAME(SDLK12_WORLD_83, "world 83");
+    CASESDLK12TONAME(SDLK12_WORLD_84, "world 84");
+    CASESDLK12TONAME(SDLK12_WORLD_85, "world 85");
+    CASESDLK12TONAME(SDLK12_WORLD_86, "world 86");
+    CASESDLK12TONAME(SDLK12_WORLD_87, "world 87");
+    CASESDLK12TONAME(SDLK12_WORLD_88, "world 88");
+    CASESDLK12TONAME(SDLK12_WORLD_89, "world 89");
+    CASESDLK12TONAME(SDLK12_WORLD_90, "world 90");
+    CASESDLK12TONAME(SDLK12_WORLD_91, "world 91");
+    CASESDLK12TONAME(SDLK12_WORLD_92, "world 92");
+    CASESDLK12TONAME(SDLK12_WORLD_93, "world 93");
+    CASESDLK12TONAME(SDLK12_WORLD_94, "world 94");
+    CASESDLK12TONAME(SDLK12_WORLD_95, "world 95");
 
-	    CASESDLK12TONAME(SDLK12_KP0, "[0]");
-	    CASESDLK12TONAME(SDLK12_KP1, "[1]");
-	    CASESDLK12TONAME(SDLK12_KP2, "[2]");
-	    CASESDLK12TONAME(SDLK12_KP3, "[3]");
-	    CASESDLK12TONAME(SDLK12_KP4, "[4]");
-	    CASESDLK12TONAME(SDLK12_KP5, "[5]");
-	    CASESDLK12TONAME(SDLK12_KP6, "[6]");
-	    CASESDLK12TONAME(SDLK12_KP7, "[7]");
-	    CASESDLK12TONAME(SDLK12_KP8, "[8]");
-	    CASESDLK12TONAME(SDLK12_KP9, "[9]");
-	    CASESDLK12TONAME(SDLK12_KP_PERIOD, "[.]");
-	    CASESDLK12TONAME(SDLK12_KP_DIVIDE, "[/]");
-	    CASESDLK12TONAME(SDLK12_KP_MULTIPLY, "[*]");
-	    CASESDLK12TONAME(SDLK12_KP_MINUS, "[-]");
-	    CASESDLK12TONAME(SDLK12_KP_PLUS, "[+]");
-	    CASESDLK12TONAME(SDLK12_KP_ENTER, "enter");
-	    CASESDLK12TONAME(SDLK12_KP_EQUALS, "equals");
+    CASESDLK12TONAME(SDLK12_KP0, "[0]");
+    CASESDLK12TONAME(SDLK12_KP1, "[1]");
+    CASESDLK12TONAME(SDLK12_KP2, "[2]");
+    CASESDLK12TONAME(SDLK12_KP3, "[3]");
+    CASESDLK12TONAME(SDLK12_KP4, "[4]");
+    CASESDLK12TONAME(SDLK12_KP5, "[5]");
+    CASESDLK12TONAME(SDLK12_KP6, "[6]");
+    CASESDLK12TONAME(SDLK12_KP7, "[7]");
+    CASESDLK12TONAME(SDLK12_KP8, "[8]");
+    CASESDLK12TONAME(SDLK12_KP9, "[9]");
+    CASESDLK12TONAME(SDLK12_KP_PERIOD, "[.]");
+    CASESDLK12TONAME(SDLK12_KP_DIVIDE, "[/]");
+    CASESDLK12TONAME(SDLK12_KP_MULTIPLY, "[*]");
+    CASESDLK12TONAME(SDLK12_KP_MINUS, "[-]");
+    CASESDLK12TONAME(SDLK12_KP_PLUS, "[+]");
+    CASESDLK12TONAME(SDLK12_KP_ENTER, "enter");
+    CASESDLK12TONAME(SDLK12_KP_EQUALS, "equals");
 
-	    CASESDLK12TONAME(SDLK12_UP, "up");
-	    CASESDLK12TONAME(SDLK12_DOWN, "down");
-	    CASESDLK12TONAME(SDLK12_RIGHT, "right");
-	    CASESDLK12TONAME(SDLK12_LEFT, "left");
-	    CASESDLK12TONAME(SDLK12_INSERT, "insert");
-	    CASESDLK12TONAME(SDLK12_HOME, "home");
-	    CASESDLK12TONAME(SDLK12_END, "end");
-	    CASESDLK12TONAME(SDLK12_PAGEUP, "page up");
-	    CASESDLK12TONAME(SDLK12_PAGEDOWN, "page down");
+    CASESDLK12TONAME(SDLK12_UP, "up");
+    CASESDLK12TONAME(SDLK12_DOWN, "down");
+    CASESDLK12TONAME(SDLK12_RIGHT, "right");
+    CASESDLK12TONAME(SDLK12_LEFT, "left");
+    CASESDLK12TONAME(SDLK12_INSERT, "insert");
+    CASESDLK12TONAME(SDLK12_HOME, "home");
+    CASESDLK12TONAME(SDLK12_END, "end");
+    CASESDLK12TONAME(SDLK12_PAGEUP, "page up");
+    CASESDLK12TONAME(SDLK12_PAGEDOWN, "page down");
 
-	    CASESDLK12TONAME(SDLK12_F1, "f1");
-	    CASESDLK12TONAME(SDLK12_F2, "f2");
-	    CASESDLK12TONAME(SDLK12_F3, "f3");
-	    CASESDLK12TONAME(SDLK12_F4, "f4");
-	    CASESDLK12TONAME(SDLK12_F5, "f5");
-	    CASESDLK12TONAME(SDLK12_F6, "f6");
-	    CASESDLK12TONAME(SDLK12_F7, "f7");
-	    CASESDLK12TONAME(SDLK12_F8, "f8");
-	    CASESDLK12TONAME(SDLK12_F9, "f9");
-	    CASESDLK12TONAME(SDLK12_F10, "f10");
-	    CASESDLK12TONAME(SDLK12_F11, "f11");
-	    CASESDLK12TONAME(SDLK12_F12, "f12");
-	    CASESDLK12TONAME(SDLK12_F13, "f13");
-	    CASESDLK12TONAME(SDLK12_F14, "f14");
-	    CASESDLK12TONAME(SDLK12_F15, "f15");
+    CASESDLK12TONAME(SDLK12_F1, "f1");
+    CASESDLK12TONAME(SDLK12_F2, "f2");
+    CASESDLK12TONAME(SDLK12_F3, "f3");
+    CASESDLK12TONAME(SDLK12_F4, "f4");
+    CASESDLK12TONAME(SDLK12_F5, "f5");
+    CASESDLK12TONAME(SDLK12_F6, "f6");
+    CASESDLK12TONAME(SDLK12_F7, "f7");
+    CASESDLK12TONAME(SDLK12_F8, "f8");
+    CASESDLK12TONAME(SDLK12_F9, "f9");
+    CASESDLK12TONAME(SDLK12_F10, "f10");
+    CASESDLK12TONAME(SDLK12_F11, "f11");
+    CASESDLK12TONAME(SDLK12_F12, "f12");
+    CASESDLK12TONAME(SDLK12_F13, "f13");
+    CASESDLK12TONAME(SDLK12_F14, "f14");
+    CASESDLK12TONAME(SDLK12_F15, "f15");
 
-	    CASESDLK12TONAME(SDLK12_NUMLOCK, "numlock");
-	    CASESDLK12TONAME(SDLK12_CAPSLOCK, "caps lock");
-	    CASESDLK12TONAME(SDLK12_SCROLLOCK, "scroll lock");
-	    CASESDLK12TONAME(SDLK12_RSHIFT, "right shift");
-	    CASESDLK12TONAME(SDLK12_LSHIFT, "left shift");
-	    CASESDLK12TONAME(SDLK12_RCTRL, "right ctrl");
-	    CASESDLK12TONAME(SDLK12_LCTRL, "left ctrl");
-	    CASESDLK12TONAME(SDLK12_RALT, "right alt");
-	    CASESDLK12TONAME(SDLK12_LALT, "left alt");
-	    CASESDLK12TONAME(SDLK12_RMETA, "right meta");
-	    CASESDLK12TONAME(SDLK12_LMETA, "left meta");
-	    CASESDLK12TONAME(SDLK12_LSUPER, "left super");	/* "Windows" keys */
-	    CASESDLK12TONAME(SDLK12_RSUPER, "right super");	
-	    CASESDLK12TONAME(SDLK12_MODE, "alt gr");
-	    CASESDLK12TONAME(SDLK12_COMPOSE, "compose");
+    CASESDLK12TONAME(SDLK12_NUMLOCK, "numlock");
+    CASESDLK12TONAME(SDLK12_CAPSLOCK, "caps lock");
+    CASESDLK12TONAME(SDLK12_SCROLLOCK, "scroll lock");
+    CASESDLK12TONAME(SDLK12_RSHIFT, "right shift");
+    CASESDLK12TONAME(SDLK12_LSHIFT, "left shift");
+    CASESDLK12TONAME(SDLK12_RCTRL, "right ctrl");
+    CASESDLK12TONAME(SDLK12_LCTRL, "left ctrl");
+    CASESDLK12TONAME(SDLK12_RALT, "right alt");
+    CASESDLK12TONAME(SDLK12_LALT, "left alt");
+    CASESDLK12TONAME(SDLK12_RMETA, "right meta");
+    CASESDLK12TONAME(SDLK12_LMETA, "left meta");
+    CASESDLK12TONAME(SDLK12_LSUPER, "left super"); /* "Windows" keys */
+    CASESDLK12TONAME(SDLK12_RSUPER, "right super");
+    CASESDLK12TONAME(SDLK12_MODE, "alt gr");
+    CASESDLK12TONAME(SDLK12_COMPOSE, "compose");
 
-	    CASESDLK12TONAME(SDLK12_HELP, "help");
-	    CASESDLK12TONAME(SDLK12_PRINT, "print screen");
-	    CASESDLK12TONAME(SDLK12_SYSREQ, "sys req");
-	    CASESDLK12TONAME(SDLK12_BREAK, "break");
-	    CASESDLK12TONAME(SDLK12_MENU, "menu");
-	    CASESDLK12TONAME(SDLK12_POWER, "power");
-	    CASESDLK12TONAME(SDLK12_EURO, "euro");
-	    CASESDLK12TONAME(SDLK12_UNDO, "undo");
-        #undef CASESDLK12TONAME
-        default: break;
+    CASESDLK12TONAME(SDLK12_HELP, "help");
+    CASESDLK12TONAME(SDLK12_PRINT, "print screen");
+    CASESDLK12TONAME(SDLK12_SYSREQ, "sys req");
+    CASESDLK12TONAME(SDLK12_BREAK, "break");
+    CASESDLK12TONAME(SDLK12_MENU, "menu");
+    CASESDLK12TONAME(SDLK12_POWER, "power");
+    CASESDLK12TONAME(SDLK12_EURO, "euro");
+    CASESDLK12TONAME(SDLK12_UNDO, "undo");
+    #undef CASESDLK12TONAME
+    default: break;
     }
 
     return (char *) "unknown key";
@@ -1985,73 +1983,73 @@ Keysym20to12(const SDL_Keycode keysym20)
     }
 
     switch (keysym20) {
-        #define CASEKEYSYM20TO12(k20, k12) case SDLK_##k20: return SDLK12_##k12
-        CASEKEYSYM20TO12(KP_0, KP0);
-        CASEKEYSYM20TO12(KP_1, KP1);
-        CASEKEYSYM20TO12(KP_2, KP2);
-        CASEKEYSYM20TO12(KP_3, KP3);
-        CASEKEYSYM20TO12(KP_4, KP4);
-        CASEKEYSYM20TO12(KP_5, KP5);
-        CASEKEYSYM20TO12(KP_6, KP6);
-        CASEKEYSYM20TO12(KP_7, KP7);
-        CASEKEYSYM20TO12(KP_8, KP8);
-        CASEKEYSYM20TO12(KP_9, KP9);
-        CASEKEYSYM20TO12(NUMLOCKCLEAR, NUMLOCK);
-        CASEKEYSYM20TO12(SCROLLLOCK, SCROLLOCK);
-        CASEKEYSYM20TO12(RGUI, RMETA);
-        CASEKEYSYM20TO12(LGUI, LMETA);
-        CASEKEYSYM20TO12(PRINTSCREEN, PRINT);
-        #undef CASEKEYSYM20TO12
+    #define CASEKEYSYM20TO12(k20, k12) case SDLK_##k20: return SDLK12_##k12
+    CASEKEYSYM20TO12(KP_0, KP0);
+    CASEKEYSYM20TO12(KP_1, KP1);
+    CASEKEYSYM20TO12(KP_2, KP2);
+    CASEKEYSYM20TO12(KP_3, KP3);
+    CASEKEYSYM20TO12(KP_4, KP4);
+    CASEKEYSYM20TO12(KP_5, KP5);
+    CASEKEYSYM20TO12(KP_6, KP6);
+    CASEKEYSYM20TO12(KP_7, KP7);
+    CASEKEYSYM20TO12(KP_8, KP8);
+    CASEKEYSYM20TO12(KP_9, KP9);
+    CASEKEYSYM20TO12(NUMLOCKCLEAR, NUMLOCK);
+    CASEKEYSYM20TO12(SCROLLLOCK, SCROLLOCK);
+    CASEKEYSYM20TO12(RGUI, RMETA);
+    CASEKEYSYM20TO12(LGUI, LMETA);
+    CASEKEYSYM20TO12(PRINTSCREEN, PRINT);
+    #undef CASEKEYSYM20TO12
 
-        #define CASEKEYSYM20TO12(k) case SDLK_##k: return SDLK12_##k
-        CASEKEYSYM20TO12(CLEAR);
-        CASEKEYSYM20TO12(PAUSE);
-        CASEKEYSYM20TO12(KP_PERIOD);
-        CASEKEYSYM20TO12(KP_DIVIDE);
-        CASEKEYSYM20TO12(KP_MULTIPLY);
-        CASEKEYSYM20TO12(KP_MINUS);
-        CASEKEYSYM20TO12(KP_PLUS);
-        CASEKEYSYM20TO12(KP_ENTER);
-        CASEKEYSYM20TO12(KP_EQUALS);
-        CASEKEYSYM20TO12(UP);
-        CASEKEYSYM20TO12(DOWN);
-        CASEKEYSYM20TO12(RIGHT);
-        CASEKEYSYM20TO12(LEFT);
-        CASEKEYSYM20TO12(INSERT);
-        CASEKEYSYM20TO12(HOME);
-        CASEKEYSYM20TO12(END);
-        CASEKEYSYM20TO12(PAGEUP);
-        CASEKEYSYM20TO12(PAGEDOWN);
-        CASEKEYSYM20TO12(F1);
-        CASEKEYSYM20TO12(F2);
-        CASEKEYSYM20TO12(F3);
-        CASEKEYSYM20TO12(F4);
-        CASEKEYSYM20TO12(F5);
-        CASEKEYSYM20TO12(F6);
-        CASEKEYSYM20TO12(F7);
-        CASEKEYSYM20TO12(F8);
-        CASEKEYSYM20TO12(F9);
-        CASEKEYSYM20TO12(F10);
-        CASEKEYSYM20TO12(F11);
-        CASEKEYSYM20TO12(F12);
-        CASEKEYSYM20TO12(F13);
-        CASEKEYSYM20TO12(F14);
-        CASEKEYSYM20TO12(F15);
-        CASEKEYSYM20TO12(CAPSLOCK);
-        CASEKEYSYM20TO12(RSHIFT);
-        CASEKEYSYM20TO12(LSHIFT);
-        CASEKEYSYM20TO12(RCTRL);
-        CASEKEYSYM20TO12(LCTRL);
-        CASEKEYSYM20TO12(RALT);
-        CASEKEYSYM20TO12(LALT);
-        CASEKEYSYM20TO12(MODE);
-        CASEKEYSYM20TO12(HELP);
-        CASEKEYSYM20TO12(SYSREQ);;
-        CASEKEYSYM20TO12(MENU);
-        CASEKEYSYM20TO12(POWER);
-        CASEKEYSYM20TO12(UNDO);
-        #undef CASEKEYSYM20TO12
-        default: break;
+    #define CASEKEYSYM20TO12(k) case SDLK_##k: return SDLK12_##k
+    CASEKEYSYM20TO12(CLEAR);
+    CASEKEYSYM20TO12(PAUSE);
+    CASEKEYSYM20TO12(KP_PERIOD);
+    CASEKEYSYM20TO12(KP_DIVIDE);
+    CASEKEYSYM20TO12(KP_MULTIPLY);
+    CASEKEYSYM20TO12(KP_MINUS);
+    CASEKEYSYM20TO12(KP_PLUS);
+    CASEKEYSYM20TO12(KP_ENTER);
+    CASEKEYSYM20TO12(KP_EQUALS);
+    CASEKEYSYM20TO12(UP);
+    CASEKEYSYM20TO12(DOWN);
+    CASEKEYSYM20TO12(RIGHT);
+    CASEKEYSYM20TO12(LEFT);
+    CASEKEYSYM20TO12(INSERT);
+    CASEKEYSYM20TO12(HOME);
+    CASEKEYSYM20TO12(END);
+    CASEKEYSYM20TO12(PAGEUP);
+    CASEKEYSYM20TO12(PAGEDOWN);
+    CASEKEYSYM20TO12(F1);
+    CASEKEYSYM20TO12(F2);
+    CASEKEYSYM20TO12(F3);
+    CASEKEYSYM20TO12(F4);
+    CASEKEYSYM20TO12(F5);
+    CASEKEYSYM20TO12(F6);
+    CASEKEYSYM20TO12(F7);
+    CASEKEYSYM20TO12(F8);
+    CASEKEYSYM20TO12(F9);
+    CASEKEYSYM20TO12(F10);
+    CASEKEYSYM20TO12(F11);
+    CASEKEYSYM20TO12(F12);
+    CASEKEYSYM20TO12(F13);
+    CASEKEYSYM20TO12(F14);
+    CASEKEYSYM20TO12(F15);
+    CASEKEYSYM20TO12(CAPSLOCK);
+    CASEKEYSYM20TO12(RSHIFT);
+    CASEKEYSYM20TO12(LSHIFT);
+    CASEKEYSYM20TO12(RCTRL);
+    CASEKEYSYM20TO12(LCTRL);
+    CASEKEYSYM20TO12(RALT);
+    CASEKEYSYM20TO12(LALT);
+    CASEKEYSYM20TO12(MODE);
+    CASEKEYSYM20TO12(HELP);
+    CASEKEYSYM20TO12(SYSREQ);;
+    CASEKEYSYM20TO12(MENU);
+    CASEKEYSYM20TO12(POWER);
+    CASEKEYSYM20TO12(UNDO);
+    #undef CASEKEYSYM20TO12
+    default: break;
     }
 
     FIXME("nothing maps to SDLK12_COMPOSE, SDLK12_BREAK, or SDLK12_EURO ...?");
@@ -2072,7 +2070,7 @@ SDL_GetKeyState(int *numkeys)
 static int SDLCALL
 EventFilter20to12(void *data, SDL_Event *event20)
 {
-    //const int maxUserEvents12 = SDL12_NUMEVENTS - SDL12_USEREVENT;
+    /*const int maxUserEvents12 = SDL12_NUMEVENTS - SDL12_USEREVENT;*/
     SDL12_Event event12;
 
     SDL_assert(data == NULL);  /* currently unused. */
@@ -2143,7 +2141,7 @@ EventFilter20to12(void *data, SDL_Event *event20)
             }
             break;
 
-        // !!! FIXME: this is sort of a mess to convert.
+        /* !!! FIXME: this is sort of a mess to convert. */
         case SDL_SYSWMEVENT: FIXME("write me"); return 1;
 
         case SDL_KEYUP:
@@ -2162,7 +2160,7 @@ EventFilter20to12(void *data, SDL_Event *event20)
             event12.key.which = 0;
             event12.key.state = event20->key.state;
             FIXME("SDL1.2 and SDL2.0 scancodes are incompatible");
-            // turns out that some apps actually made use of the hardware scancodes (checking for platform beforehand)
+            /* turns out that some apps actually made use of the hardware scancodes (checking for platform beforehand) */
             event12.key.keysym.scancode = 0;
             event12.key.keysym.mod = event20->key.keysym.mod;  /* these match up between 1.2 and 2.0! */
             FIXME("unicode");
@@ -2273,22 +2271,24 @@ EventFilter20to12(void *data, SDL_Event *event20)
             event12.jbutton.state = event20->jbutton.state;
             break;
 
-        //case SDL_JOYDEVICEADDED:
-        //case SDL_JOYDEVICEREMOVED:
-        //case SDL_CONTROLLERAXISMOTION:
-        //case SDL_CONTROLLERBUTTONDOWN:
-        //case SDL_CONTROLLERBUTTONUP:
-        //case SDL_CONTROLLERDEVICEADDED:
-        //case SDL_CONTROLLERDEVICEREMOVED:
-        //case SDL_CONTROLLERDEVICEREMAPPED:
-        //case SDL_FINGERDOWN:
-        //case SDL_FINGERUP:
-        //case SDL_FINGERMOTION:
-        //case SDL_DOLLARGESTURE:
-        //case SDL_DOLLARRECORD:
-        //case SDL_MULTIGESTURE:
-        //case SDL_CLIPBOARDUPDATE:
-        //case SDL_DROPFILE:
+        /*
+        case SDL_JOYDEVICEADDED:
+        case SDL_JOYDEVICEREMOVED:
+        case SDL_CONTROLLERAXISMOTION:
+        case SDL_CONTROLLERBUTTONDOWN:
+        case SDL_CONTROLLERBUTTONUP:
+        case SDL_CONTROLLERDEVICEADDED:
+        case SDL_CONTROLLERDEVICEREMOVED:
+        case SDL_CONTROLLERDEVICEREMAPPED:
+        case SDL_FINGERDOWN:
+        case SDL_FINGERUP:
+        case SDL_FINGERMOTION:
+        case SDL_DOLLARGESTURE:
+        case SDL_DOLLARRECORD:
+        case SDL_MULTIGESTURE:
+        case SDL_CLIPBOARDUPDATE:
+        case SDL_DROPFILE:
+        */
 
         default:
             return 1;  /* drop everything else. */
@@ -2516,13 +2516,13 @@ SDL_CreateRGBSurface(Uint32 flags12, int width, int height, int depth, Uint32 Rm
     SDL_Surface *surface20;
     SDL12_Surface *surface12;
 
-    // SDL 1.2 checks this.
+    /* SDL 1.2 checks this. */
     if ((width >= 16384) || (height >= 65536)) {
         SDL20_SetError("Width or height is too large");
         return NULL;
     }
 
-    if (depth == 8) {  // don't pass masks to SDL2 for 8-bit surfaces, it'll cause problems.
+    if (depth == 8) {  /* don't pass masks to SDL2 for 8-bit surfaces, it'll cause problems. */
         surface20 = SDL20_CreateRGBSurface(0, width, height, depth, 0, 0, 0, 0);
     } else {
         surface20 = SDL20_CreateRGBSurface(0, width, height, depth, Rmask, Gmask, Bmask, Amask);
@@ -2534,7 +2534,7 @@ SDL_CreateRGBSurface(Uint32 flags12, int width, int height, int depth, Uint32 Rm
         return NULL;
     }
 
-    SDL_assert((surface12->flags & ~(SDL12_SRCCOLORKEY|SDL12_SRCALPHA)) == 0);  // shouldn't have prealloc, rleaccel, or dontfree.
+    SDL_assert((surface12->flags & ~(SDL12_SRCCOLORKEY|SDL12_SRCALPHA)) == 0);  /* shouldn't have prealloc, rleaccel, or dontfree. */
 
     SetPalette12ForMasks(surface12, Rmask, Gmask, Bmask);
 
@@ -2557,7 +2557,7 @@ SDL_CreateRGBSurfaceFrom(void *pixels, int width, int height, int depth, int pit
         return NULL;
     }
 
-    if (depth == 8) {  // don't pass masks to SDL2 for 8-bit surfaces, it'll cause problems.
+    if (depth == 8) {  /* don't pass masks to SDL2 for 8-bit surfaces, it'll cause problems. */
         surface20 = SDL20_CreateRGBSurfaceFrom(pixels, width, height, depth, pitch, 0, 0, 0, 0);
     } else {
         surface20 = SDL20_CreateRGBSurfaceFrom(pixels, width, height, depth, pitch, Rmask, Gmask, Bmask, Amask);
@@ -2569,7 +2569,7 @@ SDL_CreateRGBSurfaceFrom(void *pixels, int width, int height, int depth, int pit
         return NULL;
     }
 
-    SDL_assert((surface12->flags & ~(SDL12_SRCCOLORKEY|SDL12_SRCALPHA)) == SDL12_PREALLOC);  // should _only_ have prealloc.
+    SDL_assert((surface12->flags & ~(SDL12_SRCCOLORKEY|SDL12_SRCALPHA)) == SDL12_PREALLOC);  /* should _only_ have prealloc. */
 
     SetPalette12ForMasks(surface12, Rmask, Gmask, Bmask);
 
@@ -2995,9 +2995,9 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
     }
 
     if (flags12 & SDL12_FULLSCREEN) {
-        // OpenGL tries to force the real resolution requested, but for
-        //  software rendering, we're just going to push it off onto the
-        //  GPU, so use FULLSCREEN_DESKTOP and logical scaling there.
+        /* OpenGL tries to force the real resolution requested, but for
+         *  software rendering, we're just going to push it off onto the
+         *  GPU, so use FULLSCREEN_DESKTOP and logical scaling there. */
         FIXME("OpenGL will still expect letterboxing and centering if it didn't get an exact resolution match.");
         if (((flags12 & SDL12_OPENGL) == 0) || ((dmode.w == width) && (dmode.h == height))) {
             fullscreen_flags20 |= SDL_WINDOW_FULLSCREEN_DESKTOP;
@@ -3115,8 +3115,8 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
 
         VideoSurface12->flags &= ~SDL12_OPENGL;
         VideoSurface12->flags |= SDL12_DOUBLEBUF;
-        // some apps check for the presence/lack of double buffering via MUSTLOCK
-        // so set SDL12_HWSURFACE so they are less confused
+        /* some apps check for the presence/lack of double buffering via MUSTLOCK
+         * so set SDL12_HWSURFACE so they are less confused */
         VideoSurface12->flags |= SDL12_HWSURFACE;
         VideoSurface12->surface20->pixels = SDL20_malloc(height * VideoSurface12->pitch);
         VideoSurface12->pixels = VideoSurface12->surface20->pixels;
@@ -3444,9 +3444,9 @@ SDL_UpdateRects(SDL12_Surface *surface12, int numrects, SDL12_Rect *rects12)
         return;
     }
 
-    // everything else is marked SDL12_DOUBLEBUF and SHOULD BE a no-op here,
-    //  but in practice most apps never got a double-buffered surface and
-    //  don't handle it correctly, so we have to work around it.
+    /* everything else is marked SDL12_DOUBLEBUF and SHOULD BE a no-op here,
+     *  but in practice most apps never got a double-buffered surface and
+     *  don't handle it correctly, so we have to work around it. */
     if (surface12 == VideoSurface12) {
         SDL_bool whole_screen = SDL_FALSE;
         if (numrects == 1) {
@@ -3459,9 +3459,9 @@ SDL_UpdateRects(SDL12_Surface *surface12, int numrects, SDL12_Rect *rects12)
         }
 
         if (whole_screen) {
-            PresentScreen();  // flip it now.
+            PresentScreen();  /* flip it now. */
         } else {
-            VideoSurfacePresentTicks = VideoSurfaceLastPresentTicks + 15;  // flip it later.
+            VideoSurfacePresentTicks = VideoSurfaceLastPresentTicks + 15;  /* flip it later. */
         }
     }
 }
@@ -3498,10 +3498,10 @@ SDL_PumpEvents(void)
 {
     SDL_Event e;
 
-    // If the app is doing dirty rectangles, we set a flag and present the
-    //  screen surface when they pump for new events if we're close to 60Hz,
-    //  which we consider a sign that they are done rendering for the current
-    //  frame and it would make sense to send it to the screen.
+    /* If the app is doing dirty rectangles, we set a flag and present the
+     *  screen surface when they pump for new events if we're close to 60Hz,
+     *  which we consider a sign that they are done rendering for the current
+     *  frame and it would make sense to send it to the screen. */
     if (VideoSurfacePresentTicks && SDL_TICKS_PASSED(SDL20_GetTicks(), VideoSurfacePresentTicks)) {
         PresentScreen();
     }
@@ -3549,17 +3549,17 @@ SDL_WM_SetIcon(SDL12_Surface *icon12, Uint8 *mask)
         return;
     }
 
-    // take the mask and zero out those alpha values.
+    /* take the mask and zero out those alpha values. */
     oldmode = SDL_BLENDMODE_NONE;
     if (SDL20_GetSurfaceBlendMode(icon12->surface20, &oldmode) < 0) {
-        return; // oh well.
+        return; /* oh well. */
     }
     if (!SDL20_PixelFormatEnumToMasks(SDL_PIXELFORMAT_ARGB8888, &bpp, &rmask, &gmask, &bmask, &amask)) {
-        return; // oh well.
+        return; /* oh well. */
     }
     icon20 = SDL20_CreateRGBSurface(0, icon12->w, icon12->h, bpp, rmask, gmask, bmask, amask);
     if (!icon20) {
-        return; // oh well.
+        return; /* oh well. */
     }
 
     SDL20_SetSurfaceBlendMode(icon12->surface20, SDL_BLENDMODE_NONE);
@@ -3643,14 +3643,14 @@ typedef enum
 static void
 UpdateRelativeMouseMode(void)
 {
-    // in SDL 1.2, hiding+grabbing the cursor was like SDL2's relative mouse mode.
+    /* in SDL 1.2, hiding+grabbing the cursor was like SDL2's relative mouse mode. */
     if (VideoWindow20) {
         const SDL_bool enable = (VideoWindowGrabbed && VideoCursorHidden) ? SDL_TRUE : SDL_FALSE;
         if (MouseInputIsRelative != enable) {
             MouseInputIsRelative = enable;
             if (MouseInputIsRelative) {
-                // reset position, we'll have to track it ourselves in SDL_MOUSEMOTION events, since 1.2
-                //  would give you window coordinates, even in relative mode.
+                /* reset position, we'll have to track it ourselves in SDL_MOUSEMOTION events, since 1.2
+                 *  would give you window coordinates, even in relative mode. */
                 SDL_GetMouseState(&MousePositionWhenRelative.x, &MousePositionWhenRelative.y);
             }
             SDL20_SetRelativeMouseMode(MouseInputIsRelative);
@@ -3747,29 +3747,29 @@ SDL_SetPalette(SDL12_Surface *surface12, int flags, const SDL_Color *colors,
     int i, retval;
 
     if (!surface12) {
-        return 0;  // not an error, a no-op.
+        return 0;  /* not an error, a no-op. */
     }
 
     if ((flags & (SDL12_LOGPAL | SDL12_PHYSPAL)) == 0) {
-        return 0;  // nothing to do.
+        return 0;  /* nothing to do. */
     }
 
     palette12 = surface12->format->palette;
     if (!palette12) {
-        return 0;  // not an error, a no-op.
+        return 0;  /* not an error, a no-op. */
     }
 
     palette20 = surface12->surface20->format->palette;
     SDL_assert(palette20 != NULL);
 
-    // we need to force the "unused" field to 255, since it's "alpha" in SDL2.
+    /* we need to force the "unused" field to 255, since it's "alpha" in SDL2. */
     opaquecolors = (SDL_Color *) SDL20_malloc(sizeof (SDL_Color) * ncolors);
     if (!opaquecolors) {
         return SDL20_OutOfMemory();
     }
 
-    // don't SDL_memcpy in case the 'a' field is uninitialized and upsets
-    //  memory tools like Valgrind.
+    /* don't SDL_memcpy in case the 'a' field is uninitialized and upsets
+     *  memory tools like Valgrind. */
     for (i = 0; i < ncolors; i++) {
         opaquecolors[i].r = colors[i].r;
         opaquecolors[i].g = colors[i].g;
@@ -3787,12 +3787,12 @@ SDL_SetPalette(SDL12_Surface *surface12, int flags, const SDL_Color *colors,
 
     SDL20_free(opaquecolors);
 
-    // in case this pointer changed...
+    /* in case this pointer changed... */
     palette12->colors = palette20->colors;
 
-    FIXME("We need to store the physical palette somewhere");  // it might be different that logical palette and it will be needed for future blits.
+    FIXME("We need to store the physical palette somewhere");  /* it might be different that logical palette and it will be needed for future blits. */
     if ((surface12 == VideoSurface12) && (flags & SDL12_PHYSPAL)) {
-        SDL_UpdateRect(surface12, 0, 0, 0, 0);   // force screen to reblit with new palette.
+        SDL_UpdateRect(surface12, 0, 0, 0, 0);   /* force screen to reblit with new palette. */
     }
 
     return retval;
@@ -3808,7 +3808,7 @@ SDL_SetColors(SDL12_Surface *surface12, const SDL_Color * colors, int firstcolor
 DECLSPEC int SDLCALL
 SDL_GetWMInfo(SDL_SysWMinfo * info)
 {
-    //return SDL20_GetWindowWMInfo(VideoWindow20, info);
+    /*return SDL20_GetWindowWMInfo(VideoWindow20, info);src*/
     FIXME("write me");
     SDL20_Unsupported();
     return 0; /* some programs only test against 0, not -1 */
