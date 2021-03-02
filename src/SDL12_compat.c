@@ -4543,6 +4543,23 @@ SDL_OpenAudio(SDL_AudioSpec *want, SDL_AudioSpec *obtained)
     return retval;
 }
 
+/* !!! FIXME: these are just stubs for now, but Sam thinks that maybe these
+were added at Loki for Heavy Gear 2's UI. They just make GL calls. */
+void SDL_GL_Lock()
+{
+    FIXME("write me");
+}
+
+void SDL_GL_UpdateRects(int numrects, SDL_Rect *rects)
+{
+    FIXME("write me");
+}
+
+void SDL_GL_Unlock()
+{
+    FIXME("write me");
+}
+
 
 /* SDL_GL_DisableContext and SDL_GL_EnableContext_Thread are not real SDL 1.2
    APIs, but some idTech4 games shipped with a custom SDL 1.2 build that added
