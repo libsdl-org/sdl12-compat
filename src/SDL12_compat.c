@@ -4097,6 +4097,17 @@ SDL_CreateThread(int (SDLCALL *fn)(void *), void *data)
 }
 #endif
 
+/* These two will truncate the returned value on LP64 systems,
+ * a shortcoming of SDL-1.2. */
+DECLSPEC Uint32 SDLCALL SDL_ThreadID(void)
+{
+    return SDL20_ThreadID();
+}
+DECLSPEC Uint32 SDLCALL SDL_GetThreadID(SDL_Thread *thread)
+{
+    return SDL20_GetThreadID(thread);
+}
+
 DECLSPEC int SDLCALL
 SDL_mutexP(SDL_mutex *mutex)
 {
