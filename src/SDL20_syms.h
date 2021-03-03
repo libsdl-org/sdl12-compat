@@ -150,8 +150,11 @@ SDL20_SYM(SDL_Thread *,CreateThread,(SDL_ThreadFunction a, const char *b, void *
 SDL20_SYM(SDL_Thread *,CreateThread,(SDL_ThreadFunction a, const char *b, void *c),(a,b,c),return)
 #endif
 
+/* These two will truncate the returned value on LP64 systems,
+ * a shortcoming of SDL-1.2.. */
 SDL20_SYM_PASSTHROUGH(Uint32,GetThreadID,(SDL_Thread *a),(a),return)
 SDL20_SYM_PASSTHROUGH(Uint32,ThreadID,(void),(),return)
+
 SDL20_SYM_PASSTHROUGH(void,WaitThread,(SDL_Thread *a, int *b),(a,b),)
 SDL20_SYM_PASSTHROUGH(SDL_mutex*,CreateMutex,(void),(),return)
 SDL20_SYM(int,LockMutex,(SDL_mutex *a),(a),return)
