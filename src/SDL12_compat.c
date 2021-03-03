@@ -1229,9 +1229,13 @@ Init12VidModes(void)
 
         if (SDL20_GetDisplayMode(VideoDisplayIndex, i, &mode) < 0) {
             continue;
-        } else if (!mode.w || !mode.h) {
+        }
+        if (!mode.w || !mode.h) {
             SDL_assert(0 && "Can this actually happen?");
             continue;
+        }
+        if (mode.w > 65535 || mode.h > 65535) {
+            continue;  /* can't fit to 16-bits for SDL12_Rect */
         }
 
         if (!vmode || (mode.format != vmode->format)) {  /* SDL20_GetDisplayMode() sorts on bpp first. We know when to change arrays. */
@@ -1258,8 +1262,6 @@ Init12VidModes(void)
         if (j < vmode->nummodes) {
             continue;  /* already have this one. */
         }
-
-        FIXME("Make sure mode dimensions fit in 16-bits for SDL12_Rect");
 
         ptr = SDL20_realloc(vmode->modeslist12, sizeof (SDL12_Rect) * (vmode->nummodes + 1));
         if (ptr == NULL) {
@@ -2350,6 +2352,10 @@ Surface20to12(SDL_Surface *surface20)
 
     if (!surface20)
         return NULL;
+    if (surface20->pitch > 65535) {
+        SDL20_SetError("Pitch is too large");  /* can't fit to 16-bits */
+        return NULL;
+    }
 
     surface12 = (SDL12_Surface *) SDL20_malloc(sizeof (SDL12_Surface));
     if (!surface12)
@@ -2419,7 +2425,7 @@ Surface20to12(SDL_Surface *surface20)
     surface12->format = format12;
     surface12->w = surface20->w;
     surface12->h = surface20->h;
-    surface12->pitch = (Uint16) surface20->pitch;  FIXME("make sure this fits in a Uint16");
+    surface12->pitch = (Uint16) surface20->pitch;
     surface12->pixels = surface20->pixels;
     surface12->offset = 0;
     surface12->surface20 = surface20;
@@ -3978,7 +3984,7 @@ DECLSPEC int SDLCALL
 SDL_EnableUNICODE(int enable)
 {
     int old = EnabledUnicode;
-    FIXME("implement properly");
+    FIXME("write me properly!");
     EnabledUnicode = enable;
     return old;
 }
