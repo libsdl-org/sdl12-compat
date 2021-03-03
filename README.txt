@@ -18,7 +18,7 @@ you are writing new code, please target SDL 2.0 directly and do not use this
 layer.
 
 If you absolutely must have the real SDL 1.2 ("SDL 1.2 Classic"), please use
-the SDL-1.2 branch at https://github.com/libsdl-org/SDL-1.2, which
+the master branch at https://github.com/libsdl-org/SDL-1.2, which
 occasionally gets bug fixes but no formal release. But we strongly encourage
 you not to do that.
 
