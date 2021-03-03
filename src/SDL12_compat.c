@@ -4496,9 +4496,16 @@ SDL_OpenAudio(SDL_AudioSpec *want, SDL_AudioSpec *obtained)
     }
     if (!want->freq) {
         want->freq = 22050;
+        want->samples = 0;
     }
     if (!want->channels) {
         want->channels = 2;
+    }
+    if (!want->samples) {
+        Uint32 samp = (want->freq / 1000) * 46;  /* ~46 ms */
+        Uint32 pow2 = 1;
+        while (pow2 < samp) pow2 <<= 1;
+        want->samples = pow2;
     }
     retval = SDL20_OpenAudio(want, NULL);
     want->callback = data->app_callback;
