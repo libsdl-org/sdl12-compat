@@ -113,9 +113,7 @@
 
 /* Missing SDL_thread.h stuff (see above): */
 #if defined(_WIN32) || defined(__OS2__)
-struct SDL_Thread;
 typedef struct SDL_Thread SDL_Thread;
-typedef unsigned long SDL_threadID;
 typedef int (SDLCALL *SDL_ThreadFunction) (void*);
 #endif
 #ifdef __OS2__
