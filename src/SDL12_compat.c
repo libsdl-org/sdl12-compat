@@ -4441,7 +4441,12 @@ SDL_LoadWAV_RW(SDL12_RWops *rwops12, int freerwops12,
 {
     SDL_RWops *rwops20 = RWops12to20(rwops12);
     SDL_AudioSpec *retval = SDL20_LoadWAV_RW(rwops20, freerwops12, spec, buf, len);
-    FIXME("deal with non-1.2 formats, like float32");
+    if (retval && retval->format & 0x20) {
+        SDL20_SetError("Unsupported 32-bit PCM data format");
+        SDL20_FreeWAV(*buf);
+        *buf = NULL;
+        retval = NULL;
+    }
     if (!freerwops12)  /* free our wrapper if SDL2 didn't close it. */
         SDL20_FreeRW(rwops20);
     return retval;
@@ -4454,11 +4459,13 @@ typedef struct
     Uint8 silence;
 } AudioCallbackWrapperData;
 
+static AudioCallbackWrapperData *audio_cbdata = NULL;
+
 static void SDLCALL
 AudioCallbackWrapper(void *userdata, Uint8 *stream, int len)
 {
     AudioCallbackWrapperData *data = (AudioCallbackWrapperData *) userdata;
-    SDL_memset(stream, data->silence, len);  // SDL2 doesn't clear the stream before calling in here, but 1.2 expects it.
+    SDL_memset(stream, data->silence, len);  /* SDL2 doesn't clear the stream before calling in here, but 1.2 expects it. */
     data->app_callback(data->app_userdata, stream, len);
 }
 
@@ -4469,7 +4476,7 @@ SDL_OpenAudio(SDL_AudioSpec *want, SDL_AudioSpec *obtained)
     AudioCallbackWrapperData *data;
     int retval;
 
-    // SDL2 uses a NULL callback to mean "we play to use SDL_QueueAudio()"
+    /* SDL2 uses a NULL callback to mean "we play to use SDL_QueueAudio()" */
     if (want && (want->callback == NULL)) {
         return SDL20_SetError("Callback can't be NULL");
     }
@@ -4482,26 +4489,39 @@ SDL_OpenAudio(SDL_AudioSpec *want, SDL_AudioSpec *obtained)
     data->app_userdata = want->userdata;
     want->callback = AudioCallbackWrapper;
     want->userdata = data;
-
-    FIXME("Don't allow int32 or float32");
-    FIXME("clamp output to mono/stereo");
-    retval = SDL20_OpenAudio(want, obtained);
+    /* to avoid receiving a possible incompatible configuration
+     * from SDL2, always pass NULL as the 'obtained' pointer.  */
+    if (!want->format) {
+        want->format = AUDIO_S16SYS;
+    }
+    if (!want->freq) {
+        want->freq = 22050;
+    }
+    if (!want->channels) {
+        want->channels = 2;
+    }
+    retval = SDL20_OpenAudio(want, NULL);
     want->callback = data->app_callback;
     want->userdata = data->app_userdata;
     if (retval < 0) {
         SDL20_free(data);
     } else {
-        FIXME("memory leak on callback data");
-        if (!obtained) {
-            data->silence = want->silence;
-        } else {
-            data->silence = obtained->silence;
-            obtained->callback = data->app_callback;
-            obtained->userdata = data->app_userdata;
+        data->silence = want->silence;
+        audio_cbdata = data;
+        if (obtained) {
+            SDL_memcpy(obtained, want, sizeof (SDL_AudioSpec));
         }
     }
 
     return retval;
+}
+
+DECLSPEC void SDLCALL
+SDL_CloseAudio(void)
+{
+    SDL20_CloseAudio();
+    SDL20_free(audio_cbdata);
+    audio_cbdata = NULL;
 }
 
 /* !!! FIXME: these are just stubs for now, but Sam thinks that maybe these

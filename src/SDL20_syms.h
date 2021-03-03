@@ -149,10 +149,8 @@ SDL20_SYM(SDL_Thread *,CreateThread,(SDL_ThreadFunction a, const char *b, void *
 #else
 SDL20_SYM(SDL_Thread *,CreateThread,(SDL_ThreadFunction a, const char *b, void *c),(a,b,c),return)
 #endif
-
 SDL20_SYM(unsigned long,GetThreadID,(SDL_Thread *a),(a),return)
 SDL20_SYM(unsigned long,ThreadID,(void),(),return)
-
 SDL20_SYM_PASSTHROUGH(void,WaitThread,(SDL_Thread *a, int *b),(a,b),)
 SDL20_SYM_PASSTHROUGH(SDL_mutex*,CreateMutex,(void),(),return)
 SDL20_SYM(int,LockMutex,(SDL_mutex *a),(a),return)
@@ -174,6 +172,7 @@ SDL20_SYM_PASSTHROUGH(int,CondWaitTimeout,(SDL_cond *a, SDL_mutex *b, Uint32 c),
 
 SDL20_SYM(SDL_AudioSpec *,LoadWAV_RW,(SDL_RWops *a, int b, SDL_AudioSpec *c, Uint8 **d, Uint32 *e),(a,b,c,d,e),return)
 SDL20_SYM(int,OpenAudio,(SDL_AudioSpec *a, SDL_AudioSpec *b),(a,b),return)
+SDL20_SYM(void,CloseAudio,(void),(),)
 SDL20_SYM_PASSTHROUGH(SDL_AudioStatus,GetAudioStatus,(void),(),return)
 SDL20_SYM_PASSTHROUGH(void,PauseAudio,(int a),(a),)
 SDL20_SYM_PASSTHROUGH(void,FreeWAV,(Uint8 *a),(a),)
@@ -182,7 +181,6 @@ SDL20_SYM_PASSTHROUGH(int,ConvertAudio,(SDL_AudioCVT *a),(a),return)
 SDL20_SYM_PASSTHROUGH(void,MixAudio,(Uint8 *a, const Uint8 *b, Uint32 c, int d),(a,b,c,d),)
 SDL20_SYM_PASSTHROUGH(void,LockAudio,(void),(),)
 SDL20_SYM_PASSTHROUGH(void,UnlockAudio,(void),(),)
-SDL20_SYM_PASSTHROUGH(void,CloseAudio,(void),(),)
 
 SDL20_SYM_PASSTHROUGH(void*,LoadObject,(const char *a),(a),return)
 SDL20_SYM_PASSTHROUGH(void*,LoadFunction,(void *a, const char *b),(a,b),return)
