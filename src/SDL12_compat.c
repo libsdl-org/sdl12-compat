@@ -1487,6 +1487,12 @@ SDL_Quit(void)
 }
 
 DECLSPEC void SDLCALL
+SDL_Error(SDL_errorcode error)
+{
+    SDL20_Error(error);
+}
+
+DECLSPEC void SDLCALL
 SDL_SetError(const char *fmt, ...)
 {
     char ch;

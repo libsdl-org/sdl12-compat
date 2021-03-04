@@ -31,6 +31,7 @@
 #define SDL_GetVersion IGNORE_THIS_VERSION_OF_SDL_GetVersion
 #define SDL_Log IGNORE_THIS_VERSION_OF_SDL_Log
 #define SDL_ReportAssertion IGNORE_THIS_VERSION_OF_SDL_ReportAssertion
+#define SDL_Error IGNORE_THIS_VERSION_OF_SDL_Error
 #define SDL_SetError IGNORE_THIS_VERSION_OF_SDL_SetError
 #define SDL_PollEvent IGNORE_THIS_VERSION_OF_SDL_PollEvent
 #define SDL_PushEvent IGNORE_THIS_VERSION_OF_SDL_PushEvent
@@ -134,6 +135,7 @@ typedef void (__cdecl *pfnSDL_CurrentEndThread) (unsigned);
 #undef SDL_Log
 #undef SDL_GetVersion
 #undef SDL_ReportAssertion
+#undef SDL_Error
 #undef SDL_SetError
 #undef SDL_PollEvent
 #undef SDL_PushEvent
