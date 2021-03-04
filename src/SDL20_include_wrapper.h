@@ -94,6 +94,7 @@
 #define SDL_LockSurface IGNORE_THIS_VERSION_OF_SDL_LockSurface
 #define SDL_UnlockSurface IGNORE_THIS_VERSION_OF_SDL_UnlockSurface
 #define SDL_GetKeyName IGNORE_THIS_VERSION_OF_SDL_GetKeyName
+#define SDL_VideoInit IGNORE_THIS_VERSION_OF_SDL_VideoInit
 
 #define BUILD_SDL 1
 
@@ -196,6 +197,7 @@ typedef void (__cdecl *pfnSDL_CurrentEndThread) (unsigned);
 #undef SDL_LockSurface
 #undef SDL_UnlockSurface
 #undef SDL_GetKeyName
+#undef SDL_VideoInit
 
 #ifdef SDL_mutexP
 #undef SDL_mutexP

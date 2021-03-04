@@ -1336,6 +1336,12 @@ Init12Video(void)
 }
 
 DECLSPEC int SDLCALL
+SDL_VideoInit(const char *driver, Uint32 flags)
+{
+    return SDL20_VideoInit(driver);
+}
+
+DECLSPEC int SDLCALL
 SDL_InitSubSystem(Uint32 sdl12flags)
 {
     Uint32 sdl20flags = 0;
