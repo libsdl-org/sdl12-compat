@@ -4514,6 +4514,7 @@ SDL_OpenAudio(SDL_AudioSpec *want, SDL_AudioSpec *obtained)
         SDL20_free(data);
     } else {
         data->silence = want->silence;
+        SDL_assert(audio_cbdata==NULL);
         audio_cbdata = data;
         if (obtained) {
             SDL_memcpy(obtained, want, sizeof (SDL_AudioSpec));
