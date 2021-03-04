@@ -941,7 +941,7 @@ SDL_sscanf(const char *text, const char *fmt, ...)
     int retval;
     va_list ap;
     va_start(ap, fmt);
-    retval = (int) SDL20_sscanf(text, fmt, ap);
+    retval = (int) SDL20_vsscanf(text, fmt, ap);
     va_end(ap);
     return retval;
 }

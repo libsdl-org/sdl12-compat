@@ -256,6 +256,7 @@ SDL20_SYM_PASSTHROUGH(int,strcasecmp,(const char *a, const char *b),(a,b),return
 SDL20_SYM_PASSTHROUGH(int,strncasecmp,(const char *a, const char *b, size_t c),(a,b,c),return)
 SDL20_SYM_VARARGS(int,sscanf,(const char *text, const char *fmt, ...))
 SDL20_SYM_VARARGS(int,snprintf,(char *text, size_t maxlen, const char *fmt, ...))
+SDL20_SYM(int,vsscanf,(const char *a,const char *b,va_list c),(a,b,c),return)
 SDL20_SYM_PASSTHROUGH(int,vsnprintf,(char *a, size_t b, const char *c, va_list d),(a,b,c,d),return)
 SDL20_SYM_PASSTHROUGH(SDL_iconv_t,iconv_open,(const char *a, const char *b),(a,b),return)
 SDL20_SYM_PASSTHROUGH(int,iconv_close,(SDL_iconv_t a),(a),return)
