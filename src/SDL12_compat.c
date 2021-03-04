@@ -1341,17 +1341,12 @@ SDL_InitSubSystem(Uint32 sdl12flags)
     Uint32 sdl20flags = 0;
     int rc;
 
-    FIXME("support event thread where it makes sense to do so?");
-
-    if ((sdl12flags & SDL12_INIT_EVENTTHREAD) == SDL12_INIT_EVENTTHREAD) {
-        return SDL20_SetError("OS doesn't support threaded events");
-    }
-
 #ifdef __MACOSX__
     extern void sdl12_compat_macos_init(void);
     sdl12_compat_macos_init();
 #endif
 
+    FIXME("support SDL_INIT_EVENTTHREAD where it makes sense?");
     #define SETFLAG(flag) if (sdl12flags & SDL12_INIT_##flag) sdl20flags |= SDL_INIT_##flag
     SETFLAG(TIMER);
     SETFLAG(AUDIO);
@@ -1363,8 +1358,6 @@ SDL_InitSubSystem(Uint32 sdl12flags)
     /* There's no CDROM in 2.0, but we'll just pretend it succeeded. */
     if (sdl12flags & SDL12_INIT_CDROM)
         CDRomInit = 1;
-
-    FIXME("do something about SDL12_INIT_EVENTTHREAD");
 
     rc = SDL20_Init(sdl20flags);
     if ((rc == 0) && (sdl20flags & SDL_INIT_VIDEO)) {
@@ -1401,8 +1394,6 @@ InitFlags12To20(const Uint32 flags12, Uint32 *_flags20, Uint32 *_extraflags)
     if ((flags12 & SDL12_INIT_CDROM) && (CDRomInit)) {
         extraflags |= SDL12_INIT_CDROM;
     }
-
-    FIXME("do something about SDL12_INIT_EVENTTHREAD");
 
     *_flags20 = flags20;
     *_extraflags = extraflags;
@@ -1476,7 +1467,6 @@ SDL_QuitSubSystem(Uint32 sdl12flags)
         Quit12Video();
     }
 
-    FIXME("do something about SDL12_INIT_EVENTTHREAD");
     SDL20_QuitSubSystem(sdl20flags);
 
     if ((SDL20_WasInit(0) == 0) && (!CDRomInit)) {
