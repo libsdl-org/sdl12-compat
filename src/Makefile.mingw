@@ -16,11 +16,10 @@ LD = $(CC)
 CPPFLAGS = -DDLL_EXPORT -DNDEBUG
 
 CFLAGS  = -O3 -Wall
-LDFLAGS = -shared -Wl,--no-undefined
-LDFLAGS+= -nostdlib
-LDFLAGS+= -Wl,--enable-auto-image-base
+LDFLAGS = -nostdlib -shared -Wl,--no-undefined -Wl,--enable-auto-image-base -Wl,--out-implib,$(LIB)
 LDLIBS  = -lkernel32 -luser32
 
+LIB = libSDL.dll.a
 DLL = SDL.dll
 
 OBJ = SDL12_compat.o version.o
@@ -30,6 +29,7 @@ OBJ = SDL12_compat.o version.o
 
 all: $(DLL)
 
+$(LIB): $(DLL)
 $(DLL): $(OBJ)
 	$(LD) -o $@ $(LDFLAGS) $(OBJ) $(LDLIBS)
 
@@ -39,6 +39,6 @@ $(DLL): $(OBJ)
 	$(RC) -o $@ $<
 
 distclean: clean
-	$(RM) $(DLL)
+	$(RM) $(DLL) $(LIB)
 clean:
 	$(RM) *.o
