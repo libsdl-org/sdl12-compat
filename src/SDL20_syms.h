@@ -33,6 +33,14 @@
 #define SDL20_SYM_VARARGS(rc,fn,params) SDL20_SYM(rc,fn,params,unused,unused)
 #endif
 
+#ifndef OPENGL_SYM
+#define OPENGL_SYM(ext,rc,fn,params,args,ret)
+#endif
+
+#ifndef OPENGL_EXT
+#define OPENGL_EXT(name)
+#endif
+
 SDL20_SYM(void,GetVersion,(SDL_version *a),(a),)
 SDL20_SYM_VARARGS(void,Log,(const char *fmt, ...))
 SDL20_SYM(int,Init,(Uint32 a),(a),return)
@@ -108,6 +116,7 @@ SDL20_SYM(int,GetSurfaceBlendMode,(SDL_Surface *a, SDL_BlendMode *b),(a,b),retur
 SDL20_SYM(SDL_Surface*,LoadBMP_RW,(SDL_RWops *a, int b),(a,b),return)
 SDL20_SYM(int,SaveBMP_RW,(SDL_Surface *a, SDL_RWops *b, int c),(a,b,c),return)
 SDL20_SYM(int,SetPaletteColors,(SDL_Palette *a, const SDL_Color *b, int c, int d),(a,b,c,d),return)
+SDL20_SYM(SDL_bool,GL_ExtensionSupported,(const char *a),(a),return)
 SDL20_SYM(int,GL_LoadLibrary,(const char *a),(a),return)
 SDL20_SYM_PASSTHROUGH(void *,GL_GetProcAddress,(const char *a),(a),return)
 SDL20_SYM(int,GL_SetAttribute,(SDL_GLattr a, int b),(a,b),return)
@@ -118,6 +127,7 @@ SDL20_SYM(SDL_GLContext,GL_CreateContext,(SDL_Window *a),(a),return)
 SDL20_SYM(int,GL_MakeCurrent,(SDL_Window *a, SDL_GLContext b),(a,b),return)
 SDL20_SYM(void,GL_SwapWindow,(SDL_Window *a),(a),)
 SDL20_SYM(void,GL_DeleteContext,(SDL_GLContext a),(a),)
+SDL20_SYM(void,GL_GetDrawableSize,(SDL_Window *a, int *b, int *c),(a,b,c),)
 SDL20_SYM(void,GetClipRect,(SDL_Surface *a, SDL_Rect *b),(a,b),)
 SDL20_SYM(SDL_bool,SetClipRect,(SDL_Surface *a, const SDL_Rect *b),(a,b),return)
 SDL20_SYM(int,FillRect,(SDL_Surface *a,const SDL_Rect *b,Uint32 c),(a,b,c),return)
@@ -278,9 +288,35 @@ SDL20_SYM(void,DestroyTexture,(SDL_Texture *a),(a),)
 SDL20_SYM(void,DestroyRenderer,(SDL_Renderer *a),(a),)
 SDL20_SYM(void,RenderPresent,(SDL_Renderer *a),(a),)
 
+/* These are optional OpenGL entry points for sdl12-compat's internal use. */
+OPENGL_SYM(Core,const GLubyte *,glGetString,(GLenum a),(a),return)
+OPENGL_SYM(Core,GLenum,glGetError,(),(),return)
+OPENGL_SYM(Core,void,glClear,(GLbitfield a),(a),)
+OPENGL_SYM(Core,GLboolean,glIsEnabled,(GLenum a),(a),return)
+OPENGL_SYM(Core,void,glEnable,(GLenum a),(a),)
+OPENGL_SYM(Core,void,glDisable,(GLenum a),(a),)
+OPENGL_SYM(Core,void,glGetFloatv,(GLenum a, GLfloat *b),(a,b),)
+OPENGL_SYM(Core,void,glClearColor,(GLfloat a,GLfloat b,GLfloat c,GLfloat d),(a,b,c,d),)
+
+OPENGL_EXT(GL_ARB_framebuffer_object)
+OPENGL_SYM(GL_ARB_framebuffer_object,void,glBindRenderbuffer,(GLenum a, GLuint b),(a,b),)
+OPENGL_SYM(GL_ARB_framebuffer_object,void,glDeleteRenderbuffers,(GLsizei a, const GLuint *b),(a,b),)
+OPENGL_SYM(GL_ARB_framebuffer_object,void,glGenRenderbuffers,(GLsizei a, GLuint *b),(a,b),)
+OPENGL_SYM(GL_ARB_framebuffer_object,void,glRenderbufferStorage,(GLenum a, GLenum b, GLsizei c, GLsizei d),(a,b,c,d),)
+OPENGL_SYM(GL_ARB_framebuffer_object,void,glGetRenderbufferParameteriv,(GLenum a, GLenum b, GLint* c),(a,b,c),)
+OPENGL_SYM(GL_ARB_framebuffer_object,GLboolean,glIsFramebuffer,(GLuint a),(a),return)
+OPENGL_SYM(GL_ARB_framebuffer_object,void,glBindFramebuffer,(GLenum a, GLuint b),(a,b),)
+OPENGL_SYM(GL_ARB_framebuffer_object,void,glDeleteFramebuffers,(GLsizei a, const GLuint *b),(a,b),)
+OPENGL_SYM(GL_ARB_framebuffer_object,void,glGenFramebuffers,(GLsizei a, GLuint *b),(a,b),)
+OPENGL_SYM(GL_ARB_framebuffer_object,GLenum,glCheckFramebufferStatus,(GLenum a),(a),return)
+OPENGL_SYM(GL_ARB_framebuffer_object,void,glFramebufferRenderbuffer,(GLenum a, GLenum b, GLenum c, GLuint d),(a,b,c,d),)
+OPENGL_SYM(GL_ARB_framebuffer_object,void,glBlitFramebuffer,(GLint a, GLint b, GLint c, GLint d, GLint e, GLint f, GLint g, GLint h, GLbitfield i, GLenum j),(a,b,c,d,e,f,g,h,i,j),)
+
 #undef SDL20_SYM
 #undef SDL20_SYM_PASSTHROUGH
 #undef SDL20_SYM_VARARGS
+#undef OPENGL_SYM
+#undef OPENGL_EXT
 
 /* vi: set ts=4 sw=4 expandtab: */
 

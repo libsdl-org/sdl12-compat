@@ -671,6 +671,24 @@ typedef struct
     SDL_Joystick *joystick;
 } JoystickOpenedItem;
 
+#include "SDL_opengl.h"
+#include "SDL_opengl_glext.h"
+
+
+#define OPENGL_SYM(ext,rc,fn,params,args,ret) typedef rc (GLAPIENTRY *openglfn_##fn##_t) params;
+#include "SDL20_syms.h"
+
+typedef struct OpenGLEntryPoints
+{
+    SDL_bool SUPPORTS_Core;
+
+    #define OPENGL_EXT(name) SDL_bool SUPPORTS_##name;
+    #include "SDL20_syms.h"
+    #define OPENGL_SYM(ext,rc,fn,params,args,ret) openglfn_##fn##_t fn;
+    #include "SDL20_syms.h"
+} OpenGLEntryPoints;
+
+
 /* !!! FIXME: grep for VideoWindow20 places that might care if it's NULL */
 /* !!! FIXME: go through all of these. */
 static VideoModeList *VideoModes = NULL;
@@ -703,6 +721,15 @@ static JoystickOpenedItem JoystickOpenList[16];
 static Uint8 KeyState[SDLK12_LAST];
 static SDL_bool MouseInputIsRelative = SDL_FALSE;
 static SDL_Point MousePositionWhenRelative = { 0, 0 };
+static OpenGLEntryPoints OpenGLFuncs;
+static SDL_bool UseOpenGLLogicalScaling = SDL_FALSE;
+static int OpenGLLogicalScalingWidth = 0;
+static int OpenGLLogicalScalingHeight = 0;
+static GLuint OpenGLLogicalScalingFBO = 0;
+static GLuint OpenGLLogicalScalingColor = 0;
+static GLuint OpenGLLogicalScalingDepth = 0;
+
+
 
 /* !!! FIXME: need a mutex for the event queue. */
 #define SDL12_MAXEVENTS 128
@@ -2890,6 +2917,13 @@ EndVidModeCreate(void)
         VideoConvertSurface20 = NULL;
     }
 
+    SDL_zero(OpenGLFuncs);
+    OpenGLLogicalScalingWidth = 0;
+    OpenGLLogicalScalingHeight = 0;
+    OpenGLLogicalScalingFBO = 0;
+    OpenGLLogicalScalingColor = 0;
+    OpenGLLogicalScalingDepth = 0;
+
     MouseInputIsRelative = SDL_FALSE;
     MousePositionWhenRelative.x = 0;
     MousePositionWhenRelative.y = 0;
@@ -2924,6 +2958,77 @@ CreateNullPixelSurface20(const int width, const int height, const Uint32 fmt)
     return surface20;
 }
 
+static void
+LoadOpenGLFunctions(void)
+{
+    const char *version;
+    int major = 0, minor = 0;
+
+    /* load core functions so we can guess about a few other things. */
+    SDL_zero(OpenGLFuncs);
+    OpenGLFuncs.SUPPORTS_Core = SDL_TRUE;
+    #define OPENGL_SYM(ext,rc,fn,params,args,ret) OpenGLFuncs.fn = (OpenGLFuncs.SUPPORTS_##ext) ? SDL20_GL_GetProcAddress(#fn) : NULL;
+    #include "SDL20_syms.h"
+
+    version = OpenGLFuncs.glGetString(GL_VERSION);
+    if ((!version) || (SDL20_sscanf(version, "%d.%d", &major, &minor) != 2)) {
+        major = minor = 0;
+    }
+
+    /* Lookup reported extensions. */
+    #define OPENGL_EXT(name) OpenGLFuncs.SUPPORTS_##name = SDL20_GL_ExtensionSupported(#name);
+    #include "SDL20_syms.h"
+
+    /* GL_ARB_framebuffer_object is in core OpenGL 3.0+ with the same entry point names as the extension version. */
+    if (major >= 3) {
+        OpenGLFuncs.SUPPORTS_GL_ARB_framebuffer_object = SDL_TRUE;
+    }
+
+    /* load everything we can. */
+    #define OPENGL_SYM(ext,rc,fn,params,args,ret) OpenGLFuncs.fn = (OpenGLFuncs.SUPPORTS_##ext) ? SDL20_GL_GetProcAddress(#fn) : NULL;
+    #include "SDL20_syms.h"
+}
+
+static SDL_bool
+InitializeOpenGLScaling(const int w, const int h)
+{
+    LoadOpenGLFunctions();
+
+    if (!OpenGLFuncs.SUPPORTS_GL_ARB_framebuffer_object) {
+        return SDL_FALSE;  /* no FBOs, no scaling. */
+    }
+
+    OpenGLFuncs.glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    SDL20_GL_SwapWindow(VideoWindow20);
+
+    OpenGLFuncs.glGenFramebuffers(1, &OpenGLLogicalScalingFBO);
+    OpenGLFuncs.glBindFramebuffer(GL_FRAMEBUFFER, OpenGLLogicalScalingFBO);
+    OpenGLFuncs.glGenRenderbuffers(1, &OpenGLLogicalScalingColor);
+    OpenGLFuncs.glBindRenderbuffer(GL_RENDERBUFFER, OpenGLLogicalScalingColor);
+    OpenGLFuncs.glRenderbufferStorage(GL_RENDERBUFFER, GL_RGB8, w, h);
+    OpenGLFuncs.glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, OpenGLLogicalScalingColor);
+    OpenGLFuncs.glGenRenderbuffers(1, &OpenGLLogicalScalingDepth);
+    OpenGLFuncs.glBindRenderbuffer(GL_RENDERBUFFER, OpenGLLogicalScalingDepth);
+    OpenGLFuncs.glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, w, h);  /* !!! FIXME: is an extension (or core 3.0) */
+    OpenGLFuncs.glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, OpenGLLogicalScalingDepth);
+    OpenGLFuncs.glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+    if ( (OpenGLFuncs.glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) || OpenGLFuncs.glGetError() ) {
+        OpenGLFuncs.glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        OpenGLFuncs.glDeleteRenderbuffers(1, &OpenGLLogicalScalingColor);
+        OpenGLFuncs.glDeleteRenderbuffers(1, &OpenGLLogicalScalingDepth);
+        OpenGLFuncs.glDeleteFramebuffers(1, &OpenGLLogicalScalingFBO);
+        OpenGLLogicalScalingFBO = OpenGLLogicalScalingColor = OpenGLLogicalScalingDepth = 0;
+        return SDL_FALSE;
+    }
+
+    OpenGLLogicalScalingWidth = w;
+    OpenGLLogicalScalingHeight = h;
+    OpenGLFuncs.glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    return SDL_TRUE;
+}
+
+
 
 DECLSPEC SDL12_Surface * SDLCALL
 SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
@@ -2931,6 +3036,21 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
     SDL_DisplayMode dmode;
     Uint32 fullscreen_flags20 = 0;
     Uint32 appfmt;
+    SDL_bool use_gl_scaling = SDL_FALSE;
+
+    FIXME("Should we offer scaling for windowed modes, too?");
+    if (flags12 & SDL12_OPENGL) {
+        /* !!! FIXME: the reason we have a toggle to prevent this is because an app might use
+           FBOs directly, and will cause this to break if they bind Framebuffer 0 instead
+           of our render target. If we can fool them into calling a fake glBindFramebuffer
+           that binds our logical FBO instead of the window framebuffer, we can probably
+           work with these apps, too. That's easy from SDL_GL_GetProcAddress, but we
+           maybe need to export the symbol from here too, for those that link against
+           OpenGL directly. UT2004 is known to use FBOs with SDL 1.2, and I assume
+           idTech 4 games (Doom 3, Quake 4, Prey) do as well.*/
+        const char *env = SDL20_getenv("SDL12COMPAT_OPENGL_SCALING");
+        use_gl_scaling = (env && SDL20_atoi(env)) ? SDL_TRUE : SDL_FALSE;
+    }
 
     FIXME("currently ignores SDL_WINDOWID, which we could use with SDL_CreateWindowFrom ...?");
 
@@ -3003,11 +3123,11 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
     }
 
     if (flags12 & SDL12_FULLSCREEN) {
-        /* OpenGL tries to force the real resolution requested, but for
-         *  software rendering, we're just going to push it off onto the
-         *  GPU, so use FULLSCREEN_DESKTOP and logical scaling there. */
-        FIXME("OpenGL will still expect letterboxing and centering if it didn't get an exact resolution match.");
-        if (((flags12 & SDL12_OPENGL) == 0) || ((dmode.w == width) && (dmode.h == height))) {
+        /* For software rendering, we're just going to push it off onto the
+            GPU, so use FULLSCREEN_DESKTOP and logical scaling there.
+            If possible, we'll do this with OpenGL, too, but we might not be
+            able to. */
+        if (use_gl_scaling || ((dmode.w == width) && (dmode.h == height))) {
             fullscreen_flags20 |= SDL_WINDOW_FULLSCREEN_DESKTOP;
         } else {
             fullscreen_flags20 |= SDL_WINDOW_FULLSCREEN;
@@ -3065,12 +3185,26 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
     if (flags12 & SDL12_OPENGL) {
         SDL_assert(!VideoTexture20);  /* either a new window or we destroyed all this */
         SDL_assert(!VideoRenderer20);
+        FIXME("Should we force a compatibility context here?");
         VideoGLContext20 = SDL20_GL_CreateContext(VideoWindow20);
         if (!VideoGLContext20) {
             return EndVidModeCreate();
         }
 
         VideoSurface12->flags |= SDL12_OPENGL;
+
+        // Try to set up a logical scaling
+        if (use_gl_scaling) {
+            if (!InitializeOpenGLScaling(width, height)) {
+                use_gl_scaling = SDL_FALSE;
+                fullscreen_flags20 &= ~SDL_WINDOW_FULLSCREEN_DESKTOP;
+                SDL20_SetWindowFullscreen(VideoWindow20, fullscreen_flags20);
+                SDL20_SetWindowSize(VideoWindow20, width, height);
+                fullscreen_flags20 |= SDL_WINDOW_FULLSCREEN;
+                SDL20_SetWindowFullscreen(VideoWindow20, fullscreen_flags20);
+            }
+        }
+
     } else {
         /* always use a renderer for non-OpenGL windows. */
         const char *env = SDL20_getenv("SDL12COMPAT_SYNC_TO_VBLANK");
@@ -3628,7 +3762,7 @@ SDL_WM_ToggleFullScreen(SDL12_Surface *surface)
         } else {
             Uint32 newflags20;
             SDL_assert((VideoSurface12->flags & SDL12_FULLSCREEN) == 0);
-            newflags20 = (VideoSurface12->flags & SDL12_OPENGL) ? SDL_WINDOW_FULLSCREEN : SDL_WINDOW_FULLSCREEN_DESKTOP;
+            newflags20 = (((VideoSurface12->flags & SDL12_OPENGL) == 0) || (OpenGLLogicalScalingFBO != 0)) ? SDL_WINDOW_FULLSCREEN_DESKTOP : SDL_WINDOW_FULLSCREEN;
             retval = (SDL20_SetWindowFullscreen(VideoWindow20, newflags20) == 0);
             if (retval) {
                 VideoSurface12->flags |= SDL12_FULLSCREEN;
@@ -3924,8 +4058,46 @@ SDL_GL_GetAttribute(SDL12_GLattr attr, int* value)
 DECLSPEC void SDLCALL
 SDL_GL_SwapBuffers(void)
 {
-    if (VideoWindow20)
-        SDL20_GL_SwapWindow(VideoWindow20);
+    if (VideoWindow20) {
+        if (OpenGLLogicalScalingFBO != 0) {
+            const GLboolean has_scissor = OpenGLFuncs.glIsEnabled(GL_SCISSOR_TEST);
+            GLfloat clearcolor[4];
+            int scaledh, scaledw;
+            int centeredx, centeredy;
+            int drawablew, drawableh;
+            SDL20_GL_GetDrawableSize(VideoWindow20, &drawablew, &drawableh);
+            OpenGLFuncs.glGetFloatv(GL_COLOR_CLEAR_VALUE, clearcolor);
+
+            if (drawablew < drawableh) {
+                scaledw = drawablew;
+                scaledh = (int) (((((double)OpenGLLogicalScalingHeight) / ((double)OpenGLLogicalScalingWidth))) * ((double)drawablew));
+            } else {
+                scaledh = drawableh;
+                scaledw = (int) (((((double)OpenGLLogicalScalingWidth) / ((double)OpenGLLogicalScalingHeight))) * ((double)drawableh));
+            }
+
+            centeredx = (drawablew - scaledw) / 2;
+            centeredy = (drawableh - scaledh) / 2;
+
+			OpenGLFuncs.glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+			OpenGLFuncs.glBindFramebuffer(GL_READ_FRAMEBUFFER, OpenGLLogicalScalingFBO);
+			if (has_scissor) { OpenGLFuncs.glDisable(GL_SCISSOR_TEST); }  /* scissor test affects framebuffer_blit */
+            OpenGLFuncs.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+            OpenGLFuncs.glClear(GL_COLOR_BUFFER_BIT);
+			OpenGLFuncs.glBlitFramebuffer(
+			    0, 0, OpenGLLogicalScalingWidth, OpenGLLogicalScalingHeight,
+                centeredx, centeredy, centeredx + scaledw, centeredy + scaledh,
+			    GL_COLOR_BUFFER_BIT, GL_LINEAR
+			);
+			OpenGLFuncs.glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            SDL20_GL_SwapWindow(VideoWindow20);
+            OpenGLFuncs.glClearColor(clearcolor[0], clearcolor[1], clearcolor[2], clearcolor[3]);
+			if (has_scissor) { OpenGLFuncs.glEnable(GL_SCISSOR_TEST); }
+			OpenGLFuncs.glBindFramebuffer(GL_FRAMEBUFFER, OpenGLLogicalScalingFBO);
+        } else {
+            SDL20_GL_SwapWindow(VideoWindow20);
+        }
+    }
 }
 
 DECLSPEC int SDLCALL
