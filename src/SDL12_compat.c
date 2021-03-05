@@ -786,13 +786,45 @@ static char loaderror[256];
             Loaded_SDL20 = NULLHANDLE;
         }
     }
-#elif defined(__unix__) || defined(__APPLE__)
+#elif defined(__APPLE__)
     #include <dlfcn.h>
-    #ifdef __APPLE__
+    #include <pwd.h>
+    #include <unistd.h>
     #define SDL20_LIBNAME "libSDL2-2.0.0.dylib"
-    #else
+    #define SDL20_FRAMEWORK "SDL2.framework/Versions/A/SDL2"
+    #define SDL20_REQUIRED_VER SDL_VERSIONNUM(2,0,9)
+    #define strcpy_fn  strcpy
+    #define sprintf_fn sprintf
+    static void *Loaded_SDL20 = NULL;
+    static char framework[4096];
+    #define LookupSDL20Sym(sym) dlsym(Loaded_SDL20, sym)
+    #define CloseSDL20Library() { if (Loaded_SDL20) { dlclose(Loaded_SDL20); Loaded_SDL20 = NULL; } }
+    static SDL_bool LoadSDL20Library(void) {
+        const char *homedir = NULL;
+        struct passwd *pwent;
+        pwent = getpwuid(getuid());
+        if (pwent) {
+            homedir = pwent->pw_dir;
+        }
+        if (!homedir) {
+            homedir = getenv("HOME");
+        }
+        if (homedir) {
+            sprintf_fn(framework, "%s%s/%s", homedir, "/Library/Frameworks", SDL20_FRAMEWORK);
+            Loaded_SDL20 = dlopen(framework, RTLD_LOCAL|RTLD_NOW);
+        }
+        if (!Loaded_SDL20) {
+            sprintf_fn(framework, "%s/%s", "/Library/Frameworks", SDL20_FRAMEWORK);
+            Loaded_SDL20 = dlopen(framework, RTLD_LOCAL|RTLD_NOW);
+        }
+        if (!Loaded_SDL20) {
+            Loaded_SDL20 = dlopen(SDL20_LIBNAME, RTLD_LOCAL|RTLD_NOW);
+        }
+        return (Loaded_SDL20 != NULL) ? SDL_TRUE : SDL_FALSE;
+    }
+#elif defined(__unix__)
+    #include <dlfcn.h>
     #define SDL20_LIBNAME "libSDL2-2.0.so.0"
-    #endif
     #define SDL20_REQUIRED_VER SDL_VERSIONNUM(2,0,9)
     static void *Loaded_SDL20 = NULL;
     #define LoadSDL20Library() ((Loaded_SDL20 = dlopen(SDL20_LIBNAME, RTLD_LOCAL|RTLD_NOW)) != NULL)
