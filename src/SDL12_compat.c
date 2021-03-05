@@ -722,7 +722,7 @@ static Uint8 KeyState[SDLK12_LAST];
 static SDL_bool MouseInputIsRelative = SDL_FALSE;
 static SDL_Point MousePositionWhenRelative = { 0, 0 };
 static OpenGLEntryPoints OpenGLFuncs;
-static SDL_bool UseOpenGLLogicalScaling = SDL_FALSE;
+/*static SDL_bool UseOpenGLLogicalScaling = SDL_FALSE;*/
 static int OpenGLLogicalScalingWidth = 0;
 static int OpenGLLogicalScalingHeight = 0;
 static GLuint OpenGLLogicalScalingFBO = 0;
@@ -2970,8 +2970,8 @@ LoadOpenGLFunctions(void)
     #define OPENGL_SYM(ext,rc,fn,params,args,ret) OpenGLFuncs.fn = (OpenGLFuncs.SUPPORTS_##ext) ? SDL20_GL_GetProcAddress(#fn) : NULL;
     #include "SDL20_syms.h"
 
-    version = OpenGLFuncs.glGetString(GL_VERSION);
-    if ((!version) || (SDL20_sscanf(version, "%d.%d", &major, &minor) != 2)) {
+    version = (const char *) OpenGLFuncs.glGetString(GL_VERSION);
+    if (!version || (SDL20_sscanf(version, "%d.%d", &major, &minor) != 2)) {
         major = minor = 0;
     }
 
@@ -3193,7 +3193,7 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
 
         VideoSurface12->flags |= SDL12_OPENGL;
 
-        // Try to set up a logical scaling
+        /* Try to set up a logical scaling */
         if (use_gl_scaling) {
             if (!InitializeOpenGLScaling(width, height)) {
                 use_gl_scaling = SDL_FALSE;
