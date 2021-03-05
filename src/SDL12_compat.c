@@ -722,7 +722,6 @@ static Uint8 KeyState[SDLK12_LAST];
 static SDL_bool MouseInputIsRelative = SDL_FALSE;
 static SDL_Point MousePositionWhenRelative = { 0, 0 };
 static OpenGLEntryPoints OpenGLFuncs;
-/*static SDL_bool UseOpenGLLogicalScaling = SDL_FALSE;*/
 static int OpenGLLogicalScalingWidth = 0;
 static int OpenGLLogicalScalingHeight = 0;
 static GLuint OpenGLLogicalScalingFBO = 0;
@@ -3152,6 +3151,12 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
         SDL20_GL_MakeCurrent(NULL, NULL);
         SDL20_GL_DeleteContext(VideoGLContext20);
         VideoGLContext20 = NULL;
+        SDL_zero(OpenGLFuncs);
+        OpenGLLogicalScalingWidth = 0;
+        OpenGLLogicalScalingHeight = 0;
+        OpenGLLogicalScalingFBO = 0;
+        OpenGLLogicalScalingColor = 0;
+        OpenGLLogicalScalingDepth = 0;
     }
 
     if (flags12 & SDL12_FULLSCREEN) {
