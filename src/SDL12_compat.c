@@ -761,20 +761,6 @@ static char loaderror[256];
     #define CloseSDL20Library() { if (Loaded_SDL20) { FreeLibrary(Loaded_SDL20); Loaded_SDL20 = NULL; } }
     #define strcpy_fn  lstrcpyA
     #define sprintf_fn wsprintfA
-#elif defined(__unix__) || defined(__APPLE__)
-    #include <dlfcn.h>
-    #ifdef __APPLE__
-    #define SDL20_LIBNAME "libSDL2-2.0.0.dylib"
-    #else
-    #define SDL20_LIBNAME "libSDL2-2.0.so.0"
-    #endif
-    #define SDL20_REQUIRED_VER SDL_VERSIONNUM(2,0,9)
-    static void *Loaded_SDL20 = NULL;
-    #define LoadSDL20Library() ((Loaded_SDL20 = dlopen(SDL20_LIBNAME, RTLD_LOCAL|RTLD_NOW)) != NULL)
-    #define LookupSDL20Sym(sym) dlsym(Loaded_SDL20, sym)
-    #define CloseSDL20Library() { if (Loaded_SDL20) { dlclose(Loaded_SDL20); Loaded_SDL20 = NULL; } }
-    #define strcpy_fn  strcpy
-    #define sprintf_fn sprintf
 #elif defined(__OS2__)
     #include <os2.h>
     #define SDL20_LIBNAME "SDL2.dll"
@@ -800,6 +786,20 @@ static char loaderror[256];
             Loaded_SDL20 = NULLHANDLE;
         }
     }
+#elif defined(__unix__) || defined(__APPLE__)
+    #include <dlfcn.h>
+    #ifdef __APPLE__
+    #define SDL20_LIBNAME "libSDL2-2.0.0.dylib"
+    #else
+    #define SDL20_LIBNAME "libSDL2-2.0.so.0"
+    #endif
+    #define SDL20_REQUIRED_VER SDL_VERSIONNUM(2,0,9)
+    static void *Loaded_SDL20 = NULL;
+    #define LoadSDL20Library() ((Loaded_SDL20 = dlopen(SDL20_LIBNAME, RTLD_LOCAL|RTLD_NOW)) != NULL)
+    #define LookupSDL20Sym(sym) dlsym(Loaded_SDL20, sym)
+    #define CloseSDL20Library() { if (Loaded_SDL20) { dlclose(Loaded_SDL20); Loaded_SDL20 = NULL; } }
+    #define strcpy_fn  strcpy
+    #define sprintf_fn sprintf
 #else
     #error Please define your platform.
 #endif
