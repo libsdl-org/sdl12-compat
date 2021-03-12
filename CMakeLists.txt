@@ -1,9 +1,14 @@
 # NOTE:  If you installed SDL2 at an unusual place and FindSDL2 fails,
 #        you can define SDL2_INCLUDE_DIR on the cmdline.  For example:
 #        cmake -DSDL2_INCLUDE_DIR=/opt/SDL2/include/SDL2 [other stuff]
+#
+# NOTE:  To build SDL1.2 test programs enable SDL12TESTS. For example:
+#        cmake -DSDL12TESTS=1 [other stuff]
 
 cmake_minimum_required(VERSION 3.0.0)
 project(sdl12_compat)
+
+option(SDL12TESTS "Enable to build SDL-1.2 test programs" OFF)
 
 if(APPLE)
   set(OSX_SRCS "src/SDL12_compat_objc.m")
@@ -73,20 +78,20 @@ if(MSVC)
 endif()
 
 
-# test programs...
-
-include(FindSDL)
-if(NOT (WIN32 OR APPLE OR CYGWIN OR HAIKU OR BEOS))
-  find_library(MATH_LIBRARY m)
-endif()
-
-macro(test_program _NAME _SRCS)
-    add_executable(${_NAME} ${_SRCS})
-    target_include_directories(${_NAME} PRIVATE ${SDL_INCLUDE_DIR})
-    target_link_libraries(${_NAME} SDL)
-    if(MATH_LIBRARY)
-      target_link_libraries(${_NAME} ${MATH_LIBRARY})
+if(SDL12TESTS)
+    include(FindSDL)
+    if(NOT (WIN32 OR APPLE OR CYGWIN OR HAIKU OR BEOS))
+      find_library(MATH_LIBRARY m)
     endif()
-endmacro()
 
-test_program(testsprite "test/testsprite.c")
+    macro(test_program _NAME _SRCS)
+        add_executable(${_NAME} ${_SRCS})
+        target_include_directories(${_NAME} PRIVATE ${SDL_INCLUDE_DIR})
+        target_link_libraries(${_NAME} SDL)
+        if(MATH_LIBRARY)
+          target_link_libraries(${_NAME} ${MATH_LIBRARY})
+        endif()
+    endmacro()
+
+    test_program(testsprite "test/testsprite.c")
+endif()
