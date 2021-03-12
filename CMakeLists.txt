@@ -8,6 +8,9 @@ project(sdl12_compat)
 if(APPLE)
   set(OSX_SRCS "src/SDL12_compat_objc.m")
   set_source_files_properties(${OSX_SRCS} PROPERTIES LANGUAGE C)
+  # the following matches SDL-1.2 Xcode project file
+  set(DYLIB_COMPAT_VERSION 1.0.0)
+  set(DYLIB_CURRENT_VERSION 12.50.0)
 endif()
 if(WIN32)
   set(WIN32_SRCS "src/version.rc")
@@ -35,10 +38,9 @@ if(UNIX AND NOT APPLE)
 endif()
 if(APPLE)
     set_target_properties(SDL PROPERTIES COMPILE_DEFINITIONS "_THREAD_SAFE")
+    set_target_properties(SDL PROPERTIES LINK_FLAGS
+            "-Wl,-compatibility_version,${DYLIB_COMPAT_VERSION} -Wl,-current_version,${DYLIB_CURRENT_VERSION}")
     target_link_libraries(SDL PRIVATE "-framework AppKit")
-endif()
-
-if(APPLE)
     set_target_properties(SDL PROPERTIES
         MACOSX_RPATH 1
         OUTPUT_NAME "SDL-1.2.0"
