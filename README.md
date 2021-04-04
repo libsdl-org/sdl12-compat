@@ -1,11 +1,5 @@
+# Simple DirectMedia Layer (SDL) sdl12-compat
 
-                         Simple DirectMedia Layer
-
-                                  (SDL)
-
-                               sdl12-compat
-
----
 https://www.libsdl.org/
 
 This is the Simple DirectMedia Layer, a general API that provides low
