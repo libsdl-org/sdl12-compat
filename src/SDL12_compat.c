@@ -85,6 +85,67 @@
 #define SDL20_zerop(x) SDL20_memset((x), 0, sizeof(*(x)))
 #define SDL_ReportAssertion SDL20_ReportAssertion
 
+/* From SDL2.0's SDL_bits.h: a force-inlined function. */
+#if defined(__WATCOMC__) && defined(__386__)
+extern _inline int _SDL20_bsr_watcom (Uint32);
+#pragma aux _SDL20_bsr_watcom = \
+    "bsr eax, eax" \
+    parm [eax] nomemory \
+    value [eax] \
+    modify exact [eax] nomemory;
+#endif
+
+SDL_FORCE_INLINE int
+SDL20_MostSignificantBitIndex32(Uint32 x)
+{
+#if defined(__GNUC__) && (__GNUC__ >= 4 || (__GNUC__ == 3 && __GNUC_MINOR__ >= 4))
+    /* Count Leading Zeroes builtin in GCC.
+     * http://gcc.gnu.org/onlinedocs/gcc-4.3.4/gcc/Other-Builtins.html
+     */
+    if (x == 0) {
+        return -1;
+    }
+    return 31 - __builtin_clz(x);
+#elif defined(__WATCOMC__) && defined(__386__)
+    if (x == 0) {
+        return -1;
+    }
+    return _SDL20_bsr_watcom(x);
+#elif defined(_MSC_VER)
+    unsigned long index;
+    if (_BitScanReverse(&index, x)) {
+        return index;
+    }
+    return -1;
+#else
+    /* Based off of Bit Twiddling Hacks by Sean Eron Anderson
+     * <seander@cs.stanford.edu>, released in the public domain.
+     * http://graphics.stanford.edu/~seander/bithacks.html#IntegerLog
+     */
+    const Uint32 b[] = {0x2, 0xC, 0xF0, 0xFF00, 0xFFFF0000};
+    const int    S[] = {1, 2, 4, 8, 16};
+
+    int msbIndex = 0;
+    int i;
+
+    if (x == 0) {
+        return -1;
+    }
+
+    for (i = 4; i >= 0; i--)
+    {
+        if (x & b[i])
+        {
+            x >>= S[i];
+            msbIndex |= S[i];
+        }
+    }
+
+    return msbIndex;
+#endif
+}
+
+
 #define SDL12_DEFAULT_REPEAT_DELAY 500
 #define SDL12_DEFAULT_REPEAT_INTERVAL 30
 
@@ -471,6 +532,9 @@ typedef struct SDL12_keysym
     SDL12Mod mod;
     Uint16 unicode;
 } SDL12_keysym;
+
+#define SDL12_RELEASED 0
+#define SDL12_PRESSED  1
 
 typedef enum
 {
@@ -2128,6 +2192,20 @@ SDL_GetKeyState(int *numkeys)
     return KeyState;
 }
 
+static int DecodeUTF8Char(char **ptr)
+{
+    Uint32 first_c = **(unsigned char **)ptr;
+    int num_bytes = (first_c) ? (31 - SDL20_MostSignificantBitIndex32(~(first_c << 24))) : 0;
+    Uint32 value = first_c & ((1 << (8 - num_bytes)) - 1);
+    int i;
+    (*ptr)++;
+    for (i = 1; i < num_bytes; ++i)
+    {
+        value = (value << 6) | (**(unsigned char **)ptr & 0x3f);
+        (*ptr)++;
+    }
+    return value;
+}
 
 static int SDLCALL
 EventFilter20to12(void *data, SDL_Event *event20)
@@ -2225,13 +2303,27 @@ EventFilter20to12(void *data, SDL_Event *event20)
             /* turns out that some apps actually made use of the hardware scancodes (checking for platform beforehand) */
             event12.key.keysym.scancode = 0;
             event12.key.keysym.mod = event20->key.keysym.mod;  /* these match up between 1.2 and 2.0! */
-            FIXME("unicode");
-            /* without setting keysym.unicode to at least keysym.sym, text input in some games don't work at all ! */
-            event12.key.keysym.unicode = (EnabledUnicode)? event12.key.keysym.sym : 0;
+            event12.key.keysym.unicode = 0;
             break;
 
-        case SDL_TEXTEDITING: FIXME("write me"); return 1;
-        case SDL_TEXTINPUT: FIXME("write me"); return 1;
+        case SDL_TEXTEDITING: return 1;
+        case SDL_TEXTINPUT:
+        {
+            char *text = event20->text.text;
+            int codePoint = 0, i;
+            while (codePoint = DecodeUTF8Char(&text))
+            {
+                if (codePoint > 0xFFFF)
+                    FIXME("Support for UTF-16 surrgate pairs");
+                event12.type = SDL12_KEYDOWN;
+                event12.key.state = SDL12_PRESSED;
+                event12.key.keysym.scancode = 0;
+                event12.key.keysym.sym = SDLK12_UNKNOWN;
+                event12.key.keysym.unicode = codePoint;
+                PushEventIfNotFiltered(&event12);
+            }
+        }
+        return 1;
 
         case SDL_MOUSEMOTION:
             event12.type = SDL12_MOUSEMOTION;
@@ -4195,8 +4287,11 @@ DECLSPEC int SDLCALL
 SDL_EnableUNICODE(int enable)
 {
     int old = EnabledUnicode;
-    FIXME("write me properly!");
     EnabledUnicode = enable;
+    if (enable)
+	    SDL20_StartTextInput();
+    else
+	    SDL20_StopTextInput();
     return old;
 }
 
