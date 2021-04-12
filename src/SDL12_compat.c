@@ -2886,7 +2886,7 @@ SDL_ListModes(const SDL12_PixelFormat *format12, Uint32 flags)
 
     for (i = 0; i < VideoModesCount; i++) {
         VideoModeList *modes = &VideoModes[i];
-        if (modes->format == fmt) {
+        if (SDL_BITSPERPIXEL(modes->format) == SDL_BITSPERPIXEL(fmt)) {
             return modes->modes12;
         }
     }
