@@ -2310,8 +2310,8 @@ EventFilter20to12(void *data, SDL_Event *event20)
         case SDL_TEXTINPUT:
         {
             char *text = event20->text.text;
-            int codePoint = 0, i;
-            while (codePoint = DecodeUTF8Char(&text))
+            int codePoint = 0;
+            while ((codePoint = DecodeUTF8Char(&text)) != 0)
             {
                 if (codePoint > 0xFFFF)
                     FIXME("Support for UTF-16 surrgate pairs");
