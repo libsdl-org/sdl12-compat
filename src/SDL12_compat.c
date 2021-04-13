@@ -807,6 +807,8 @@ static EventQueueType *EventQueueHead = NULL;
 static EventQueueType *EventQueueTail = NULL;
 static EventQueueType *EventQueueAvailable = NULL;
 
+/* This is a KEYDOWN event which is being held for a follow-up TEXTINPUT */
+static SDL12_Event PendingKeydownEvent;
 
 /* Obviously we can't use SDL_LoadObject() to load SDL2.  :)  */
 static char loaderror[256];
@@ -1426,6 +1428,8 @@ Init12Video(void)
 
     EventQueueHead = EventQueueTail = NULL;
     EventQueueAvailable = EventQueuePool;
+
+    SDL_memset(&PendingKeydownEvent, 0, sizeof(SDL12_Event));
 
     SDL_memset(EventStates, SDL_ENABLE, sizeof (EventStates)); /* on by default */
     EventStates[SDL12_SYSWMEVENT] = SDL_IGNORE;  /* off by default. */
@@ -2207,6 +2211,23 @@ static int DecodeUTF8Char(char **ptr)
     return value;
 }
 
+/* Add the pending KEYDOWN event to the EventQueue, possibly with 'unicode' set
+ * Returns 1 if there was a pending event. */
+static int FlushPendingKeydownEvent(Uint32 unicode)
+{
+    if (PendingKeydownEvent.type != SDL12_KEYDOWN)
+        return 0;
+
+    PendingKeydownEvent.key.keysym.unicode = unicode;
+
+    PushEventIfNotFiltered(&PendingKeydownEvent);
+    
+    /* Reset the event. */
+    SDL_memset(&PendingKeydownEvent, 0, sizeof(SDL12_Event));
+
+    return 1;
+}
+
 static int SDLCALL
 EventFilter20to12(void *data, SDL_Event *event20)
 {
@@ -2285,7 +2306,6 @@ EventFilter20to12(void *data, SDL_Event *event20)
         case SDL_SYSWMEVENT: FIXME("write me"); return 1;
 
         case SDL_KEYUP:
-        case SDL_KEYDOWN:
             if (event20->key.repeat) {
                 return 1;  /* ignore 2.0-style key repeat events */
             }
@@ -2304,7 +2324,40 @@ EventFilter20to12(void *data, SDL_Event *event20)
             event12.key.keysym.scancode = 0;
             event12.key.keysym.mod = event20->key.keysym.mod;  /* these match up between 1.2 and 2.0! */
             event12.key.keysym.unicode = 0;
+
+            /* If there's a pending KEYDOWN event, flush it on KEYUP. */
+            FlushPendingKeydownEvent(0);
             break;
+
+        case SDL_KEYDOWN:
+
+            FlushPendingKeydownEvent(0);
+
+            if (event20->key.repeat) {
+                return 1;  /* ignore 2.0-style key repeat events */
+            }
+
+            PendingKeydownEvent.key.keysym.sym = Keysym20to12(event20->key.keysym.sym);
+            if (PendingKeydownEvent.key.keysym.sym == SDLK12_UNKNOWN) {
+                return 1;  /* drop it if we can't map it */
+            }
+
+            KeyState[PendingKeydownEvent.key.keysym.sym] = event20->key.state;
+
+            PendingKeydownEvent.type = (event20->type == SDL_KEYDOWN) ? SDL12_KEYDOWN : SDL12_KEYUP;
+            PendingKeydownEvent.key.which = 0;
+            PendingKeydownEvent.key.state = event20->key.state;
+            FIXME("SDL1.2 and SDL2.0 scancodes are incompatible");
+            /* turns out that some apps actually made use of the hardware scancodes (checking for platform beforehand) */
+            PendingKeydownEvent.key.keysym.scancode = 0;
+            PendingKeydownEvent.key.keysym.mod = event20->key.keysym.mod;  /* these match up between 1.2 and 2.0! */
+            PendingKeydownEvent.key.keysym.unicode = 0;
+
+            /* If Unicode is not enabled, flush all KEYDOWN events immediately. */
+            if (!EnabledUnicode)
+                FlushPendingKeydownEvent(0);
+
+            return 1;
 
         case SDL_TEXTEDITING: return 1;
         case SDL_TEXTINPUT:
@@ -2313,14 +2366,31 @@ EventFilter20to12(void *data, SDL_Event *event20)
             int codePoint = 0;
             while ((codePoint = DecodeUTF8Char(&text)) != 0)
             {
-                if (codePoint > 0xFFFF)
-                    FIXME("Support for UTF-16 surrgate pairs");
-                event12.type = SDL12_KEYDOWN;
-                event12.key.state = SDL12_PRESSED;
-                event12.key.keysym.scancode = 0;
-                event12.key.keysym.sym = SDLK12_UNKNOWN;
-                event12.key.keysym.unicode = codePoint;
-                PushEventIfNotFiltered(&event12);
+                if (codePoint > 0xFFFF) {
+                    /* We need to send a UTF-16 surrogate pair. */
+                    Uint16 firstChar = ((codePoint - 0x10000) >> 10) + 0xD800;
+                    Uint16 secondChar = ((codePoint - 0x10000) & 0x3FF) + 0xDC00;
+                    event12.type = SDL12_KEYDOWN;
+                    event12.key.state = SDL12_PRESSED;
+                    event12.key.keysym.scancode = 0;
+                    event12.key.keysym.sym = SDLK12_UNKNOWN;
+                    event12.key.keysym.unicode = firstChar;
+                    if (!FlushPendingKeydownEvent(firstChar))
+                         PushEventIfNotFiltered(&event12);
+                    event12.key.keysym.unicode = secondChar;
+                    PushEventIfNotFiltered(&event12);
+            }
+            else
+            {
+                    if (!FlushPendingKeydownEvent(codePoint)) {
+                        event12.type = SDL12_KEYDOWN;
+                        event12.key.state = SDL12_PRESSED;
+                        event12.key.keysym.scancode = 0;
+                        event12.key.keysym.sym = SDLK12_UNKNOWN;
+                        event12.key.keysym.unicode = codePoint;
+                        PushEventIfNotFiltered(&event12);
+                    }
+            }
             }
         }
         return 1;
@@ -3777,6 +3847,11 @@ SDL_PumpEvents(void)
         PresentScreen();
     }
     while (SDL20_PollEvent(&e)) {  /* spin to drain the SDL2 event queue. */ }
+
+    /* If there's a pending KEYDOWN event, and we haven't got a TEXTINPUT
+     * event which matches it, then let it through now. */
+    if (PendingKeydownEvent.type == SDL12_KEYDOWN)
+        FlushPendingKeydownEvent(0);
 }
 
 DECLSPEC void SDLCALL
