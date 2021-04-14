@@ -529,7 +529,7 @@ typedef struct SDL12_keysym
 {
     Uint8 scancode;
     SDL12Key sym;
-    SDL12Mod mod;
+    unsigned int mod; /* SDL12Mod */
     Uint16 unicode;
 } SDL12_keysym;
 
@@ -4388,7 +4388,7 @@ SDL_SetTimer(Uint32 interval, SDL12_TimerCallback callback)
 
     if (interval && callback) {
         interval = RoundTimerTo12Resolution(interval);
-        compat_timer = SDL20_AddTimer(interval, SetTimerCallback12, callback);
+        compat_timer = SDL20_AddTimer(interval, SetTimerCallback12, (void*)callback);
         if (!compat_timer) {
             return -1;
         }
