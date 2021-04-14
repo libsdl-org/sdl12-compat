@@ -1728,18 +1728,16 @@ SDL_PushEvent(SDL12_Event *event12)
 DECLSPEC int SDLCALL
 SDL_PeepEvents(SDL12_Event *events12, int numevents, SDL_eventaction action, Uint32 mask)
 {
-    if (action == SDL_ADDEVENT)
-    {
+    if (action == SDL_ADDEVENT) {
         int i;
-        for (i = 0; i < numevents; i++)
-        {
+        for (i = 0; i < numevents; i++) {
             if (SDL_PushEvent(&events12[i]) < 0)
                 break;  /* out of space for more events. */
         }
         return i;
     }
-    else if ((action == SDL_PEEKEVENT) || (action == SDL_GETEVENT))
-    {
+
+    if ((action == SDL_PEEKEVENT) || (action == SDL_GETEVENT)) {
         const SDL_bool isGet = (action == SDL_GETEVENT)? SDL_TRUE : SDL_FALSE;
         EventQueueType *prev = NULL;
         EventQueueType *item = EventQueueHead;
@@ -1793,10 +1791,8 @@ SDL_WaitEvent(SDL12_Event *event12)
 static SDL_bool
 PushEventIfNotFiltered(SDL12_Event *event12)
 {
-    if (event12->type != SDL12_NOEVENT)
-    {
-        if (EventStates[event12->type] != SDL_IGNORE)
-        {
+    if (event12->type != SDL12_NOEVENT) {
+        if (EventStates[event12->type] != SDL_IGNORE) {
             if ((!EventFilter12) || (EventFilter12(event12)))
                 return (SDL_PushEvent(event12) == 0)? SDL_TRUE : SDL_FALSE;
         }
@@ -2205,9 +2201,9 @@ static int DecodeUTF8Char(char **ptr)
     int num_bytes = (first_c) ? (31 - SDL20_MostSignificantBitIndex32(~(first_c << 24))) : 0;
     Uint32 value = first_c & ((1 << (8 - num_bytes)) - 1);
     int i;
+
     (*ptr)++;
-    for (i = 1; i < num_bytes; ++i)
-    {
+    for (i = 1; i < num_bytes; ++i) {
         value = (value << 6) | (**(unsigned char **)ptr & 0x3f);
         (*ptr)++;
     }
@@ -2241,15 +2237,13 @@ EventFilter20to12(void *data, SDL_Event *event20)
 
     SDL20_zero(event12);
 
-    switch (event20->type)
-    {
+    switch (event20->type) {
         case SDL_QUIT:
             event12.type = SDL12_QUIT;
             break;
 
         case SDL_WINDOWEVENT:
-            switch (event20->window.event)
-            {
+            switch (event20->window.event) {
                 case SDL_WINDOWEVENT_CLOSE:
                     event12.type = SDL12_QUIT;
                     break;
@@ -2363,12 +2357,10 @@ EventFilter20to12(void *data, SDL_Event *event20)
             return 1;
 
         case SDL_TEXTEDITING: return 1;
-        case SDL_TEXTINPUT:
-        {
+        case SDL_TEXTINPUT: {
             char *text = event20->text.text;
             int codePoint = 0;
-            while ((codePoint = DecodeUTF8Char(&text)) != 0)
-            {
+            while ((codePoint = DecodeUTF8Char(&text)) != 0) {
                 if (codePoint > 0xFFFF) {
                     /* We need to send a UTF-16 surrogate pair. */
                     Uint16 firstChar = ((codePoint - 0x10000) >> 10) + 0xD800;
@@ -2382,9 +2374,7 @@ EventFilter20to12(void *data, SDL_Event *event20)
                          PushEventIfNotFiltered(&event12);
                     event12.key.keysym.unicode = secondChar;
                     PushEventIfNotFiltered(&event12);
-            }
-            else
-            {
+                } else {
                     if (!FlushPendingKeydownEvent(codePoint)) {
                         event12.type = SDL12_KEYDOWN;
                         event12.key.state = SDL12_PRESSED;
@@ -2393,10 +2383,10 @@ EventFilter20to12(void *data, SDL_Event *event20)
                         event12.key.keysym.unicode = codePoint;
                         PushEventIfNotFiltered(&event12);
                     }
+                }
             }
-            }
-        }
-        return 1;
+          }
+          return 1;
 
         case SDL_MOUSEMOTION:
             event12.type = SDL12_MOUSEMOTION;
@@ -2832,8 +2822,7 @@ DECLSPEC SDL_bool SDLCALL
 SDL_SetClipRect(SDL12_Surface *surface12, const SDL12_Rect *rect12)
 {
     SDL_bool retval = SDL_FALSE;
-    if (surface12)
-    {
+    if (surface12) {
         SDL_Rect rect20;
         retval = SDL20_SetClipRect(surface12->surface20, rect12 ? Rect12to20(rect12, &rect20) : NULL);
         SDL20_GetClipRect(surface12->surface20, &rect20);
@@ -2847,8 +2836,7 @@ SDL_FillRect(SDL12_Surface *dst, SDL12_Rect *dstrect12, Uint32 color)
 {
     SDL_Rect dstrect20;
     const int retval = SDL20_FillRect(dst->surface20, dstrect12 ? Rect12to20(dstrect12, &dstrect20) : NULL, color);
-    if (retval == 0)
-    {
+    if (retval == 0) {
         if (dstrect12) {  /* 1.2 stores the clip intersection in dstrect */
             SDL_Rect intersected20;
             SDL20_IntersectRect(&dstrect20, &dst->surface20->clip_rect, &intersected20);
@@ -4237,13 +4225,11 @@ SDL_GL_SetAttribute(SDL12_GLattr attr, int value)
         return SDL20_SetError("Unknown GL attribute");
 
     /* swap control was moved out of this API, everything else lines up. */
-    if (attr == SDL12_GL_SWAP_CONTROL)
-    {
+    if (attr == SDL12_GL_SWAP_CONTROL) {
         SwapInterval = value;
         FIXME("Actually set swap interval somewhere");
         return 0;
     }
-
     return SDL20_GL_SetAttribute((SDL_GLattr) attr, value);
 }
 
@@ -4254,12 +4240,10 @@ SDL_GL_GetAttribute(SDL12_GLattr attr, int* value)
         return SDL20_SetError("Unknown GL attribute");
 
     /* swap control was moved out of this API, everything else lines up. */
-    if (attr == SDL12_GL_SWAP_CONTROL)
-    {
+    if (attr == SDL12_GL_SWAP_CONTROL) {
         *value = SDL20_GL_GetSwapInterval();
         return 0;
     }
-
     return SDL20_GL_GetAttribute((SDL_GLattr) attr, value);
 }
 
@@ -4274,6 +4258,7 @@ SDL_GL_SwapBuffers(void)
             int scaledh, scaledw;
             int centeredx, centeredy;
             int drawablew, drawableh;
+
             SDL20_GL_GetDrawableSize(VideoWindow20, &drawablew, &drawableh);
             OpenGLFuncs.glGetFloatv(GL_COLOR_CLEAR_VALUE, clearcolor);
 
@@ -4284,25 +4269,26 @@ SDL_GL_SwapBuffers(void)
                 scaledh = drawableh;
                 scaledw = (int) (((((double)OpenGLLogicalScalingWidth) / ((double)OpenGLLogicalScalingHeight))) * ((double)drawableh));
             }
-
             centeredx = (drawablew - scaledw) / 2;
             centeredy = (drawableh - scaledh) / 2;
 
-			OpenGLFuncs.glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-			OpenGLFuncs.glBindFramebuffer(GL_READ_FRAMEBUFFER, OpenGLLogicalScalingFBO);
-			if (has_scissor) { OpenGLFuncs.glDisable(GL_SCISSOR_TEST); }  /* scissor test affects framebuffer_blit */
+            OpenGLFuncs.glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+            OpenGLFuncs.glBindFramebuffer(GL_READ_FRAMEBUFFER, OpenGLLogicalScalingFBO);
+            if (has_scissor) {
+                OpenGLFuncs.glDisable(GL_SCISSOR_TEST);  /* scissor test affects framebuffer_blit */
+            }
             OpenGLFuncs.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
             OpenGLFuncs.glClear(GL_COLOR_BUFFER_BIT);
-			OpenGLFuncs.glBlitFramebuffer(
-			    0, 0, OpenGLLogicalScalingWidth, OpenGLLogicalScalingHeight,
-                centeredx, centeredy, centeredx + scaledw, centeredy + scaledh,
-			    GL_COLOR_BUFFER_BIT, GL_LINEAR
-			);
-			OpenGLFuncs.glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            OpenGLFuncs.glBlitFramebuffer(0, 0, OpenGLLogicalScalingWidth, OpenGLLogicalScalingHeight,
+                                          centeredx, centeredy, centeredx + scaledw, centeredy + scaledh,
+                                          GL_COLOR_BUFFER_BIT, GL_LINEAR);
+            OpenGLFuncs.glBindFramebuffer(GL_FRAMEBUFFER, 0);
             SDL20_GL_SwapWindow(VideoWindow20);
             OpenGLFuncs.glClearColor(clearcolor[0], clearcolor[1], clearcolor[2], clearcolor[3]);
-			if (has_scissor) { OpenGLFuncs.glEnable(GL_SCISSOR_TEST); }
-			OpenGLFuncs.glBindFramebuffer(GL_FRAMEBUFFER, OpenGLLogicalScalingFBO);
+            if (has_scissor) {
+                OpenGLFuncs.glEnable(GL_SCISSOR_TEST);
+            }
+            OpenGLFuncs.glBindFramebuffer(GL_FRAMEBUFFER, OpenGLLogicalScalingFBO);
         } else {
             SDL20_GL_SwapWindow(VideoWindow20);
         }
@@ -4368,10 +4354,11 @@ SDL_EnableUNICODE(int enable)
 {
     int old = EnabledUnicode;
     EnabledUnicode = enable;
-    if (enable)
-	    SDL20_StartTextInput();
-    else
-	    SDL20_StopTextInput();
+    if (enable) {
+        SDL20_StartTextInput();
+    } else {
+        SDL20_StopTextInput();
+    }
     return old;
 }
 
@@ -4621,8 +4608,7 @@ static int SDLCALL
 RWops20to12_close(struct SDL12_RWops *rwops12)
 {
     int rc = 0;
-    if (rwops12)
-    {
+    if (rwops12) {
         rc = rwops12->rwops20->close(rwops12->rwops20);
         if (rc == 0)
             SDL_FreeRW(rwops12);
