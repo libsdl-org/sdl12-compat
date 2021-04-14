@@ -1813,8 +1813,11 @@ SDL_EventState(Uint8 type, int state)
 
     if (state != SDL_QUERY)
         EventStates[type] = state;
-    if (state == SDL_IGNORE)  /* drop existing events of this type. */
-        while (SDL_PeepEvents(&e, 1, SDL_GETEVENT, (1<<type))) {}
+    if (state == SDL_IGNORE) {  /* drop existing events of this type. */
+        while (SDL_PeepEvents(&e, 1, SDL_GETEVENT, (1<<type))) {
+          /* nothing */ ;
+        }
+    }
 
     return retval;
 }
@@ -3160,7 +3163,8 @@ LoadOpenGLFunctions(void)
     /* load core functions so we can guess about a few other things. */
     SDL_zero(OpenGLFuncs);
     OpenGLFuncs.SUPPORTS_Core = SDL_TRUE;
-    #define OPENGL_SYM(ext,rc,fn,params,args,ret) OpenGLFuncs.fn = (OpenGLFuncs.SUPPORTS_##ext) ? SDL20_GL_GetProcAddress(#fn) : NULL;
+    #define OPENGL_SYM(ext,rc,fn,params,args,ret) OpenGLFuncs.fn = \
+           (OpenGLFuncs.SUPPORTS_##ext)? (openglfn_##fn##_t)SDL20_GL_GetProcAddress(#fn) : NULL;
     #include "SDL20_syms.h"
 
     version = (const char *) OpenGLFuncs.glGetString(GL_VERSION);
@@ -3178,7 +3182,8 @@ LoadOpenGLFunctions(void)
     }
 
     /* load everything we can. */
-    #define OPENGL_SYM(ext,rc,fn,params,args,ret) OpenGLFuncs.fn = (OpenGLFuncs.SUPPORTS_##ext) ? SDL20_GL_GetProcAddress(#fn) : NULL;
+    #define OPENGL_SYM(ext,rc,fn,params,args,ret) OpenGLFuncs.fn = \
+           (OpenGLFuncs.SUPPORTS_##ext)? (openglfn_##fn##_t)SDL20_GL_GetProcAddress(#fn) : NULL;
     #include "SDL20_syms.h"
 }
 
