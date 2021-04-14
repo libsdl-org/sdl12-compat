@@ -6,22 +6,23 @@
 
 DLLNAME = SDL12
 VERSION = 1.2.50
-LIBHOME = .
 
-# change SDL2INC to point to the SDL2 headers.
-SDL2INC = -IC:\SDL2DEV/h/SDL2
-INCPATH = -I$(%WATCOM)/h/os2 -I$(%WATCOM)/h $(SDL2INC)
+# change SDL2INC to point to the SDL2 headers
+SDL2INC = C:\SDL2DEV\h\SDL2
+INCPATH = -I"$(%WATCOM)/h/os2" -I"$(%WATCOM)/h" -I"$(SDL2INC)"
 LIBNAME = $(DLLNAME)
 
-DLLFILE = $(LIBHOME)/$(LIBNAME).dll
-LIBFILE = $(LIBHOME)/$(LIBNAME).lib
-LNKFILE=$(LIBNAME).lnk
+DLLFILE = $(LIBNAME).dll
+LIBFILE = $(LIBNAME).lib
+LNKFILE = $(LIBNAME).lnk
 
 CFLAGS_DEF=-bt=os2 -d0 -zq -bm -5s -fp5 -fpi87 -sg -oteanbmier $(INCPATH)
 CFLAGS_DLL=$(CFLAGS_DEF) -bd
 
 # Special flags for building SDL
 CFLAGS=$(CFLAGS_DLL) -otexan -wx -ei
+# avoid bogus W200 from cpuid code:
+CFLAGS+= -wcd=200
 # newer OpenWatcom versions enable W303 by default
 CFLAGS+= -wcd=303
 
