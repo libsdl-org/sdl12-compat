@@ -940,6 +940,12 @@ LoadSDL20(void)
                 okay = (SDL_VERSIONNUM(v.major,v.minor,v.patch) >= SDL20_REQUIRED_VER);
                 if (!okay) {
                     sprintf_fn(loaderror, "SDL2 %d.%d.%d library is too old.", v.major, v.minor, v.patch);
+                } else {
+                    #if defined(__DATE__) && defined(__TIME__)
+                    SDL20_Log("sdl12-compat, built on " __DATE__ " at " __TIME__ ", talking to SDL2 %d.%d.%d", v.major, v.minor, v.patch);
+                    #else
+                    SDL20_Log("sdl12-compat, talking to SDL2 %d.%d.%d", v.major, v.minor, v.patch);
+                    #endif
                 }
             }
             if (!okay) {
