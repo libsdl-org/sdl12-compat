@@ -3181,11 +3181,23 @@ LoadOpenGLFunctions(void)
     #include "SDL20_syms.h"
 }
 
+/* if the app binds its own framebuffer objects, it'll try to bind the window framebuffer
+   (always zero) to draw to the screen, but if we're using a framebuffer object to handle
+   scaling, we need to catch those binds and make sure rendering intended for the window
+   framebuffer is redirected to our scaling FBO, so we have SDL_GL_GetProcAddress() hand out
+   a shim for glBindFramebuffer to catch this. */
+static void GLAPIENTRY
+glBindFramebuffer_shim_for_scaling(GLenum target, GLuint name)
+{
+    /* OpenGLLogicalScalingFBO will be zero if we aren't scaling, making this use the default. */
+    /*if ((name == 0) && (OpenGLLogicalScalingFBO != 0)) { SDL20_Log("OVERRIDE WINDOW FRAMEBUFFER FOR SCALING!"); }*/
+    OpenGLFuncs.glBindFramebuffer(target, (name == 0) ? OpenGLLogicalScalingFBO : name);
+}
+
+
 static SDL_bool
 InitializeOpenGLScaling(const int w, const int h)
 {
-    LoadOpenGLFunctions();
-
     if (!OpenGLFuncs.SUPPORTS_GL_ARB_framebuffer_object) {
         return SDL_FALSE;  /* no FBOs, no scaling. */
     }
@@ -3239,9 +3251,12 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
            work with these apps, too. That's easy from SDL_GL_GetProcAddress, but we
            maybe need to export the symbol from here too, for those that link against
            OpenGL directly. UT2004 is known to use FBOs with SDL 1.2, and I assume
-           idTech 4 games (Doom 3, Quake 4, Prey) do as well.*/
+           idTech 4 games (Doom 3, Quake 4, Prey) do as well. */
         const char *env = SDL20_getenv("SDL12COMPAT_OPENGL_SCALING");
-        use_gl_scaling = (env && SDL20_atoi(env)) ? SDL_TRUE : SDL_FALSE;
+
+        /* for now we default GL scaling to ENABLED. If an app breaks or is linked directly
+           to glBindFramebuffer, they'll need to turn it off with this environment variable */
+        use_gl_scaling = (!env || SDL20_atoi(env)) ? SDL_TRUE : SDL_FALSE;
     }
 
     FIXME("currently ignores SDL_WINDOWID, which we could use with SDL_CreateWindowFrom ...?");
@@ -3390,6 +3405,8 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
         }
 
         VideoSurface12->flags |= SDL12_OPENGL;
+
+        LoadOpenGLFunctions();
 
         /* Try to set up a logical scaling */
         if (use_gl_scaling) {
@@ -4191,6 +4208,16 @@ DECLSPEC void SDLCALL
 SDL_FreeYUVOverlay(SDL12_Overlay * overlay)
 {
     FIXME("write me");
+}
+
+DECLSPEC void * SDLCALL
+SDL_GL_GetProcAddress(const char *sym)
+{
+    /* see comments on glBindFramebuffer_shim_for_scaling for explanation */
+    if ((SDL_strcmp(sym, "glBindFramebuffer") == 0) || (SDL_strcmp(sym, "glBindFramebufferEXT") == 0)) {
+        return (void *) glBindFramebuffer_shim_for_scaling;
+    }
+    return SDL20_GL_GetProcAddress(sym);
 }
 
 DECLSPEC int SDLCALL
