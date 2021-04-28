@@ -3765,7 +3765,6 @@ PresentScreen(void)
         return;  /* oh well */
     }
 
-    FIXME("Maybe lock texture always, until present, if no conversion needed?");
     if (VideoConvertSurface20) {
         VideoConvertSurface20->pixels = pixels;
         VideoConvertSurface20->pitch = pitch;
