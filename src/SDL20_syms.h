@@ -281,6 +281,8 @@ SDL20_SYM(int,GetRendererInfo,(SDL_Renderer *a, SDL_RendererInfo *b),(a,b),retur
 SDL20_SYM(SDL_Texture *,CreateTexture,(SDL_Renderer *a, Uint32 b, int c, int d, int e),(a,b,c,d,e),return)
 SDL20_SYM(int,LockTexture,(SDL_Texture *a, const SDL_Rect *b, void **c, int *d),(a,b,c,d),return)
 SDL20_SYM(void,UnlockTexture,(SDL_Texture *a),(a),)
+SDL20_SYM(int,UpdateTexture,(SDL_Texture *a, const SDL_Rect *b, const void *c, int d),(a,b,c,d),return)
+SDL20_SYM(int,UpdateYUVTexture,(SDL_Texture *a, const SDL_Rect *b, const Uint8 *c, int d, const Uint8 *e, int f, const Uint8 *g, int h),(a,b,c,d,e,f,g,h),return)
 SDL20_SYM(int,RenderSetLogicalSize,(SDL_Renderer *a, int b, int c),(a,b,c),return)
 SDL20_SYM(int,SetRenderDrawColor,(SDL_Renderer *a, Uint8 b, Uint8 c, Uint8 d, Uint8 e),(a,b,c,d,e),return)
 SDL20_SYM(int,RenderClear,(SDL_Renderer *a),(a),return)

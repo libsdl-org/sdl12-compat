@@ -218,6 +218,12 @@ typedef struct SDL12_Surface
     int refcount;
 } SDL12_Surface;
 
+#define SDL12_YV12_OVERLAY 0x32315659
+#define SDL12_IYUV_OVERLAY 0x56555949
+#define SDL12_YUY2_OVERLAY 0x32595559
+#define SDL12_UYVY_OVERLAY 0x59565955
+#define SDL12_YVYU_OVERLAY 0x55595659
+
 typedef struct SDL12_Overlay
 {
     Uint32 format;
@@ -4176,38 +4182,164 @@ SDL_GetWMInfo(SDL_SysWMinfo * info)
     return 0; /* some programs only test against 0, not -1 */
 }
 
+
+typedef struct SDL12_YUVData
+{
+    SDL_Texture *texture20;
+    Uint8 *pixelbuf;
+    Uint8 *pixels[3];
+    Uint16 pitches[3];
+} SDL12_YUVData;
+
 DECLSPEC SDL12_Overlay * SDLCALL
-SDL_CreateYUVOverlay(int w, int h, Uint32 format, SDL12_Surface *display)
+SDL_CreateYUVOverlay(int w, int h, Uint32 format12, SDL12_Surface *display12)
 {
-    FIXME("write me");
-    SDL20_Unsupported();
-    return NULL;
+    /* SDL 1.2 has you pass the screen surface in here, but it doesn't check that it's _actually_ the screen surface,
+       which implies you should be able to blit YUV overlays to other surfaces too...but then SDL_DisplayYUVOverlay
+       always uses the screen surface unconditionally. As such, and because overlays were sort of hostile to software
+       rendering anyhow, we always make an SDL_Texture in here and draw over the screen pixels, in hopes that the GPU
+       gives us a boost here. */
+
+    SDL12_Overlay *retval = NULL;
+    SDL12_YUVData *hwdata = NULL;
+    Uint32 format20 = 0;
+
+    if (display12 != VideoSurface12) {  /* SDL 1.2 doesn't check this, but it seems irresponsible not to. */
+        SDL20_SetError("YUV overlays are only supported on the screen surface");
+        return NULL;
+    }
+
+    if (display12->flags & SDL12_OPENGL) {
+        SDL20_SetError("YUV overlays are not supported in OpenGL mode");
+        return NULL;
+    }
+
+    SDL_assert(VideoRenderer20 != NULL);
+
+    switch (format12) {
+        #define SUPPORTED_YUV_FORMAT(x) case SDL12_##x##_OVERLAY: format20 = SDL_PIXELFORMAT_##x; break
+        SUPPORTED_YUV_FORMAT(YV12);
+        SUPPORTED_YUV_FORMAT(IYUV);
+        SUPPORTED_YUV_FORMAT(YUY2);
+        SUPPORTED_YUV_FORMAT(UYVY);
+        SUPPORTED_YUV_FORMAT(YVYU);
+        #undef SUPPORTED_YUV_FORMAT
+        default: SDL20_SetError("Unsupported YUV format"); return NULL;
+    }
+
+    retval = (SDL12_Overlay *) SDL20_calloc(1, sizeof (SDL12_Overlay) + sizeof (SDL12_YUVData));
+    if (!retval) {
+        SDL20_OutOfMemory();
+        return NULL;
+    }
+
+    hwdata = (SDL12_YUVData *) (retval + 1);
+    hwdata->pixelbuf = (Uint8 *) SDL_calloc(1, (w * 2) * h);
+    if (!hwdata->pixelbuf) {
+        SDL20_free(retval);
+        SDL20_OutOfMemory();
+        return NULL;
+    }
+
+    hwdata->pixels[0] = hwdata->pixelbuf;
+    if ((format12 == SDL12_YV12_OVERLAY) || (format12 == SDL12_IYUV_OVERLAY)) {
+        retval->planes = 3;
+        hwdata->pitches[0] = w;
+        hwdata->pitches[1] = hwdata->pitches[2] = w / 2;
+        hwdata->pixels[1] = hwdata->pixels[0] + (w * h);
+        hwdata->pixels[2] = hwdata->pixels[1] + ((w / 2) * h);
+    } else {
+        retval->planes = 1;
+        hwdata->pitches[0] = w * 2;
+    }
+
+    hwdata->texture20 = SDL20_CreateTexture(VideoRenderer20, format20, SDL_TEXTUREACCESS_STREAMING, w, h);
+    if (!hwdata->texture20) {
+        SDL20_free(hwdata->pixelbuf);
+        SDL20_free(retval);
+        return NULL;
+    }
+
+    retval->format = format12;
+    retval->w = w;
+    retval->h = h;
+    retval->hwfuncs = (void *) 0x1;  /* in case it's important for this to be non-NULL. */
+    retval->hwdata = hwdata;
+    retval->hw_overlay = 1;
+    retval->pitches = hwdata->pitches;
+
+    return retval;
 }
 
 DECLSPEC int SDLCALL
-SDL_LockYUVOverlay(SDL12_Overlay * overlay)
+SDL_LockYUVOverlay(SDL12_Overlay *overlay12)
 {
-    FIXME("write me");
-    return SDL20_Unsupported();
+    if (!overlay12) {
+        return SDL20_InvalidParamError("overlay");
+    }
+
+    overlay12->pixels = ((SDL12_YUVData *) overlay12->hwdata)->pixels;
+    return 0;  /* success */
 }
 
 DECLSPEC void SDLCALL
-SDL_UnlockYUVOverlay(SDL12_Overlay * overlay)
+SDL_UnlockYUVOverlay(SDL12_Overlay *overlay12)
 {
-    FIXME("write me");
+    if (overlay12) {
+        const SDL_Rect rect = { 0, 0, overlay12->w, overlay12->h };
+        SDL12_YUVData *hwdata = (SDL12_YUVData *) overlay12->hwdata;
+        if (overlay12->format == SDL12_IYUV_OVERLAY) {
+            SDL20_UpdateYUVTexture(hwdata->texture20, &rect,
+                                 hwdata->pixels[0], hwdata->pitches[0],
+                                 hwdata->pixels[1], hwdata->pitches[1],
+                                 hwdata->pixels[2], hwdata->pitches[2]);
+        } else if (overlay12->format == SDL12_YV12_OVERLAY) {
+            SDL20_UpdateYUVTexture(hwdata->texture20, &rect,
+                                 hwdata->pixels[0], hwdata->pitches[0],
+                                 hwdata->pixels[2], hwdata->pitches[2],
+                                 hwdata->pixels[1], hwdata->pitches[1]);
+        } else {
+            SDL20_UpdateTexture(hwdata->texture20, &rect, hwdata->pixels[0], hwdata->pitches[0]);
+        }
+        overlay12->pixels = NULL;
+    }
 }
 
 DECLSPEC int SDLCALL
-SDL_DisplayYUVOverlay(SDL12_Overlay * overlay, SDL12_Rect * dstrect12)
+SDL_DisplayYUVOverlay(SDL12_Overlay *overlay12, SDL12_Rect *dstrect12)
 {
-    FIXME("write me");
-    return SDL20_Unsupported();
+    SDL12_YUVData *hwdata;
+    SDL_Rect dstrect20;
+
+    if (!overlay12) {
+        return SDL20_InvalidParamError("overlay");
+    } else if (!dstrect12) {
+        return SDL20_InvalidParamError("dstrect");
+    } else if (!VideoRenderer20) {
+        return SDL20_SetError("No software screen surface available");
+    }
+
+    hwdata = (SDL12_YUVData *) overlay12->hwdata;
+
+    SDL20_RenderClear(VideoRenderer20);
+    SDL20_RenderCopy(VideoRenderer20, VideoTexture20, NULL, NULL);
+    SDL20_RenderCopy(VideoRenderer20, hwdata->texture20, NULL, Rect12to20(dstrect12, &dstrect20));
+    SDL20_RenderPresent(VideoRenderer20);
+    VideoSurfaceLastPresentTicks = SDL20_GetTicks();
+    VideoSurfacePresentTicks = 0;
+
+    return 0;
 }
 
 DECLSPEC void SDLCALL
-SDL_FreeYUVOverlay(SDL12_Overlay * overlay)
+SDL_FreeYUVOverlay(SDL12_Overlay *overlay12)
 {
-    FIXME("write me");
+    if (overlay12) {
+        SDL12_YUVData *hwdata = (SDL12_YUVData *) overlay12->hwdata;
+        SDL20_DestroyTexture(hwdata->texture20);
+        SDL20_free(hwdata->pixelbuf);
+        SDL20_free(overlay12);
+    }
 }
 
 DECLSPEC void * SDLCALL
