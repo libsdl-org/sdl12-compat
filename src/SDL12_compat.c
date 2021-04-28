@@ -4286,8 +4286,11 @@ DECLSPEC void SDLCALL
 SDL_UnlockYUVOverlay(SDL12_Overlay *overlay12)
 {
     if (overlay12) {
-        const SDL_Rect rect = { 0, 0, overlay12->w, overlay12->h };
         SDL12_YUVData *hwdata = (SDL12_YUVData *) overlay12->hwdata;
+        SDL_Rect rect;
+        rect.x = rect.y = 0;
+        rect.w = overlay12->w;
+        rect.h = overlay12->h;
         if (overlay12->format == SDL12_IYUV_OVERLAY) {
             SDL20_UpdateYUVTexture(hwdata->texture20, &rect,
                                  hwdata->pixels[0], hwdata->pitches[0],
