@@ -3232,6 +3232,8 @@ InitializeOpenGLScaling(const int w, const int h)
         return SDL_FALSE;
     }
 
+    OpenGLFuncs.glViewport(0, 0, w, h);
+    OpenGLFuncs.glScissor(0, 0, w, h);
     OpenGLLogicalScalingWidth = w;
     OpenGLLogicalScalingHeight = h;
     OpenGLFuncs.glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

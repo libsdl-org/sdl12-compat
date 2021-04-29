@@ -300,6 +300,8 @@ OPENGL_SYM(Core,void,glEnable,(GLenum a),(a),)
 OPENGL_SYM(Core,void,glDisable,(GLenum a),(a),)
 OPENGL_SYM(Core,void,glGetFloatv,(GLenum a, GLfloat *b),(a,b),)
 OPENGL_SYM(Core,void,glClearColor,(GLfloat a,GLfloat b,GLfloat c,GLfloat d),(a,b,c,d),)
+OPENGL_SYM(Core,void,glViewport,(GLint a, GLint b, GLsizei c, GLsizei d),(a,b,c,d),)
+OPENGL_SYM(Core,void,glScissor,(GLint a, GLint b, GLsizei c, GLsizei d),(a,b,c,d),)
 
 OPENGL_EXT(GL_ARB_framebuffer_object)
 OPENGL_SYM(GL_ARB_framebuffer_object,void,glBindRenderbuffer,(GLenum a, GLuint b),(a,b),)
