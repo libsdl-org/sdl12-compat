@@ -4424,22 +4424,37 @@ SDL_GL_SwapBuffers(void)
         if (OpenGLLogicalScalingFBO != 0) {
             const GLboolean has_scissor = OpenGLFuncs.glIsEnabled(GL_SCISSOR_TEST);
             GLfloat clearcolor[4];
-            int scaledh, scaledw;
-            int centeredx, centeredy;
+            float want_aspect, real_aspect;
             int drawablew, drawableh;
+            SDL_Rect dstrect;
 
             SDL20_GL_GetDrawableSize(VideoWindow20, &drawablew, &drawableh);
             OpenGLFuncs.glGetFloatv(GL_COLOR_CLEAR_VALUE, clearcolor);
 
-            if (drawablew < drawableh) {
-                scaledw = drawablew;
-                scaledh = (int) (((((double)OpenGLLogicalScalingHeight) / ((double)OpenGLLogicalScalingWidth))) * ((double)drawablew));
+            want_aspect = ((float) OpenGLLogicalScalingWidth) / ((float) OpenGLLogicalScalingHeight);
+            real_aspect = ((float) drawablew) / ((float) drawableh);
+
+            if (SDL20_fabsf(want_aspect-real_aspect) < 0.0001f) {
+                /* The aspect ratios are the same, just scale appropriately */
+                dstrect.x = 0;
+                dstrect.y = 0;
+                dstrect.w = drawablew;
+                dstrect.h = drawableh;
+            } else if (want_aspect > real_aspect) {
+                /* We want a wider aspect ratio than is available - letterbox it */
+                const float scale = ((float) drawablew) / OpenGLLogicalScalingWidth;
+                dstrect.x = 0;
+                dstrect.w = drawablew;
+                dstrect.h = (int)SDL20_floorf(OpenGLLogicalScalingHeight * scale);
+                dstrect.y = (drawableh - dstrect.h) / 2;
             } else {
-                scaledh = drawableh;
-                scaledw = (int) (((((double)OpenGLLogicalScalingWidth) / ((double)OpenGLLogicalScalingHeight))) * ((double)drawableh));
+                /* We want a narrower aspect ratio than is available - use side-bars */
+                const float scale = ((float)drawableh) / OpenGLLogicalScalingHeight;
+                dstrect.y = 0;
+                dstrect.h = drawableh;
+                dstrect.w = (int)SDL20_floorf(OpenGLLogicalScalingWidth * scale);
+                dstrect.x = (drawablew - dstrect.w) / 2;
             }
-            centeredx = (drawablew - scaledw) / 2;
-            centeredy = (drawableh - scaledh) / 2;
 
             OpenGLFuncs.glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
             OpenGLFuncs.glBindFramebuffer(GL_READ_FRAMEBUFFER, OpenGLLogicalScalingFBO);
@@ -4449,7 +4464,7 @@ SDL_GL_SwapBuffers(void)
             OpenGLFuncs.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
             OpenGLFuncs.glClear(GL_COLOR_BUFFER_BIT);
             OpenGLFuncs.glBlitFramebuffer(0, 0, OpenGLLogicalScalingWidth, OpenGLLogicalScalingHeight,
-                                          centeredx, centeredy, centeredx + scaledw, centeredy + scaledh,
+                                          dstrect.x, dstrect.y, dstrect.x + dstrect.w, dstrect.y + dstrect.h,
                                           GL_COLOR_BUFFER_BIT, GL_LINEAR);
             OpenGLFuncs.glBindFramebuffer(GL_FRAMEBUFFER, 0);
             SDL20_GL_SwapWindow(VideoWindow20);

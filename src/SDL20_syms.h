@@ -275,6 +275,8 @@ SDL20_SYM_PASSTHROUGH(size_t,iconv,(SDL_iconv_t a, const char **b, size_t *c, ch
 SDL20_SYM_PASSTHROUGH(char *,iconv_string,(const char *a, const char *b, const char *c, size_t d),(a,b,c,d),return)
 SDL20_SYM(int,setenv,(const char *a, const char *b, int c),(a,b,c),return)
 SDL20_SYM(int,atoi,(const char *a),(a),return)
+SDL20_SYM(float,fabsf,(float a),(a),return)
+SDL20_SYM(float,floorf,(float a),(a),return)
 
 SDL20_SYM(SDL_Renderer *,CreateRenderer,(SDL_Window *a, int b, Uint32 c),(a,b,c),return)
 SDL20_SYM(int,GetRendererInfo,(SDL_Renderer *a, SDL_RendererInfo *b),(a,b),return)
