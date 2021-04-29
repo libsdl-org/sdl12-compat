@@ -3346,7 +3346,7 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
             GPU, so use FULLSCREEN_DESKTOP and logical scaling there.
             If possible, we'll do this with OpenGL, too, but we might not be
             able to. */
-        if (use_gl_scaling || ((dmode.w == width) && (dmode.h == height))) {
+        if (use_gl_scaling || ((flags12 & SDL12_OPENGL) == 0) || ((dmode.w == width) && (dmode.h == height))) {
             fullscreen_flags20 |= SDL_WINDOW_FULLSCREEN_DESKTOP;
         } else {
             fullscreen_flags20 |= SDL_WINDOW_FULLSCREEN;
