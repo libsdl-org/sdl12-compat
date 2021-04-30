@@ -2275,6 +2275,20 @@ EventFilter20to12(void *data, SDL_Event *event20)
                 case SDL_WINDOWEVENT_RESIZED:
                 case SDL_WINDOWEVENT_SIZE_CHANGED:
                     FIXME("what's the difference between RESIZED and SIZE_CHANGED?");
+
+                    /* don't report VIDEORESIZE if we're fullscreen-desktop;
+                       we're doing logical scaling and as far as the app is
+                       concerned the window doesn't change. */
+                    if (!VideoWindow20) {
+                        FIXME("we should probably drop a lot of these events.");
+                        break;  /* there's no window? Drop this event. */
+                    } else {
+                        const Uint32 flags = SDL20_GetWindowFlags(VideoWindow20);
+                        if ((flags & SDL_WINDOW_FULLSCREEN_DESKTOP) == SDL_WINDOW_FULLSCREEN_DESKTOP) {
+                            break;
+                        }
+                    }
+
                     event12.type = SDL12_VIDEORESIZE;
                     event12.resize.w = event20->window.data1;
                     event12.resize.h = event20->window.data2;
