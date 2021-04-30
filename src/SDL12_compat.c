@@ -53,6 +53,10 @@
 
 #define SDL_BlitSurface SDL_UpperBlit
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #if 0
 #define FIXME(x) do {} while (0)
 #else
@@ -826,9 +830,9 @@ static char loaderror[256];
     #define SDL20_LIBNAME "SDL2.dll"
     /* require SDL2 >= 2.0.12 for SDL_CreateThread binary compatibility */
     #define SDL20_REQUIRED_VER SDL_VERSIONNUM(2,0,12)
-    static HANDLE Loaded_SDL20 = NULL;
+    static HMODULE Loaded_SDL20 = NULL;
     #define LoadSDL20Library() ((Loaded_SDL20 = LoadLibraryA(SDL20_LIBNAME)) != NULL)
-    #define LookupSDL20Sym(sym) GetProcAddress(Loaded_SDL20, sym)
+    #define LookupSDL20Sym(sym) (void *)GetProcAddress(Loaded_SDL20, sym)
     #define CloseSDL20Library() { if (Loaded_SDL20) { FreeLibrary(Loaded_SDL20); Loaded_SDL20 = NULL; } }
     #define strcpy_fn  lstrcpyA
     #define sprintf_fn wsprintfA
@@ -5129,5 +5133,9 @@ SDL_GL_EnableContext_Thread(void)
     const SDL_bool enable = (VideoGLContext20 && VideoWindow20)? SDL_TRUE : SDL_FALSE;
     SDL20_GL_MakeCurrent(enable ? VideoWindow20 : NULL, enable ? VideoGLContext20 : NULL);
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 /* vi: set ts=4 sw=4 expandtab: */
