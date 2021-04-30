@@ -991,7 +991,7 @@ static void dllquit(void)
     UnloadSDL20();
 }
 
-#elif defined(_WIN32)
+#elif defined(_WIN32) && (defined(_MSC_VER) || defined(__MINGW32__))
 #if defined(_MSC_VER) && !defined(__FLTUSED__)
 #define __FLTUSED__
 __declspec(selectany) int _fltused = 1;
