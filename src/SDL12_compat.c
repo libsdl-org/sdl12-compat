@@ -991,13 +991,16 @@ static void dllquit(void)
     UnloadSDL20();
 }
 
-#elif defined(_WIN32) && (defined(_MSC_VER) || defined(__MINGW32__))
+#elif defined(_WIN32) && (defined(_MSC_VER) || defined(__MINGW32__) || defined(__WATCOMC__))
 #if defined(_MSC_VER) && !defined(__FLTUSED__)
 #define __FLTUSED__
 __declspec(selectany) int _fltused = 1;
 #endif
 #if defined(__MINGW32__)
 #define _DllMainCRTStartup DllMainCRTStartup
+#endif
+#if defined(__WATCOMC__)
+#define _DllMainCRTStartup LibMain
 #endif
 BOOL WINAPI _DllMainCRTStartup(HANDLE dllhandle, DWORD reason, LPVOID reserved)
 {
