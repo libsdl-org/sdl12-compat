@@ -803,7 +803,6 @@ static GLuint OpenGLLogicalScalingColor = 0;
 static GLuint OpenGLLogicalScalingDepth = 0;
 
 
-
 /* !!! FIXME: need a mutex for the event queue. */
 #define SDL12_MAXEVENTS 128
 typedef struct EventQueueType
@@ -1008,6 +1007,8 @@ __declspec(selectany) int _fltused = 1;
 #endif
 BOOL WINAPI _DllMainCRTStartup(HANDLE dllhandle, DWORD reason, LPVOID reserved)
 {
+    (void) dllhandle;
+    (void) reserved;
     switch (reason) {
     case DLL_PROCESS_DETACH:
         UnloadSDL20();
@@ -1056,12 +1057,13 @@ unsigned _System LibMain(unsigned hmod, unsigned termination)
 DECLSPEC void SDLCALL
 SDL_SetModuleHandle(void *handle)
 {
-    /* handled internally by SDL2 - nothing to do.. */
+    (void) handle;/* handled internally by SDL2 - nothing to do.. */
 }
 
 DECLSPEC int SDLCALL
 SDL_RegisterApp(char *name, Uint32 style, void *hInst)
 {
+    (void) name; (void) style; (void) hInst;
     return 0;
 }
 
@@ -1483,6 +1485,7 @@ Init12Video(void)
 DECLSPEC int SDLCALL
 SDL_VideoInit(const char *driver, Uint32 flags)
 {
+    (void) flags;
     return SDL20_VideoInit(driver);
 }
 
@@ -2233,13 +2236,12 @@ static int DecodeUTF8Char(char **ptr)
  * Returns 1 if there was a pending event. */
 static int FlushPendingKeydownEvent(Uint32 unicode)
 {
-    if (PendingKeydownEvent.type != SDL12_KEYDOWN)
+    if (PendingKeydownEvent.type != SDL12_KEYDOWN) {
         return 0;
+    }
 
     PendingKeydownEvent.key.keysym.unicode = unicode;
-
     PushEventIfNotFiltered(&PendingKeydownEvent);
-    
     /* Reset the event. */
     SDL_memset(&PendingKeydownEvent, 0, sizeof(SDL12_Event));
 
@@ -2249,7 +2251,6 @@ static int FlushPendingKeydownEvent(Uint32 unicode)
 static int SDLCALL
 EventFilter20to12(void *data, SDL_Event *event20)
 {
-    /*const int maxUserEvents12 = SDL12_NUMEVENTS - SDL12_USEREVENT;*/
     SDL12_Event event12;
 
     SDL_assert(data == NULL);  /* currently unused. */
@@ -4198,8 +4199,9 @@ SDL_SetColors(SDL12_Surface *surface12, const SDL_Color * colors, int firstcolor
 DECLSPEC int SDLCALL
 SDL_GetWMInfo(SDL_SysWMinfo * info)
 {
-    /*return SDL20_GetWindowWMInfo(VideoWindow20, info);src*/
+    /*return SDL20_GetWindowWMInfo(VideoWindow20, info);*/
     FIXME("write me");
+    (void)info;
     SDL20_Unsupported();
     return 0; /* some programs only test against 0, not -1 */
 }
@@ -4539,6 +4541,8 @@ DECLSPEC int SDLCALL
 SDL_EnableKeyRepeat(int delay, int interval)
 {
     FIXME("write me");
+    (void) delay;
+    (void) interval;
     return 0;
 }
 
@@ -4635,16 +4639,53 @@ SDL_CDNumDrives(void)
     return 0;
 }
 
-DECLSPEC const char *SDLCALL SDL_CDName(int drive) { SDL20_Unsupported(); return NULL; }
-DECLSPEC SDL12_CD *SDLCALL SDL_CDOpen(int drive) { SDL20_Unsupported(); return NULL; }
-DECLSPEC SDL12_CDstatus SDLCALL SDL_CDStatus(SDL12_CD *cdrom) { return SDL20_Unsupported(); }
-DECLSPEC int SDLCALL SDL_CDPlayTracks(SDL12_CD *cdrom, int start_track, int start_frame, int ntracks, int nframes) { return SDL20_Unsupported(); }
-DECLSPEC int SDLCALL SDL_CDPlay(SDL12_CD *cdrom, int start, int length) { return SDL20_Unsupported(); }
-DECLSPEC int SDLCALL SDL_CDPause(SDL12_CD *cdrom) { return SDL20_Unsupported(); }
-DECLSPEC int SDLCALL SDL_CDResume(SDL12_CD *cdrom) { return SDL20_Unsupported(); }
-DECLSPEC int SDLCALL SDL_CDStop(SDL12_CD *cdrom) { return SDL20_Unsupported(); }
-DECLSPEC int SDLCALL SDL_CDEject(SDL12_CD *cdrom) { return SDL20_Unsupported(); }
-DECLSPEC void SDLCALL SDL_CDClose(SDL12_CD *cdrom) {}
+DECLSPEC const char *SDLCALL SDL_CDName(int drive) {
+    SDL20_Unsupported();
+    (void)drive;
+    return NULL;
+}
+DECLSPEC SDL12_CD *SDLCALL SDL_CDOpen(int drive) {
+    SDL20_Unsupported();
+    (void)drive;
+    return NULL;
+}
+DECLSPEC SDL12_CDstatus SDLCALL SDL_CDStatus(SDL12_CD *cdrom) {
+    (void) cdrom;
+    return SDL20_Unsupported();
+}
+DECLSPEC int SDLCALL SDL_CDPlayTracks(SDL12_CD *cdrom, int start_track, int start_frame, int ntracks, int nframes) {
+    (void) cdrom;
+    (void) start_track;
+    (void) start_frame;
+    (void) ntracks;
+    (void) nframes;
+    return SDL20_Unsupported();
+}
+DECLSPEC int SDLCALL SDL_CDPlay(SDL12_CD *cdrom, int start, int length) {
+    (void) cdrom;
+    (void) start;
+    (void) length;
+    return SDL20_Unsupported();
+}
+DECLSPEC int SDLCALL SDL_CDPause(SDL12_CD *cdrom) {
+    (void) cdrom;
+    return SDL20_Unsupported();
+}
+DECLSPEC int SDLCALL SDL_CDResume(SDL12_CD *cdrom) {
+    (void) cdrom;
+    return SDL20_Unsupported();
+}
+DECLSPEC int SDLCALL SDL_CDStop(SDL12_CD *cdrom) {
+    (void) cdrom;
+    return SDL20_Unsupported();
+}
+DECLSPEC int SDLCALL SDL_CDEject(SDL12_CD *cdrom) {
+    (void) cdrom;
+    return SDL20_Unsupported();
+}
+DECLSPEC void SDLCALL SDL_CDClose(SDL12_CD *cdrom) {
+    (void) cdrom;
+}
 
 #if (defined(_WIN32) || defined(__OS2__)) && !defined(SDL_PASSED_BEGINTHREAD_ENDTHREAD)
 #error SDL_PASSED_BEGINTHREAD_ENDTHREAD not defined
@@ -4707,6 +4748,7 @@ SDL_mutexV(SDL_mutex *mutex)
 DECLSPEC void SDLCALL
 SDL_KillThread(SDL_Thread *thread)
 {
+    (void)thread;
     SDL20_Log("WARNING: this app used SDL_KillThread(), an unforgivable curse.\n"
               "This program should be fixed. No thread was actually harmed.\n");
 }
@@ -5109,6 +5151,7 @@ SDL_CloseAudio(void)
     audio_cbdata = NULL;
 }
 
+
 /* !!! FIXME: these are just stubs for now, but Sam thinks that maybe these
 were added at Loki for Heavy Gear 2's UI. They just make GL calls. */
 DECLSPEC void SDLCALL
@@ -5120,6 +5163,8 @@ SDL_GL_Lock(void)
 DECLSPEC void SDLCALL
 SDL_GL_UpdateRects(int numrects, SDL12_Rect *rects)
 {
+    (void) numrects;
+    (void) rects;
     FIXME("write me");
 }
 
