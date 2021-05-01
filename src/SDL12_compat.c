@@ -2392,7 +2392,7 @@ EventFilter20to12(void *data, SDL_Event *event20)
         case SDL_TEXTEDITING: return 1;
         case SDL_TEXTINPUT: {
             char *text = event20->text.text;
-            int codePoint = 0;
+            int codePoint;
             while ((codePoint = DecodeUTF8Char(&text)) != 0) {
                 if (codePoint > 0xFFFF) {
                     /* We need to send a UTF-16 surrogate pair. */
@@ -4794,19 +4794,19 @@ SDL_FreeRW(SDL12_RWops *rwops12)
 static int SDLCALL
 RWops20to12_seek(struct SDL12_RWops *rwops12, int offset, int whence)
 {
-    return rwops12->rwops20->seek(rwops12->rwops20, offset, whence);
+    return (int)rwops12->rwops20->seek(rwops12->rwops20, offset, whence);
 }
 
 static int SDLCALL
 RWops20to12_read(struct SDL12_RWops *rwops12, void *ptr, int size, int maxnum)
 {
-    return rwops12->rwops20->read(rwops12->rwops20, ptr, size, maxnum);
+    return (int)rwops12->rwops20->read(rwops12->rwops20, ptr, size, maxnum);
 }
 
 static int SDLCALL
 RWops20to12_write(struct SDL12_RWops *rwops12, const void *ptr, int size, int num)
 {
-    return rwops12->rwops20->write(rwops12->rwops20, ptr, size, num);
+    return (int)rwops12->rwops20->write(rwops12->rwops20, ptr, size, num);
 }
 
 static int SDLCALL
