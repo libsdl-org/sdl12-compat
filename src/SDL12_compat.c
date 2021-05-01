@@ -5095,7 +5095,7 @@ SDL_OpenAudio(SDL_AudioSpec *want, SDL_AudioSpec *obtained)
     AudioCallbackWrapperData *data;
     int retval;
 
-    /* SDL2 uses a NULL callback to mean "we play to use SDL_QueueAudio()" */
+    /* SDL2 uses a NULL callback to mean "we plan to use SDL_QueueAudio()" */
     if (want && (want->callback == NULL)) {
         return SDL20_SetError("Callback can't be NULL");
     }
@@ -5110,6 +5110,7 @@ SDL_OpenAudio(SDL_AudioSpec *want, SDL_AudioSpec *obtained)
     want->userdata = data;
     /* to avoid receiving a possible incompatible configuration
      * from SDL2, always pass NULL as the 'obtained' pointer.  */
+    FIXME("Respect 1.2 environment variables for defining format here.");
     if (!want->format) {
         want->format = AUDIO_S16SYS;
     }
