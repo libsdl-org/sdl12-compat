@@ -1109,7 +1109,7 @@ SDL_revcpy(void *dst, const void *src, size_t len)
        was meant to be CPU-cache friendly if you knew you were working with
        data going backwards in memory, instead of jumping over pages to copy
        from the start...? Whatever, just do a memcpy here. */
-    return SDL_memcpy(dst, src, len);
+    return SDL20_memcpy(dst, src, len);
 }
 
 
@@ -1450,9 +1450,9 @@ Init12Video(void)
     EventQueueHead = EventQueueTail = NULL;
     EventQueueAvailable = EventQueuePool;
 
-    SDL_memset(&PendingKeydownEvent, 0, sizeof(SDL12_Event));
+    SDL20_memset(&PendingKeydownEvent, 0, sizeof(SDL12_Event));
 
-    SDL_memset(EventStates, SDL_ENABLE, sizeof (EventStates)); /* on by default */
+    SDL20_memset(EventStates, SDL_ENABLE, sizeof (EventStates)); /* on by default */
     EventStates[SDL12_SYSWMEVENT] = SDL_IGNORE;  /* off by default. */
 
     SDL20_SetEventFilter(EventFilter20to12, NULL);
@@ -1713,7 +1713,7 @@ SDL_PollEvent(SDL12_Event *event12)
         return 0;  /* no events at the moment. */
     }
 
-    SDL_memcpy(event12, &EventQueueHead->event12, sizeof (SDL12_Event));
+    SDL20_memcpy(event12, &EventQueueHead->event12, sizeof (SDL12_Event));
     next = EventQueueHead->next;
     EventQueueHead->next = EventQueueAvailable;
     EventQueueAvailable = EventQueueHead;
@@ -1742,7 +1742,7 @@ SDL_PushEvent(SDL12_Event *event12)
     }
     item->next = NULL;
 
-    SDL_memcpy(&item->event12, event12, sizeof (SDL12_Event));
+    SDL20_memcpy(&item->event12, event12, sizeof (SDL12_Event));
 
     return 0;
 }
@@ -1775,7 +1775,7 @@ SDL_PeepEvents(SDL12_Event *events12, int numevents, SDL_eventaction action, Uin
 
             if (mask & (1<<item->event12.type))
             {
-                SDL_memcpy(&events12[chosen++], &item->event12, sizeof (SDL12_Event));
+                SDL20_memcpy(&events12[chosen++], &item->event12, sizeof (SDL12_Event));
                 if (isGet)  /* remove from list? */
                 {
                     if (prev != NULL)
@@ -2243,7 +2243,7 @@ static int FlushPendingKeydownEvent(Uint32 unicode)
     PendingKeydownEvent.key.keysym.unicode = unicode;
     PushEventIfNotFiltered(&PendingKeydownEvent);
     /* Reset the event. */
-    SDL_memset(&PendingKeydownEvent, 0, sizeof(SDL12_Event));
+    SDL20_memset(&PendingKeydownEvent, 0, sizeof(SDL12_Event));
 
     return 1;
 }
@@ -2361,9 +2361,7 @@ EventFilter20to12(void *data, SDL_Event *event20)
             break;
 
         case SDL_KEYDOWN:
-
             FlushPendingKeydownEvent(0);
-
             if (event20->key.repeat) {
                 return 1;  /* ignore 2.0-style key repeat events */
             }
@@ -2848,7 +2846,7 @@ DECLSPEC void SDLCALL
 SDL_GetClipRect(SDL12_Surface *surface12, SDL12_Rect *rect)
 {
     if (surface12 && rect) {
-        SDL_memcpy(rect, &surface12->clip_rect, sizeof (SDL12_Rect));
+        SDL20_memcpy(rect, &surface12->clip_rect, sizeof (SDL12_Rect));
     }
 }
 
@@ -3568,7 +3566,7 @@ SaveDestAlpha(SDL12_Surface *src12, SDL12_Surface *dst12, Uint8 **retval)
         const Uint32 ashift = dst12->format->Ashift;
         const Uint16 pitch = dst12->pitch;
 
-        dstalpha = (Uint8 *) SDL_malloc(w * h);
+        dstalpha = (Uint8 *) SDL20_malloc(w * h);
         if (!dstalpha) {
             *retval = NULL;
             return SDL20_OutOfMemory();
@@ -3638,7 +3636,7 @@ RestoreDestAlpha(SDL12_Surface *dst12, Uint8 *dstalpha)
         } else {
             FIXME("Unhandled dest alpha");
         }
-        SDL_free(dstalpha);
+        SDL20_free(dstalpha);
     }
 }
 
@@ -3796,7 +3794,7 @@ PresentScreen(void)
         VideoConvertSurface20->pixels = NULL;
         VideoConvertSurface20->pitch = 0;
     } else if (pitch == VideoSurface12->pitch) {
-        SDL_memcpy(pixels, VideoSurface12->pixels, pitch * VideoSurface12->h);
+        SDL20_memcpy(pixels, VideoSurface12->pixels, pitch * VideoSurface12->h);
     } else {
         const int srcpitch = VideoSurface12->pitch;
         const int cpy = SDL_min(srcpitch, pitch);
@@ -3805,7 +3803,7 @@ PresentScreen(void)
         char *src = (char *) VideoSurface12->pixels;
         int i = 0;
         for (; i < h; i++) {
-            SDL_memcpy(dst, src, cpy);
+            SDL20_memcpy(dst, src, cpy);
             src += srcpitch;
             dst += pitch;
         }
@@ -3908,8 +3906,8 @@ SDL_WM_SetCaption(const char *title, const char *icon)
     if (WindowIconTitle) {
         SDL20_free(WindowIconTitle);
     }
-    WindowTitle = title ? SDL_strdup(title) : NULL;
-    WindowIconTitle = icon ? SDL_strdup(icon) : NULL;
+    WindowTitle = title ? SDL20_strdup(title) : NULL;
+    WindowIconTitle = icon ? SDL20_strdup(icon) : NULL;
     if (VideoWindow20) {
         SDL20_SetWindowTitle(VideoWindow20, WindowTitle);
     }
@@ -4258,7 +4256,7 @@ SDL_CreateYUVOverlay(int w, int h, Uint32 format12, SDL12_Surface *display12)
     }
 
     hwdata = (SDL12_YUVData *) (retval + 1);
-    hwdata->pixelbuf = (Uint8 *) SDL_calloc(1, (w * 2) * h);
+    hwdata->pixelbuf = (Uint8 *) SDL20_calloc(1, (w * 2) * h);
     if (!hwdata->pixelbuf) {
         SDL20_free(retval);
         SDL20_OutOfMemory();
@@ -4373,7 +4371,7 @@ DECLSPEC void * SDLCALL
 SDL_GL_GetProcAddress(const char *sym)
 {
     /* see comments on glBindFramebuffer_shim_for_scaling for explanation */
-    if ((SDL_strcmp(sym, "glBindFramebuffer") == 0) || (SDL_strcmp(sym, "glBindFramebufferEXT") == 0)) {
+    if ((SDL20_strcmp(sym, "glBindFramebuffer") == 0) || (SDL20_strcmp(sym, "glBindFramebufferEXT") == 0)) {
         return (void *) glBindFramebuffer_shim_for_scaling;
     }
     return SDL20_GL_GetProcAddress(sym);
@@ -4775,7 +4773,7 @@ AddTimerCallback12(Uint32 interval, void *param)
 DECLSPEC SDL12_TimerID SDLCALL
 SDL_AddTimer(Uint32 interval, SDL12_NewTimerCallback callback, void *param)
 {
-    SDL12_TimerID data = (SDL12_TimerID) SDL_malloc(sizeof (SDL12_TimerID_Data));
+    SDL12_TimerID data = (SDL12_TimerID) SDL20_malloc(sizeof (SDL12_TimerID_Data));
     if (!data) {
         SDL20_OutOfMemory();
         return NULL;
@@ -4787,7 +4785,7 @@ SDL_AddTimer(Uint32 interval, SDL12_NewTimerCallback callback, void *param)
     data->timer_id = SDL20_AddTimer(interval, AddTimerCallback12, data);
 
     if (!data->timer_id) {
-        SDL_free(data);
+        SDL20_free(data);
         return NULL;
     }
 
@@ -4801,7 +4799,7 @@ SDL_RemoveTimer(SDL12_TimerID data)
      * bogus timer. This code will dereference a bogus pointer. */
     const SDL_bool retval = SDL20_RemoveTimer(data->timer_id);
     if (retval) {
-        SDL_free(data);
+        SDL20_free(data);
     }
     return retval;
 }
@@ -5084,7 +5082,7 @@ static void SDLCALL
 AudioCallbackWrapper(void *userdata, Uint8 *stream, int len)
 {
     AudioCallbackWrapperData *data = (AudioCallbackWrapperData *) userdata;
-    SDL_memset(stream, data->silence, len);  /* SDL2 doesn't clear the stream before calling in here, but 1.2 expects it. */
+    SDL20_memset(stream, data->silence, len);  /* SDL2 doesn't clear the stream before calling in here, but 1.2 expects it. */
     data->app_callback(data->app_userdata, stream, len);
 }
 
@@ -5137,7 +5135,7 @@ SDL_OpenAudio(SDL_AudioSpec *want, SDL_AudioSpec *obtained)
         SDL_assert(audio_cbdata==NULL);
         audio_cbdata = data;
         if (obtained) {
-            SDL_memcpy(obtained, want, sizeof (SDL_AudioSpec));
+            SDL20_memcpy(obtained, want, sizeof (SDL_AudioSpec));
         }
     }
 
