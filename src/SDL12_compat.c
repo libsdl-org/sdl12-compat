@@ -4208,6 +4208,8 @@ SDL_GetWMInfo(SDL_SysWMinfo * info)
 typedef struct SDL12_YUVData
 {
     SDL_Texture *texture20;
+    SDL_bool display_requested;
+    SDL12_Rect display_rect;
     Uint8 *pixelbuf;
     Uint8 *pixels[3];
     Uint16 pitches[3];
@@ -4304,6 +4306,9 @@ SDL_LockYUVOverlay(SDL12_Overlay *overlay12)
     return 0;  /* success */
 }
 
+DECLSPEC int SDLCALL
+SDL_DisplayYUVOverlay(SDL12_Overlay *overlay12, SDL12_Rect *dstrect12);
+
 DECLSPEC void SDLCALL
 SDL_UnlockYUVOverlay(SDL12_Overlay *overlay12)
 {
@@ -4327,6 +4332,12 @@ SDL_UnlockYUVOverlay(SDL12_Overlay *overlay12)
             SDL20_UpdateTexture(hwdata->texture20, &rect, hwdata->pixels[0], hwdata->pitches[0]);
         }
         overlay12->pixels = NULL;
+
+        /* See comments about SMPEG in SDL_DisplayYUVOverlay() */
+        if (hwdata->display_requested) {
+            hwdata->display_requested = SDL_FALSE;
+            SDL_DisplayYUVOverlay(overlay12, &hwdata->display_rect);
+        }
     }
 }
 
@@ -4334,7 +4345,6 @@ DECLSPEC int SDLCALL
 SDL_DisplayYUVOverlay(SDL12_Overlay *overlay12, SDL12_Rect *dstrect12)
 {
     SDL12_YUVData *hwdata;
-    SDL_Rect dstrect20;
 
     if (!overlay12) {
         return SDL20_InvalidParamError("overlay");
@@ -4344,14 +4354,22 @@ SDL_DisplayYUVOverlay(SDL12_Overlay *overlay12, SDL12_Rect *dstrect12)
         return SDL20_SetError("No software screen surface available");
     }
 
+    /* SMPEG locks the YUV overlay, calls SDL_DisplayYUVOverlay() on it, copies
+       data to it then unlocks it, in that order, which _seems_ like an app
+       bug, but it works in 1.2, so we tapdance to make that order work here. */
     hwdata = (SDL12_YUVData *) overlay12->hwdata;
-
-    SDL20_RenderClear(VideoRenderer20);
-    SDL20_RenderCopy(VideoRenderer20, VideoTexture20, NULL, NULL);
-    SDL20_RenderCopy(VideoRenderer20, hwdata->texture20, NULL, Rect12to20(dstrect12, &dstrect20));
-    SDL20_RenderPresent(VideoRenderer20);
-    VideoSurfaceLastPresentTicks = SDL20_GetTicks();
-    VideoSurfacePresentTicks = 0;
+    if (overlay12->pixels == NULL) {   /* NULL == not locked, present now */
+        SDL_Rect dstrect20;
+        SDL20_RenderClear(VideoRenderer20);
+        SDL20_RenderCopy(VideoRenderer20, VideoTexture20, NULL, NULL);
+        SDL20_RenderCopy(VideoRenderer20, hwdata->texture20, NULL, Rect12to20(dstrect12, &dstrect20));
+        SDL20_RenderPresent(VideoRenderer20);
+        VideoSurfaceLastPresentTicks = SDL20_GetTicks();
+        VideoSurfacePresentTicks = 0;
+    } else {  /* locked! Note that we should display as soon as it unlocks. */
+        hwdata->display_requested = SDL_TRUE;
+        SDL20_memcpy(&hwdata->display_rect, dstrect12, sizeof (SDL12_Rect));
+    }
 
     return 0;
 }
