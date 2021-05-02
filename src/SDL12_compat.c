@@ -4307,7 +4307,37 @@ SDL_LockYUVOverlay(SDL12_Overlay *overlay12)
 }
 
 DECLSPEC int SDLCALL
-SDL_DisplayYUVOverlay(SDL12_Overlay *overlay12, SDL12_Rect *dstrect12);
+SDL_DisplayYUVOverlay(SDL12_Overlay *overlay12, SDL12_Rect *dstrect12)
+{
+    SDL12_YUVData *hwdata;
+
+    if (!overlay12) {
+        return SDL20_InvalidParamError("overlay");
+    } else if (!dstrect12) {
+        return SDL20_InvalidParamError("dstrect");
+    } else if (!VideoRenderer20) {
+        return SDL20_SetError("No software screen surface available");
+    }
+
+    /* SMPEG locks the YUV overlay, calls SDL_DisplayYUVOverlay() on it, copies
+       data to it then unlocks it, in that order, which _seems_ like an app
+       bug, but it works in 1.2, so we tapdance to make that order work here. */
+    hwdata = (SDL12_YUVData *) overlay12->hwdata;
+    if (overlay12->pixels == NULL) {   /* NULL == not locked, present now */
+        SDL_Rect dstrect20;
+        SDL20_RenderClear(VideoRenderer20);
+        SDL20_RenderCopy(VideoRenderer20, VideoTexture20, NULL, NULL);
+        SDL20_RenderCopy(VideoRenderer20, hwdata->texture20, NULL, Rect12to20(dstrect12, &dstrect20));
+        SDL20_RenderPresent(VideoRenderer20);
+        VideoSurfaceLastPresentTicks = SDL20_GetTicks();
+        VideoSurfacePresentTicks = 0;
+    } else {  /* locked! Note that we should display as soon as it unlocks. */
+        hwdata->display_requested = SDL_TRUE;
+        SDL20_memcpy(&hwdata->display_rect, dstrect12, sizeof (SDL12_Rect));
+    }
+
+    return 0;
+}
 
 DECLSPEC void SDLCALL
 SDL_UnlockYUVOverlay(SDL12_Overlay *overlay12)
@@ -4339,39 +4369,6 @@ SDL_UnlockYUVOverlay(SDL12_Overlay *overlay12)
             SDL_DisplayYUVOverlay(overlay12, &hwdata->display_rect);
         }
     }
-}
-
-DECLSPEC int SDLCALL
-SDL_DisplayYUVOverlay(SDL12_Overlay *overlay12, SDL12_Rect *dstrect12)
-{
-    SDL12_YUVData *hwdata;
-
-    if (!overlay12) {
-        return SDL20_InvalidParamError("overlay");
-    } else if (!dstrect12) {
-        return SDL20_InvalidParamError("dstrect");
-    } else if (!VideoRenderer20) {
-        return SDL20_SetError("No software screen surface available");
-    }
-
-    /* SMPEG locks the YUV overlay, calls SDL_DisplayYUVOverlay() on it, copies
-       data to it then unlocks it, in that order, which _seems_ like an app
-       bug, but it works in 1.2, so we tapdance to make that order work here. */
-    hwdata = (SDL12_YUVData *) overlay12->hwdata;
-    if (overlay12->pixels == NULL) {   /* NULL == not locked, present now */
-        SDL_Rect dstrect20;
-        SDL20_RenderClear(VideoRenderer20);
-        SDL20_RenderCopy(VideoRenderer20, VideoTexture20, NULL, NULL);
-        SDL20_RenderCopy(VideoRenderer20, hwdata->texture20, NULL, Rect12to20(dstrect12, &dstrect20));
-        SDL20_RenderPresent(VideoRenderer20);
-        VideoSurfaceLastPresentTicks = SDL20_GetTicks();
-        VideoSurfacePresentTicks = 0;
-    } else {  /* locked! Note that we should display as soon as it unlocks. */
-        hwdata->display_requested = SDL_TRUE;
-        SDL20_memcpy(&hwdata->display_rect, dstrect12, sizeof (SDL12_Rect));
-    }
-
-    return 0;
 }
 
 DECLSPEC void SDLCALL
