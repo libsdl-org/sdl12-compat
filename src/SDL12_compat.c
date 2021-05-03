@@ -242,6 +242,15 @@ typedef struct SDL12_Overlay
     Uint32 UnusedBits :31;
 } SDL12_Overlay;
 
+typedef struct SDL12_YUVData  /* internal struct, not part of public SDL 1.2 API */
+{
+    SDL_Texture *texture20;
+    SDL_bool dirty;
+    Uint8 *pixelbuf;
+    Uint8 *pixels[3];
+    Uint16 pitches[3];
+} SDL12_YUVData;
+
 typedef struct
 {
     Uint32 hw_available :1;
@@ -781,6 +790,8 @@ static Uint32 VideoSurfacePresentTicks = 0;
 static Uint32 VideoSurfaceLastPresentTicks = 0;
 static SDL_Surface *VideoConvertSurface20 = NULL;
 static SDL_GLContext VideoGLContext20 = NULL;
+static SDL12_Overlay *QueuedDisplayOverlay12 = NULL;
+static SDL12_Rect QueuedDisplayOverlayDstRect12;
 static char *WindowTitle = NULL;
 static char *WindowIconTitle = NULL;
 static SDL_Surface *VideoIcon20 = NULL;
@@ -3813,6 +3824,15 @@ PresentScreen(void)
 
     SDL20_RenderClear(VideoRenderer20);
     SDL20_RenderCopy(VideoRenderer20, VideoTexture20, NULL, NULL);
+
+    /* Render any pending YUV overlay over the surface texture. */
+    if (QueuedDisplayOverlay12) {
+        SDL12_YUVData *hwdata = (SDL12_YUVData *) QueuedDisplayOverlay12->hwdata;
+        SDL_Rect dstrect20;
+        SDL20_RenderCopy(VideoRenderer20, hwdata->texture20, NULL, Rect12to20(&QueuedDisplayOverlayDstRect12, &dstrect20));
+        QueuedDisplayOverlay12 = NULL;
+    }
+
     SDL20_RenderPresent(VideoRenderer20);
     VideoSurfaceLastPresentTicks = SDL20_GetTicks();
     VideoSurfacePresentTicks = 0;
@@ -4204,17 +4224,6 @@ SDL_GetWMInfo(SDL_SysWMinfo * info)
     return 0; /* some programs only test against 0, not -1 */
 }
 
-
-typedef struct SDL12_YUVData
-{
-    SDL_Texture *texture20;
-    SDL_bool display_requested;
-    SDL12_Rect display_rect;
-    Uint8 *pixelbuf;
-    Uint8 *pixels[3];
-    Uint16 pitches[3];
-} SDL12_YUVData;
-
 DECLSPEC SDL12_Overlay * SDLCALL
 SDL_CreateYUVOverlay(int w, int h, Uint32 format12, SDL12_Surface *display12)
 {
@@ -4298,11 +4307,23 @@ SDL_CreateYUVOverlay(int w, int h, Uint32 format12, SDL12_Surface *display12)
 DECLSPEC int SDLCALL
 SDL_LockYUVOverlay(SDL12_Overlay *overlay12)
 {
+    SDL12_YUVData *hwdata;
+
     if (!overlay12) {
         return SDL20_InvalidParamError("overlay");
     }
 
-    overlay12->pixels = ((SDL12_YUVData *) overlay12->hwdata)->pixels;
+    /* SMPEG locks the YUV overlay, calls SDL_DisplayYUVOverlay() on it,
+       copies data to it then unlocks it, in that order, which _seems_ like an
+       app bug, but it works in 1.2. Most of SDL 1.2's yuv lock/unlock
+       implementations are just no-ops anyhow, so we upload during display,
+       if the overlay has been locked since last time (and even
+       if it is still locked), to accomodate this usage pattern. */
+
+    hwdata = (SDL12_YUVData *) overlay12->hwdata;
+    hwdata->dirty = SDL_TRUE;  /* assume the contents will change and we must upload */
+    overlay12->pixels = hwdata->pixels;
+
     return 0;  /* success */
 }
 
@@ -4319,22 +4340,40 @@ SDL_DisplayYUVOverlay(SDL12_Overlay *overlay12, SDL12_Rect *dstrect12)
         return SDL20_SetError("No software screen surface available");
     }
 
-    /* SMPEG locks the YUV overlay, calls SDL_DisplayYUVOverlay() on it, copies
-       data to it then unlocks it, in that order, which _seems_ like an app
-       bug, but it works in 1.2, so we tapdance to make that order work here. */
     hwdata = (SDL12_YUVData *) overlay12->hwdata;
-    if (overlay12->pixels == NULL) {   /* NULL == not locked, present now */
-        SDL_Rect dstrect20;
-        SDL20_RenderClear(VideoRenderer20);
-        SDL20_RenderCopy(VideoRenderer20, VideoTexture20, NULL, NULL);
-        SDL20_RenderCopy(VideoRenderer20, hwdata->texture20, NULL, Rect12to20(dstrect12, &dstrect20));
-        SDL20_RenderPresent(VideoRenderer20);
-        VideoSurfaceLastPresentTicks = SDL20_GetTicks();
-        VideoSurfacePresentTicks = 0;
-    } else {  /* locked! Note that we should display as soon as it unlocks. */
-        hwdata->display_requested = SDL_TRUE;
-        SDL20_memcpy(&hwdata->display_rect, dstrect12, sizeof (SDL12_Rect));
+
+    /* Upload contents if we've been locked, even if we're _still_ locked, to
+       work around an SMPEG quirk. */
+    if (hwdata->dirty) {
+        SDL_Rect rect20;
+        rect20.x = rect20.y = 0;
+        rect20.w = overlay12->w;
+        rect20.h = overlay12->h;
+        if (overlay12->format == SDL12_IYUV_OVERLAY) {
+            SDL20_UpdateYUVTexture(hwdata->texture20, &rect20,
+                                 hwdata->pixels[0], hwdata->pitches[0],
+                                 hwdata->pixels[1], hwdata->pitches[1],
+                                 hwdata->pixels[2], hwdata->pitches[2]);
+        } else if (overlay12->format == SDL12_YV12_OVERLAY) {
+            SDL20_UpdateYUVTexture(hwdata->texture20, &rect20,
+                                 hwdata->pixels[0], hwdata->pitches[0],
+                                 hwdata->pixels[2], hwdata->pitches[2],
+                                 hwdata->pixels[1], hwdata->pitches[1]);
+        } else {
+            SDL20_UpdateTexture(hwdata->texture20, &rect20, hwdata->pixels[0], hwdata->pitches[0]);
+        }
+
+        if (overlay12->pixels == NULL) {  /* must leave it marked as dirty if still locked! */
+            hwdata->dirty = SDL_FALSE;
+        }
     }
+
+    /* The app may or may not SDL_Flip() after this...queue this to render on the next present,
+       and start a timer going to force a present, in case they don't. */
+    FIXME("is it legal to display multiple yuv overlays?");  /* if so, this will need to be a list instead of a single pointer. */
+    QueuedDisplayOverlay12 = overlay12;
+    SDL20_memcpy(&QueuedDisplayOverlayDstRect12, dstrect12, sizeof (SDL12_Rect));
+    VideoSurfacePresentTicks = VideoSurfaceLastPresentTicks + 15;  /* flip it later. */
 
     return 0;
 }
@@ -4343,31 +4382,7 @@ DECLSPEC void SDLCALL
 SDL_UnlockYUVOverlay(SDL12_Overlay *overlay12)
 {
     if (overlay12) {
-        SDL12_YUVData *hwdata = (SDL12_YUVData *) overlay12->hwdata;
-        SDL_Rect rect;
-        rect.x = rect.y = 0;
-        rect.w = overlay12->w;
-        rect.h = overlay12->h;
-        if (overlay12->format == SDL12_IYUV_OVERLAY) {
-            SDL20_UpdateYUVTexture(hwdata->texture20, &rect,
-                                 hwdata->pixels[0], hwdata->pitches[0],
-                                 hwdata->pixels[1], hwdata->pitches[1],
-                                 hwdata->pixels[2], hwdata->pitches[2]);
-        } else if (overlay12->format == SDL12_YV12_OVERLAY) {
-            SDL20_UpdateYUVTexture(hwdata->texture20, &rect,
-                                 hwdata->pixels[0], hwdata->pitches[0],
-                                 hwdata->pixels[2], hwdata->pitches[2],
-                                 hwdata->pixels[1], hwdata->pitches[1]);
-        } else {
-            SDL20_UpdateTexture(hwdata->texture20, &rect, hwdata->pixels[0], hwdata->pitches[0]);
-        }
         overlay12->pixels = NULL;
-
-        /* See comments about SMPEG in SDL_DisplayYUVOverlay() */
-        if (hwdata->display_requested) {
-            hwdata->display_requested = SDL_FALSE;
-            SDL_DisplayYUVOverlay(overlay12, &hwdata->display_rect);
-        }
     }
 }
 
