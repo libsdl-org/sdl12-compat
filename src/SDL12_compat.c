@@ -719,6 +719,13 @@ typedef struct
 
 typedef enum
 {
+    SDL12_GRAB_QUERY = -1,
+    SDL12_GRAB_OFF = 0,
+    SDL12_GRAB_ON = 1
+} SDL12_GrabMode;
+
+typedef enum
+{
     SDL12_GL_RED_SIZE,
     SDL12_GL_GREEN_SIZE,
     SDL12_GL_BLUE_SIZE,
@@ -3272,6 +3279,7 @@ InitializeOpenGLScaling(const int w, const int h)
 }
 
 
+static void HandleInputGrab(SDL12_GrabMode mode);
 
 DECLSPEC SDL12_Surface * SDLCALL
 SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
@@ -3535,6 +3543,11 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
     }
 
     SDL20_RaiseWindow(VideoWindow20);
+
+    /* SDL 1.2 always grabbed input if the video mode was fullscreen. */
+    if (VideoSurface12->flags & SDL12_FULLSCREEN) {
+        HandleInputGrab(SDL12_GRAB_ON);
+    }
 
     FIXME("setup screen saver");
 
@@ -4042,13 +4055,6 @@ SDL_WM_ToggleFullScreen(SDL12_Surface *surface)
     return retval;
 }
 
-typedef enum
-{
-    SDL12_GRAB_QUERY = -1,
-    SDL12_GRAB_OFF = 0,
-    SDL12_GRAB_ON = 1
-} SDL12_GrabMode;
-
 static void
 UpdateRelativeMouseMode(void)
 {
@@ -4083,17 +4089,23 @@ SDL_ShowCursor(int toggle)
     return retval;
 }
 
+static void
+HandleInputGrab(SDL12_GrabMode mode)
+{
+    /* SDL 1.2 always grabbed input if the video mode was fullscreen. */
+    const SDL_bool wantgrab = ((VideoSurface12->flags & SDL12_FULLSCREEN) || (mode == SDL12_GRAB_ON)) ? SDL_TRUE : SDL_FALSE;
+    if (VideoWindowGrabbed != wantgrab) {
+        SDL20_SetWindowGrab(VideoWindow20, wantgrab);
+        VideoWindowGrabbed = wantgrab;
+        UpdateRelativeMouseMode();
+    }
+}
 
 DECLSPEC SDL12_GrabMode SDLCALL
 SDL_WM_GrabInput(SDL12_GrabMode mode)
 {
     if (mode != SDL12_GRAB_QUERY) {
-        const SDL_bool wantgrab = (mode == SDL12_GRAB_ON) ? SDL_TRUE : SDL_FALSE;
-        if (VideoWindowGrabbed != wantgrab) {
-            SDL20_SetWindowGrab(VideoWindow20, wantgrab);
-            VideoWindowGrabbed = wantgrab;
-            UpdateRelativeMouseMode();
-        }
+        HandleInputGrab(mode);
     }
     return VideoWindowGrabbed ? SDL12_GRAB_ON : SDL12_GRAB_OFF;
 }
