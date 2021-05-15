@@ -28,6 +28,7 @@ set(SDL12COMPAT_SRCS
 )
 add_library(SDL SHARED ${SDL12COMPAT_SRCS})
 
+include(GNUInstallDirs)
 include("cmake/modules/FindSDL2.cmake")
 target_include_directories(SDL PRIVATE ${SDL2_INCLUDE_DIRS})
 
@@ -95,3 +96,7 @@ if(SDL12TESTS)
 
     test_program(testsprite "test/testsprite.c")
 endif()
+
+install(TARGETS SDL
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
