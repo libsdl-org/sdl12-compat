@@ -110,6 +110,7 @@
 #define INCL_DOSMODULEMGR /* for Dos_LoadModule() & co. */
 #endif
 
+#define __BUILDING_SDL12_COMPAT__ 1
 #include "SDL.h"
 #include "SDL_syswm.h"    /* includes windows.h for _WIN32, os2.h for __OS2__ */
 
