@@ -2401,8 +2401,35 @@ EventFilter20to12(void *data, SDL_Event *event20)
             PendingKeydownEvent.key.keysym.unicode = 0;
 
             /* If Unicode is not enabled, flush all KEYDOWN events immediately. */
-            if (!EnabledUnicode)
+            if (!EnabledUnicode) {
                 FlushPendingKeydownEvent(0);
+                return 1;
+            }
+
+            /* some programs rely on unicode values for these control characters */
+            switch (PendingKeydownEvent.key.keysym.sym)
+            {
+                case SDLK12_BACKSPACE:
+                    FlushPendingKeydownEvent('\b');
+                    break;
+                case SDLK12_TAB:
+                    FlushPendingKeydownEvent('\t');
+                    break;
+                case SDLK12_RETURN:
+                case SDLK12_KP_ENTER:
+                    /* Enter: \r, Shift+Enter: \n */
+                    if (PendingKeydownEvent.key.keysym.mod & KMOD_SHIFT)
+                        FlushPendingKeydownEvent('\n');
+                    else
+                        FlushPendingKeydownEvent('\r');
+                    break;
+                case SDLK12_ESCAPE:
+                    FlushPendingKeydownEvent(0x1B); /* '\e' */
+                    break;
+                default:
+                    /* not a supported control character */
+                    break;
+            }
 
             return 1;
 
