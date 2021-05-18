@@ -1121,13 +1121,17 @@ SDL_snprintf(char *text, size_t maxlen, const char *fmt, ...)
 }
 
 DECLSPEC void * SDLCALL
-SDL_revcpy(void *dst, const void *src, size_t len)
+SDL_revcpy(void *_dst, const void *_src, size_t len)
 {
-    /* this doesn't reverse the data...I think this was just a memcpy that
-       was meant to be CPU-cache friendly if you knew you were working with
-       data going backwards in memory, instead of jumping over pages to copy
-       from the start...? Whatever, just do a memcpy here. */
-    return SDL20_memcpy(dst, src, len);
+    if (len > 0) {
+        Uint8 *dst = (((Uint8 *) _dst) + len) - 1;
+        const Uint8 *src = (((const Uint8 *) _src) + len) - 1;
+        size_t i;
+        for (i = 0; i < len; i++, src--, dst--) {
+            *dst = *src;
+        }
+    }
+    return _dst;
 }
 
 
