@@ -4124,7 +4124,8 @@ static void
 HandleInputGrab(SDL12_GrabMode mode)
 {
     /* SDL 1.2 always grabbed input if the video mode was fullscreen. */
-    const SDL_bool wantgrab = ((VideoSurface12->flags & SDL12_FULLSCREEN) || (mode == SDL12_GRAB_ON)) ? SDL_TRUE : SDL_FALSE;
+    const SDL_bool isfullscreen = (VideoSurface12 && (VideoSurface12->flags & SDL12_FULLSCREEN)) ? SDL_TRUE : SDL_FALSE;
+    const SDL_bool wantgrab = (isfullscreen || (mode == SDL12_GRAB_ON)) ? SDL_TRUE : SDL_FALSE;
     if (VideoWindowGrabbed != wantgrab) {
         SDL20_SetWindowGrab(VideoWindow20, wantgrab);
         VideoWindowGrabbed = wantgrab;
