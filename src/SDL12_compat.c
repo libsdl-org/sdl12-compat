@@ -820,6 +820,10 @@ static int OpenGLLogicalScalingHeight = 0;
 static GLuint OpenGLLogicalScalingFBO = 0;
 static GLuint OpenGLLogicalScalingColor = 0;
 static GLuint OpenGLLogicalScalingDepth = 0;
+static int OpenGLLogicalScalingSamples = 0;
+static GLuint OpenGLLogicalScalingMultisampleFBO = 0;
+static GLuint OpenGLLogicalScalingMultisampleColor = 0;
+static GLuint OpenGLLogicalScalingMultisampleDepth = 0;
 
 
 /* !!! FIXME: need a mutex for the event queue. */
@@ -3314,11 +3318,11 @@ InitializeOpenGLScaling(const int w, const int h)
     OpenGLFuncs.glBindFramebuffer(GL_FRAMEBUFFER, OpenGLLogicalScalingFBO);
     OpenGLFuncs.glGenRenderbuffers(1, &OpenGLLogicalScalingColor);
     OpenGLFuncs.glBindRenderbuffer(GL_RENDERBUFFER, OpenGLLogicalScalingColor);
-    OpenGLFuncs.glRenderbufferStorage(GL_RENDERBUFFER, GL_RGB8, w, h);
+    OpenGLFuncs.glRenderbufferStorageMultisample(GL_RENDERBUFFER, OpenGLLogicalScalingSamples, GL_RGB8, w, h);
     OpenGLFuncs.glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, OpenGLLogicalScalingColor);
     OpenGLFuncs.glGenRenderbuffers(1, &OpenGLLogicalScalingDepth);
     OpenGLFuncs.glBindRenderbuffer(GL_RENDERBUFFER, OpenGLLogicalScalingDepth);
-    OpenGLFuncs.glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, w, h);  /* !!! FIXME: is an extension (or core 3.0) */
+    OpenGLFuncs.glRenderbufferStorageMultisample(GL_RENDERBUFFER, OpenGLLogicalScalingSamples, GL_DEPTH24_STENCIL8, w, h);
     OpenGLFuncs.glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, OpenGLLogicalScalingDepth);
     OpenGLFuncs.glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
@@ -3331,10 +3335,35 @@ InitializeOpenGLScaling(const int w, const int h)
         return SDL_FALSE;
     }
 
+    if (OpenGLLogicalScalingSamples) {
+        OpenGLFuncs.glGenFramebuffers(1, &OpenGLLogicalScalingMultisampleFBO);
+        OpenGLFuncs.glBindFramebuffer(GL_FRAMEBUFFER, OpenGLLogicalScalingMultisampleFBO);
+        OpenGLFuncs.glGenRenderbuffers(1, &OpenGLLogicalScalingMultisampleColor);
+        OpenGLFuncs.glBindRenderbuffer(GL_RENDERBUFFER, OpenGLLogicalScalingMultisampleColor);
+        OpenGLFuncs.glRenderbufferStorage(GL_RENDERBUFFER, GL_RGB8, w, h);
+        OpenGLFuncs.glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, OpenGLLogicalScalingMultisampleColor);
+        OpenGLFuncs.glGenRenderbuffers(1, &OpenGLLogicalScalingMultisampleDepth);
+        OpenGLFuncs.glBindRenderbuffer(GL_RENDERBUFFER, OpenGLLogicalScalingMultisampleDepth);
+        OpenGLFuncs.glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, w, h);  /* !!! FIXME: is an extension (or core 3.0) */
+        OpenGLFuncs.glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, OpenGLLogicalScalingMultisampleDepth);
+        OpenGLFuncs.glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+        if ( (OpenGLFuncs.glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) || OpenGLFuncs.glGetError() ) {
+            OpenGLFuncs.glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            OpenGLFuncs.glDeleteRenderbuffers(1, &OpenGLLogicalScalingMultisampleColor);
+            OpenGLFuncs.glDeleteRenderbuffers(1, &OpenGLLogicalScalingMultisampleDepth);
+            OpenGLFuncs.glDeleteFramebuffers(1, &OpenGLLogicalScalingMultisampleFBO);
+            OpenGLLogicalScalingMultisampleFBO = OpenGLLogicalScalingMultisampleColor = OpenGLLogicalScalingMultisampleDepth = 0;
+        }
+    }
+
+    OpenGLFuncs.glBindFramebuffer(GL_FRAMEBUFFER, OpenGLLogicalScalingFBO);
+
     OpenGLFuncs.glViewport(0, 0, w, h);
     OpenGLFuncs.glScissor(0, 0, w, h);
     OpenGLLogicalScalingWidth = w;
     OpenGLLogicalScalingHeight = h;
+
     OpenGLFuncs.glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     return SDL_TRUE;
 }
@@ -3441,6 +3470,9 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
         OpenGLLogicalScalingFBO = 0;
         OpenGLLogicalScalingColor = 0;
         OpenGLLogicalScalingDepth = 0;
+        OpenGLLogicalScalingMultisampleFBO = 0;
+        OpenGLLogicalScalingMultisampleColor = 0;
+        OpenGLLogicalScalingMultisampleDepth = 0;
     }
 
     if (flags12 & SDL12_FULLSCREEN) {
@@ -3465,6 +3497,12 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
         /* most platforms didn't check these environment variables, but the major
            ones did (x11, windib, quartz), so we'll just offer it everywhere. */
         GetEnvironmentWindowPosition(&x, &y);
+
+        /* If GL scaling is disabled, and a multisampled buffer is requested, do it. */
+        if (!use_gl_scaling && (flags12 & SDL12_OPENGL) && OpenGLLogicalScalingSamples) {
+            SDL20_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
+            SDL20_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, OpenGLLogicalScalingSamples);
+        }
 
         VideoWindow20 = SDL20_CreateWindow(WindowTitle, x, y, width, height, flags20);
         if (!VideoWindow20) {
@@ -4611,6 +4649,13 @@ SDL_GL_SetAttribute(SDL12_GLattr attr, int value)
         FIXME("Actually set swap interval somewhere");
         return 0;
     }
+    else if (attr == SDL12_GL_MULTISAMPLESAMPLES) {
+        OpenGLLogicalScalingSamples = value;
+        return 0;
+    }
+    else if (attr == SDL12_GL_MULTISAMPLEBUFFERS) {
+        return 0;
+    }
     return SDL20_GL_SetAttribute((SDL_GLattr) attr, value);
 }
 
@@ -4625,6 +4670,14 @@ SDL_GL_GetAttribute(SDL12_GLattr attr, int* value)
         *value = SDL20_GL_GetSwapInterval();
         return 0;
     }
+    else if (attr == SDL12_GL_MULTISAMPLESAMPLES) {
+        *value = OpenGLLogicalScalingSamples;
+        return 0;
+    }        
+    else if (attr == SDL12_GL_MULTISAMPLEBUFFERS) {
+        *value = (OpenGLLogicalScalingSamples) ? 1 : 0;
+        return 0;
+    }        
     return SDL20_GL_GetAttribute((SDL_GLattr) attr, value);
 }
 
@@ -4641,6 +4694,10 @@ SDL_GL_SwapBuffers(void)
             float want_aspect, real_aspect;
             int drawablew, drawableh;
             SDL_Rect dstrect;
+
+            GLint old_draw_fbo, old_read_fbo;
+            OpenGLFuncs.glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &old_draw_fbo);
+            OpenGLFuncs.glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &old_read_fbo);
 
             SDL20_GL_GetDrawableSize(VideoWindow20, &drawablew, &drawableh);
             OpenGLFuncs.glGetFloatv(GL_COLOR_CLEAR_VALUE, clearcolor);
@@ -4670,11 +4727,22 @@ SDL_GL_SwapBuffers(void)
                 dstrect.x = (drawablew - dstrect.w) / 2;
             }
 
-            OpenGLFuncs.glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-            OpenGLFuncs.glBindFramebuffer(GL_READ_FRAMEBUFFER, OpenGLLogicalScalingFBO);
             if (has_scissor) {
                 OpenGLFuncs.glDisable(GL_SCISSOR_TEST);  /* scissor test affects framebuffer_blit */
             }
+
+            OpenGLFuncs.glBindFramebuffer(GL_READ_FRAMEBUFFER, OpenGLLogicalScalingFBO);
+
+            /* Resolve the multisample framebuffer if required. */
+            if (OpenGLLogicalScalingMultisampleFBO) {
+                OpenGLFuncs.glBindFramebuffer(GL_DRAW_FRAMEBUFFER, OpenGLLogicalScalingMultisampleFBO);
+                OpenGLFuncs.glBlitFramebuffer(0, 0, OpenGLLogicalScalingWidth, OpenGLLogicalScalingHeight,
+                                              0, 0, OpenGLLogicalScalingWidth, OpenGLLogicalScalingHeight,
+                                              GL_COLOR_BUFFER_BIT, GL_NEAREST);
+                OpenGLFuncs.glBindFramebuffer(GL_READ_FRAMEBUFFER, OpenGLLogicalScalingMultisampleFBO);
+            }
+
+            OpenGLFuncs.glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
             OpenGLFuncs.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
             OpenGLFuncs.glClear(GL_COLOR_BUFFER_BIT);
             OpenGLFuncs.glBlitFramebuffer(0, 0, OpenGLLogicalScalingWidth, OpenGLLogicalScalingHeight,
@@ -4686,7 +4754,8 @@ SDL_GL_SwapBuffers(void)
             if (has_scissor) {
                 OpenGLFuncs.glEnable(GL_SCISSOR_TEST);
             }
-            OpenGLFuncs.glBindFramebuffer(GL_FRAMEBUFFER, OpenGLLogicalScalingFBO);
+            OpenGLFuncs.glBindFramebuffer(GL_READ_FRAMEBUFFER, old_read_fbo);
+            OpenGLFuncs.glBindFramebuffer(GL_DRAW_FRAMEBUFFER, old_draw_fbo);
         } else {
             SDL20_GL_SwapWindow(VideoWindow20);
         }
