@@ -3316,7 +3316,21 @@ glBindFramebuffer_shim_for_scaling(GLenum target, GLuint name)
 {
     /* OpenGLLogicalScalingFBO will be zero if we aren't scaling, making this use the default. */
     /*if ((name == 0) && (OpenGLLogicalScalingFBO != 0)) { SDL20_Log("OVERRIDE WINDOW FRAMEBUFFER FOR SCALING!"); }*/
-    OpenGLFuncs.glBindFramebuffer(target, (name == 0) ? OpenGLLogicalScalingFBO : name);
+    /* The default framebuffer can be read from in OpenGL, even if it's multisampled. Framebuffers can't.
+       We therefore bind the resolved framebuffer to GL_READ_BUFFER if it's set. This will be one frame
+       old, but this is rarely a problem. If it turns out to cause issues, we could force a resolve at
+       this point. */
+    if (OpenGLLogicalScalingMultisampleFBO && (target == GL_READ_FRAMEBUFFER)) {
+        OpenGLFuncs.glBindFramebuffer(target, (name == 0) ? OpenGLLogicalScalingMultisampleFBO : name);
+    } else if (target == GL_DRAW_FRAMEBUFFER) {
+        OpenGLFuncs.glBindFramebuffer(target, (name == 0) ? OpenGLLogicalScalingFBO : name);
+    } else if (!OpenGLLogicalScalingMultisampleFBO) {
+        OpenGLFuncs.glBindFramebuffer(target, (name == 0) ? OpenGLLogicalScalingFBO : name);
+    } else {
+        /* assume it's GL_FRAMEBUFFER, but we need separate read and draw buffers */
+        OpenGLFuncs.glBindFramebuffer(GL_READ_FRAMEBUFFER, (name == 0) ? OpenGLLogicalScalingMultisampleFBO : name);
+        OpenGLFuncs.glBindFramebuffer(GL_DRAW_FRAMEBUFFER, (name == 0) ? OpenGLLogicalScalingFBO : name);
+    }
 }
 
 
@@ -3371,9 +3385,10 @@ InitializeOpenGLScaling(const int w, const int h)
             OpenGLFuncs.glDeleteFramebuffers(1, &OpenGLLogicalScalingMultisampleFBO);
             OpenGLLogicalScalingMultisampleFBO = OpenGLLogicalScalingMultisampleColor = OpenGLLogicalScalingMultisampleDepth = 0;
         }
+        OpenGLFuncs.glBindFramebuffer(GL_DRAW_FRAMEBUFFER, OpenGLLogicalScalingFBO);
+        OpenGLFuncs.glBindFramebuffer(GL_READ_FRAMEBUFFER, OpenGLLogicalScalingMultisampleFBO);
     }
 
-    OpenGLFuncs.glBindFramebuffer(GL_FRAMEBUFFER, OpenGLLogicalScalingFBO);
 
     OpenGLFuncs.glViewport(0, 0, w, h);
     OpenGLFuncs.glScissor(0, 0, w, h);
