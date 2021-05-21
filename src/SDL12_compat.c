@@ -824,6 +824,8 @@ static int OpenGLLogicalScalingSamples = 0;
 static GLuint OpenGLLogicalScalingMultisampleFBO = 0;
 static GLuint OpenGLLogicalScalingMultisampleColor = 0;
 static GLuint OpenGLLogicalScalingMultisampleDepth = 0;
+static GLuint OpenGLCurrentReadFBO = 0;
+static GLuint OpenGLCurrentDrawFBO = 0;
 
 
 /* !!! FIXME: need a mutex for the event queue. */
@@ -3306,6 +3308,28 @@ LoadOpenGLFunctions(void)
     #include "SDL20_syms.h"
 }
 
+static void
+ResolveFauxBackbufferMSAA()
+{
+    const GLboolean has_scissor = OpenGLFuncs.glIsEnabled(GL_SCISSOR_TEST);
+
+    if (has_scissor) {
+        OpenGLFuncs.glDisable(GL_SCISSOR_TEST);  /* scissor test affects framebuffer_blit */
+    }
+
+    OpenGLFuncs.glBindFramebuffer(GL_READ_FRAMEBUFFER, OpenGLLogicalScalingFBO);
+    OpenGLFuncs.glBindFramebuffer(GL_DRAW_FRAMEBUFFER, OpenGLLogicalScalingMultisampleFBO);
+    OpenGLFuncs.glBlitFramebuffer(0, 0, OpenGLLogicalScalingWidth, OpenGLLogicalScalingHeight,
+                                  0, 0, OpenGLLogicalScalingWidth, OpenGLLogicalScalingHeight,
+                                  GL_COLOR_BUFFER_BIT, GL_NEAREST);
+
+    if (has_scissor) {
+        OpenGLFuncs.glEnable(GL_SCISSOR_TEST);
+    }
+    OpenGLFuncs.glBindFramebuffer(GL_READ_FRAMEBUFFER, OpenGLCurrentReadFBO);
+    OpenGLFuncs.glBindFramebuffer(GL_DRAW_FRAMEBUFFER, OpenGLCurrentDrawFBO);
+}
+
 /* if the app binds its own framebuffer objects, it'll try to bind the window framebuffer
    (always zero) to draw to the screen, but if we're using a framebuffer object to handle
    scaling, we need to catch those binds and make sure rendering intended for the window
@@ -3314,25 +3338,90 @@ LoadOpenGLFunctions(void)
 static void GLAPIENTRY
 glBindFramebuffer_shim_for_scaling(GLenum target, GLuint name)
 {
-    /* OpenGLLogicalScalingFBO will be zero if we aren't scaling, making this use the default. */
-    /*if ((name == 0) && (OpenGLLogicalScalingFBO != 0)) { SDL20_Log("OVERRIDE WINDOW FRAMEBUFFER FOR SCALING!"); }*/
-    /* The default framebuffer can be read from in OpenGL, even if it's multisampled. Framebuffers can't.
-       We therefore bind the resolved framebuffer to GL_READ_BUFFER if it's set. This will be one frame
-       old, but this is rarely a problem. If it turns out to cause issues, we could force a resolve at
-       this point. */
-    if (OpenGLLogicalScalingMultisampleFBO && (target == GL_READ_FRAMEBUFFER)) {
-        OpenGLFuncs.glBindFramebuffer(target, (name == 0) ? OpenGLLogicalScalingMultisampleFBO : name);
-    } else if (target == GL_DRAW_FRAMEBUFFER) {
-        OpenGLFuncs.glBindFramebuffer(target, (name == 0) ? OpenGLLogicalScalingFBO : name);
-    } else if (!OpenGLLogicalScalingMultisampleFBO) {
-        OpenGLFuncs.glBindFramebuffer(target, (name == 0) ? OpenGLLogicalScalingFBO : name);
-    } else {
-        /* assume it's GL_FRAMEBUFFER, but we need separate read and draw buffers */
-        OpenGLFuncs.glBindFramebuffer(GL_READ_FRAMEBUFFER, (name == 0) ? OpenGLLogicalScalingMultisampleFBO : name);
-        OpenGLFuncs.glBindFramebuffer(GL_DRAW_FRAMEBUFFER, (name == 0) ? OpenGLLogicalScalingFBO : name);
+    /* OpenGLLogicalScaling{Multisample,}FBO will be zero if we aren't scaling, making this use the default. */
+
+    /* We always cache the current framebuffer when it's changed here, so we don't have
+       to repeatedly ask OpenGL what the current framebuffer is, and so we can only force
+       resolves if the currently bound read FBO is the default. */
+    if ((target == GL_READ_FRAMEBUFFER) || (target == GL_FRAMEBUFFER)) {
+        if (OpenGLLogicalScalingMultisampleFBO) {
+            /* We need to read from a resolves FBO if multisampling is enabled. */
+            OpenGLCurrentReadFBO = (name == 0) ? OpenGLLogicalScalingMultisampleFBO : name;
+        } else {
+            OpenGLCurrentReadFBO = (name == 0) ? OpenGLLogicalScalingFBO : name;
+        }
     }
+
+    if ((target == GL_DRAW_FRAMEBUFFER) || (target == GL_FRAMEBUFFER)) {
+        OpenGLCurrentDrawFBO = (name == 0) ? OpenGLLogicalScalingFBO : name;
+    }
+
+    /* If multisampling is enabled, and we're trying using the default framebuffer, do a multisample resolve. */
+    if (OpenGLLogicalScalingMultisampleFBO && (OpenGLCurrentReadFBO == OpenGLLogicalScalingMultisampleFBO)) {
+        ResolveFauxBackbufferMSAA();
+    } else {
+        /* ResolveFauxBackbufferMSAA() will bind the framebuffers, otherwise we have to do it manually */
+        OpenGLFuncs.glBindFramebuffer(GL_READ_FRAMEBUFFER, OpenGLCurrentReadFBO);
+        OpenGLFuncs.glBindFramebuffer(GL_DRAW_FRAMEBUFFER, OpenGLCurrentDrawFBO);
+    }
+
 }
 
+static void GLAPIENTRY
+glReadPixels_shim_for_scaling(GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, void *data)
+{
+    if (OpenGLLogicalScalingMultisampleFBO && (OpenGLCurrentReadFBO == OpenGLLogicalScalingMultisampleFBO))
+        ResolveFauxBackbufferMSAA();
+    OpenGLFuncs.glReadPixels(x, y, width, height, format, type, data);
+}
+
+static void GLAPIENTRY
+glCopyPixels_shim_for_scaling(GLint x, GLint y, GLsizei width, GLsizei height, GLenum type)
+{
+    if (OpenGLLogicalScalingMultisampleFBO && (OpenGLCurrentReadFBO == OpenGLLogicalScalingMultisampleFBO))
+        ResolveFauxBackbufferMSAA();
+    OpenGLFuncs.glCopyPixels(x, y, width, height, type);
+}
+
+static void GLAPIENTRY
+glCopyTexImage1D_shim_for_scaling(GLenum target, GLint level, GLenum internalformat, GLint x, GLint y, GLsizei width, GLint border)
+{
+    if (OpenGLLogicalScalingMultisampleFBO && (OpenGLCurrentReadFBO == OpenGLLogicalScalingMultisampleFBO))
+        ResolveFauxBackbufferMSAA();
+    OpenGLFuncs.glCopyTexImage1D(target, level, internalformat, x, y, width, border);
+}
+
+static void GLAPIENTRY
+glCopyTexSubImage1D_shim_for_scaling(GLenum target, GLint level, GLint xoffset, GLint x, GLint y, GLsizei width)
+{
+    if (OpenGLLogicalScalingMultisampleFBO && (OpenGLCurrentReadFBO == OpenGLLogicalScalingMultisampleFBO))
+        ResolveFauxBackbufferMSAA();
+    OpenGLFuncs.glCopyTexSubImage1D(target, level, xoffset, x, y, width);
+}
+
+static void GLAPIENTRY
+glCopyTexImage2D_shim_for_scaling(GLenum target, GLint level, GLenum internalformat, GLint x, GLint y, GLsizei width, GLsizei height, GLint border)
+{
+    if (OpenGLLogicalScalingMultisampleFBO && (OpenGLCurrentReadFBO == OpenGLLogicalScalingMultisampleFBO))
+        ResolveFauxBackbufferMSAA();
+    OpenGLFuncs.glCopyTexImage2D(target, level, internalformat, x, y, width, height, border);
+}
+
+static void GLAPIENTRY
+glCopyTexSubImage2D_shim_for_scaling(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint x, GLint y, GLsizei width, GLsizei height)
+{
+    if (OpenGLLogicalScalingMultisampleFBO && (OpenGLCurrentReadFBO == OpenGLLogicalScalingMultisampleFBO))
+        ResolveFauxBackbufferMSAA();
+    OpenGLFuncs.glCopyTexSubImage2D(target, level, xoffset, yoffset, x, y, width, height);
+}
+
+static void GLAPIENTRY
+glCopyTexSubImage3D_shim_for_scaling(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLint x, GLint y, GLsizei width, GLsizei height)
+{
+    if (OpenGLLogicalScalingMultisampleFBO && (OpenGLCurrentReadFBO == OpenGLLogicalScalingMultisampleFBO))
+        ResolveFauxBackbufferMSAA();
+    OpenGLFuncs.glCopyTexSubImage3D(target, level, xoffset, yoffset, zoffset, x, y, width, height);
+}
 
 static SDL_bool
 InitializeOpenGLScaling(const int w, const int h)
@@ -3389,6 +3478,9 @@ InitializeOpenGLScaling(const int w, const int h)
         OpenGLFuncs.glBindFramebuffer(GL_READ_FRAMEBUFFER, OpenGLLogicalScalingMultisampleFBO);
     }
 
+    /* initialise the cached current FBO bindings properly */
+    OpenGLCurrentReadFBO = OpenGLLogicalScalingMultisampleFBO ? OpenGLLogicalScalingMultisampleFBO : OpenGLLogicalScalingFBO;
+    OpenGLCurrentDrawFBO = OpenGLLogicalScalingFBO;
 
     OpenGLFuncs.glViewport(0, 0, w, h);
     OpenGLFuncs.glScissor(0, 0, w, h);
@@ -4639,6 +4731,29 @@ SDL_GL_GetProcAddress(const char *sym)
     if ((SDL20_strcmp(sym, "glBindFramebuffer") == 0) || (SDL20_strcmp(sym, "glBindFramebufferEXT") == 0)) {
         return (void *) glBindFramebuffer_shim_for_scaling;
     }
+
+    /* these functions all need to have an MSAA resolve inserted before use */
+    if ((SDL20_strcmp(sym, "glReadPixels") == 0)) {
+        return (void *) glReadPixels_shim_for_scaling;
+    }
+    if ((SDL20_strcmp(sym, "glCopyPixels") == 0)) {
+        return (void *) glCopyPixels_shim_for_scaling;
+    }
+    if ((SDL20_strcmp(sym, "glCopyTexImage1D") == 0)) {
+        return (void *) glCopyTexImage1D_shim_for_scaling;
+    }
+    if ((SDL20_strcmp(sym, "glCopyTexSubImage1D") == 0)) {
+        return (void *) glCopyTexSubImage1D_shim_for_scaling;
+    }
+    if ((SDL20_strcmp(sym, "glCopyTexImage2D") == 0)) {
+        return (void *) glCopyTexImage2D_shim_for_scaling;
+    }
+    if ((SDL20_strcmp(sym, "glCopyTexSubImage2D") == 0)) {
+        return (void *) glCopyTexSubImage2D_shim_for_scaling;
+    }
+    if ((SDL20_strcmp(sym, "glCopyTexSubImage3D") == 0)) {
+        return (void *) glCopyTexSubImage3D_shim_for_scaling;
+    }
     return SDL20_GL_GetProcAddress(sym);
 }
 
@@ -4732,10 +4847,6 @@ SDL_GL_SwapBuffers(void)
             int drawablew, drawableh;
             SDL_Rect dstrect;
 
-            GLint old_draw_fbo, old_read_fbo;
-            OpenGLFuncs.glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &old_draw_fbo);
-            OpenGLFuncs.glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &old_read_fbo);
-
             SDL20_GL_GetDrawableSize(VideoWindow20, &drawablew, &drawableh);
             OpenGLFuncs.glGetFloatv(GL_COLOR_CLEAR_VALUE, clearcolor);
 
@@ -4791,8 +4902,8 @@ SDL_GL_SwapBuffers(void)
             if (has_scissor) {
                 OpenGLFuncs.glEnable(GL_SCISSOR_TEST);
             }
-            OpenGLFuncs.glBindFramebuffer(GL_READ_FRAMEBUFFER, old_read_fbo);
-            OpenGLFuncs.glBindFramebuffer(GL_DRAW_FRAMEBUFFER, old_draw_fbo);
+            OpenGLFuncs.glBindFramebuffer(GL_READ_FRAMEBUFFER, OpenGLCurrentReadFBO);
+            OpenGLFuncs.glBindFramebuffer(GL_DRAW_FRAMEBUFFER, OpenGLCurrentDrawFBO);
         } else {
             SDL20_GL_SwapWindow(VideoWindow20);
         }
