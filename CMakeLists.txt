@@ -134,6 +134,10 @@ if(SDL12TESTS)
     else()
         target_link_libraries(testgl "GL")
     endif()
+
+    foreach(fname "icon.bmp" "moose.dat" "picture.xbm" "sail.bmp" "sample.bmp" "sample.wav" "utf8.txt")
+        file(COPY "${CMAKE_SOURCE_DIR}/test/${fname}" DESTINATION "${CMAKE_BINARY_DIR}")
+    endforeach(fname)
 endif()
 
 install(TARGETS SDL
