@@ -812,7 +812,7 @@ static int SwapInterval = 0;
 static JoystickOpenedItem JoystickOpenList[16];
 static Uint8 KeyState[SDLK12_LAST];
 static SDL_bool MouseInputIsRelative = SDL_FALSE;
-static SDL_Point MousePositionWhenRelative = { 0, 0 };
+static SDL_Point MousePosition = { 0, 0 };
 static OpenGLEntryPoints OpenGLFuncs;
 static int OpenGLLogicalScalingWidth = 0;
 static int OpenGLLogicalScalingHeight = 0;
@@ -1881,10 +1881,8 @@ DECLSPEC Uint8 SDLCALL
 SDL_GetMouseState(int *x, int *y)
 {
     const Uint8 buttons = MouseButtonState20to12(SDL20_GetMouseState(x, y));
-    if (MouseInputIsRelative) {
-        if (x) { *x = MousePositionWhenRelative.x; }
-        if (y) { *y = MousePositionWhenRelative.y; }
-    }
+    if (x) { *x = MousePosition.x; }
+    if (y) { *y = MousePosition.y; }
     return buttons;
 }
 
@@ -2480,16 +2478,19 @@ EventFilter20to12(void *data, SDL_Event *event20)
             if (MouseInputIsRelative) {
                 /* in relative mode, clamp fake absolute position to the window dimensions. */
                 #define ADJUST_RELATIVE(axis, rel, dim) { \
-                    MousePositionWhenRelative.axis += event20->motion.rel; \
-                    if (MousePositionWhenRelative.axis <= 0) { \
-                        MousePositionWhenRelative.axis = 0; \
-                    } else if (MousePositionWhenRelative.axis >= VideoSurface12->dim) { \
-                        MousePositionWhenRelative.axis = (VideoSurface12->dim - 1); \
+                    MousePosition.axis += event20->motion.rel; \
+                    if (MousePosition.axis <= 0) { \
+                        MousePosition.axis = 0; \
+                    } else if (MousePosition.axis >= VideoSurface12->dim) { \
+                        MousePosition.axis = (VideoSurface12->dim - 1); \
                     } \
                 }
                 ADJUST_RELATIVE(x, xrel, w);
                 ADJUST_RELATIVE(y, yrel, h);
                 #undef ADJUST_RELATIVE
+            } else {
+                MousePosition.x = event12.motion.x;
+                MousePosition.y = event12.motion.y;
             }
             break;
 
@@ -3190,8 +3191,8 @@ EndVidModeCreate(void)
     OpenGLLogicalScalingDepth = 0;
 
     MouseInputIsRelative = SDL_FALSE;
-    MousePositionWhenRelative.x = 0;
-    MousePositionWhenRelative.y = 0;
+    MousePosition.x = 0;
+    MousePosition.y = 0;
 
     return NULL;
 }
@@ -4102,7 +4103,7 @@ UpdateRelativeMouseMode(void)
             if (MouseInputIsRelative) {
                 /* reset position, we'll have to track it ourselves in SDL_MOUSEMOTION events, since 1.2
                  *  would give you window coordinates, even in relative mode. */
-                SDL_GetMouseState(&MousePositionWhenRelative.x, &MousePositionWhenRelative.y);
+                SDL_GetMouseState(&MousePosition.x, &MousePosition.y);
             }
             SDL20_SetRelativeMouseMode(MouseInputIsRelative);
         }
@@ -4151,8 +4152,8 @@ DECLSPEC void SDLCALL
 SDL_WarpMouse(Uint16 x, Uint16 y)
 {
     if (MouseInputIsRelative) {  /* we have to track this ourselves, in case app calls SDL_GetMouseState(). */
-        MousePositionWhenRelative.x = (int) x;
-        MousePositionWhenRelative.y = (int) y;
+        MousePosition.x = (int) x;
+        MousePosition.y = (int) y;
     } else {
         SDL20_WarpMouseInWindow(VideoWindow20, x, y);
     }
