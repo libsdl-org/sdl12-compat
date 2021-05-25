@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 
 #include "SDL.h"
@@ -125,7 +124,6 @@ int TestEndian(SDL_bool verbose)
 #endif
 	return( error ? 1 : 0 );
 }
-
 
 int TestCPUInfo(SDL_bool verbose)
 {
