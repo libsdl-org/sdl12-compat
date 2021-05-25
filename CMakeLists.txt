@@ -1,9 +1,6 @@
 # NOTE:  If you installed SDL2 at an unusual place and FindSDL2 fails,
 #        you can define SDL2_INCLUDE_DIR on the cmdline.  For example:
 #        cmake -DSDL2_INCLUDE_DIR=/opt/SDL2/include/SDL2 [other stuff]
-#
-# NOTE:  To build SDL1.2 test programs enable SDL12TESTS. For example:
-#        cmake -DSDL12TESTS=1 [other stuff]
 
 cmake_minimum_required(VERSION 3.0.0)
 project(sdl12_compat)
