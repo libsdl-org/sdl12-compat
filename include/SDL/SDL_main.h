@@ -44,4 +44,3 @@ extern DECLSPEC void SDLCALL SDL_UnregisterApp(void);
 
 #endif
 
-

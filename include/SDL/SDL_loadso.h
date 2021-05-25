@@ -39,4 +39,3 @@ extern DECLSPEC void SDLCALL SDL_UnloadObject(void *handle);
 
 #endif
 
-

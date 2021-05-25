@@ -57,4 +57,3 @@ extern DECLSPEC const SDL_version * SDLCALL SDL_Linked_Version(void);
 #include "close_code.h"
 
 #endif
-

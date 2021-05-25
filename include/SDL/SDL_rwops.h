@@ -110,3 +110,4 @@ extern DECLSPEC int SDLCALL SDL_WriteBE64(SDL_RWops *dst, Uint64 value);
 #include "close_code.h"
 
 #endif
+

@@ -49,4 +49,3 @@ extern DECLSPEC SDL_bool SDLCALL SDL_RemoveTimer(SDL_TimerID t);
 
 #endif
 
-

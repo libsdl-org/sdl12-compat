@@ -51,7 +51,7 @@ typedef struct SDL_Color
     Uint8 unused;
 } SDL_Color;
 
-#define SDL_Colour SDL_Color
+#define SDL_Colour  SDL_Color
 
 typedef struct SDL_Palette
 {
@@ -221,7 +221,7 @@ extern DECLSPEC int SDLCALL SDL_WM_IconifyWindow(void);
 extern DECLSPEC int SDLCALL SDL_WM_ToggleFullScreen(SDL_Surface *surface);
 extern DECLSPEC SDL_GrabMode SDLCALL SDL_WM_GrabInput(SDL_GrabMode mode);
 extern DECLSPEC int SDLCALL SDL_SoftStretch(SDL_Surface *src, SDL_Rect *srcrect, SDL_Surface *dst, SDL_Rect *dstrect);
-                    
+
 #define SDL_SWSURFACE 0x00000000
 #define SDL_HWSURFACE 0x00000001
 #define SDL_ASYNCBLIT 0x00000004
