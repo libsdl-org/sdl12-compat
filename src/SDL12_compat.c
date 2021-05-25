@@ -793,6 +793,7 @@ static SDL_Window *VideoWindow20 = NULL;
 static SDL_Renderer *VideoRenderer20 = NULL;
 static SDL_Texture *VideoTexture20 = NULL;
 static SDL12_Surface *VideoSurface12 = NULL;
+static SDL_Palette *VideoPhysicalPalette20 = NULL;
 static Uint32 VideoSurfacePresentTicks = 0;
 static Uint32 VideoSurfaceLastPresentTicks = 0;
 static SDL_Surface *VideoConvertSurface20 = NULL;
@@ -3171,6 +3172,10 @@ EndVidModeCreate(void)
         SDL20_DestroyWindow(VideoWindow20);
         VideoWindow20 = NULL;
     }
+    if (VideoPhysicalPalette20) {
+        SDL20_FreePalette(VideoPhysicalPalette20);
+        VideoPhysicalPalette20 = NULL;
+    }
     if (VideoSurface12) {
         SDL20_free(VideoSurface12->pixels);
         VideoSurface12->pixels = NULL;
@@ -3570,6 +3575,10 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
                 { const int x = (i & 0x3) | ((i & 0x3) << 2); color->b = x | x << 4; }
                 color->a = 255;
             }
+            if (!VideoPhysicalPalette20) {
+                VideoPhysicalPalette20 = SDL20_AllocPalette(256);
+            }
+            SDL20_SetPaletteColors(VideoPhysicalPalette20, VideoSurface12->format->palette->colors, 0, 256);
         }
     }
 
@@ -3838,6 +3847,9 @@ PresentScreen(void)
 
     SDL_assert(VideoSurface12 != NULL);
 
+    SDL_Palette *logicalPal = VideoSurface12->surface20->format->palette;
+    VideoSurface12->surface20->format->palette = VideoPhysicalPalette20;
+
     if (SDL20_LockTexture(VideoTexture20, NULL, &pixels, &pitch) < 0) {
         return;  /* oh well */
     }
@@ -3878,6 +3890,7 @@ PresentScreen(void)
     }
 
     SDL20_RenderPresent(VideoRenderer20);
+    VideoSurface12->surface20->format->palette = logicalPal;
     VideoSurfaceLastPresentTicks = SDL20_GetTicks();
     VideoSurfacePresentTicks = 0;
 }
@@ -4237,13 +4250,18 @@ SDL_SetPalette(SDL12_Surface *surface12, int flags, const SDL_Color *colors,
             retval = -1;
         }
     }
+    
+    if (flags & SDL12_PHYSPAL) {
+        if (SDL20_SetPaletteColors(VideoPhysicalPalette20, opaquecolors, firstcolor, ncolors) < 0) {
+            retval = -1;
+        }
+    }
 
     SDL20_free(opaquecolors);
 
     /* in case this pointer changed... */
     palette12->colors = palette20->colors;
 
-    FIXME("We need to store the physical palette somewhere");  /* it might be different that logical palette and it will be needed for future blits. */
     if ((surface12 == VideoSurface12) && (flags & SDL12_PHYSPAL)) {
         SDL_UpdateRect(surface12, 0, 0, 0, 0);   /* force screen to reblit with new palette. */
     }

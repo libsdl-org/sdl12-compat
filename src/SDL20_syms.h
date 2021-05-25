@@ -115,6 +115,8 @@ SDL20_SYM(int,SetSurfaceBlendMode,(SDL_Surface *a, SDL_BlendMode b),(a,b),return
 SDL20_SYM(int,GetSurfaceBlendMode,(SDL_Surface *a, SDL_BlendMode *b),(a,b),return)
 SDL20_SYM(SDL_Surface*,LoadBMP_RW,(SDL_RWops *a, int b),(a,b),return)
 SDL20_SYM(int,SaveBMP_RW,(SDL_Surface *a, SDL_RWops *b, int c),(a,b,c),return)
+SDL20_SYM(SDL_Palette*,AllocPalette,(int a),(a),return)
+SDL20_SYM(void,FreePalette,(SDL_Palette *a),(a),)
 SDL20_SYM(int,SetPaletteColors,(SDL_Palette *a, const SDL_Color *b, int c, int d),(a,b,c,d),return)
 SDL20_SYM(SDL_bool,GL_ExtensionSupported,(const char *a),(a),return)
 SDL20_SYM(int,GL_LoadLibrary,(const char *a),(a),return)
