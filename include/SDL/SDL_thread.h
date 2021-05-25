@@ -30,12 +30,30 @@ real SDL-1.2 available to you. */
 #include "SDL_error.h"
 #include "SDL_mutex.h"
 
+#ifdef __OS2__ /* for _beginthread() and _endthread(). */
+#include <process.h>
+#ifdef __EMX__
+#include <stdlib.h>
+#endif
+#endif
+
 #include "begin_code.h"
 
 typedef struct SDL_Thread SDL_Thread;
 
-/* !!! FIXME: need the windows/os2 beginthread() magic here */
+/* No _beginthread()/_endthread() magic for windows -- only for os2:
+ * Official Windows versions of SDL-1.2 >= 1.2.10 were always built
+ * with HAVE_LIBC, i.e.: *without* SDL_PASSED_BEGINTHREAD_ENDTHREAD
+ * defined, in order to keep binary compatibility with SDL <= 1.2.9. */
+#ifdef __OS2__
+typedef int (*pfnSDL_CurrentBeginThread)(void (*func)(void *), void *, unsigned, void *arg);
+typedef void (*pfnSDL_CurrentEndThread)(void);
+extern DECLSPEC SDL_Thread * SDLCALL SDL_CreateThread(int (SDLCALL *fn)(void *), void *data, pfnSDL_CurrentBeginThread pfnBeginThread, pfnSDL_CurrentEndThread pfnEndThread);
+#define SDL_PASSED_BEGINTHREAD_ENDTHREAD
+#define SDL_CreateThread(fn, data) SDL_CreateThread(fn, data, _beginthread, _endthread)
+#else
 extern DECLSPEC SDL_Thread * SDLCALL SDL_CreateThread(int (SDLCALL *fn)(void *), void *data);
+#endif
 extern DECLSPEC Uint32 SDLCALL SDL_ThreadID(void);
 extern DECLSPEC Uint32 SDLCALL SDL_GetThreadID(SDL_Thread *thread);
 extern DECLSPEC void SDLCALL SDL_WaitThread(SDL_Thread *thread, int *status);
