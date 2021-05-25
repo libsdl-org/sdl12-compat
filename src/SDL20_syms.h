@@ -65,6 +65,8 @@ SDL20_SYM(SDL_assert_state,ReportAssertion,(SDL_assert_data *a,const char *b,con
 SDL20_SYM(int,PollEvent,(SDL_Event *a),(a),return)
 SDL20_SYM(void,PumpEvents,(void),(),)
 SDL20_SYM(void,SetEventFilter,(SDL_EventFilter a, void *b),(a,b),)
+SDL20_SYM(void,AddEventWatch,(SDL_EventFilter a, void *b),(a,b),)
+SDL20_SYM(void,DelEventWatch,(SDL_EventFilter a, void *b),(a,b),)
 
 SDL20_SYM(int,GetNumDisplayModes,(int a),(a),return)
 SDL20_SYM(int,GetDisplayMode,(int a, int b, SDL_DisplayMode *c),(a,b,c),return)

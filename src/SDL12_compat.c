@@ -1477,7 +1477,7 @@ Init12Video(void)
     SDL20_memset(EventStates, SDL_ENABLE, sizeof (EventStates)); /* on by default */
     EventStates[SDL12_SYSWMEVENT] = SDL_IGNORE;  /* off by default. */
 
-    SDL20_SetEventFilter(EventFilter20to12, NULL);
+    SDL20_AddEventWatch(EventFilter20to12, NULL);
 
     VideoDisplayIndex = GetVideoDisplay();
     SwapInterval = 0;
@@ -3518,6 +3518,11 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
         }
 
         SDL20_RenderSetLogicalSize(VideoRenderer20, width, height);
+
+        /* we need to make sure we're at the back of the Event Watch queue */	
+        SDL20_DelEventWatch(EventFilter20to12, NULL);
+        SDL20_AddEventWatch(EventFilter20to12, NULL);
+
         SDL20_SetRenderDrawColor(VideoRenderer20, 0, 0, 0, 255);  /* leave this black always, we only use it to clear the framebuffer. */
         SDL20_RenderClear(VideoRenderer20);
         SDL20_RenderPresent(VideoRenderer20);
