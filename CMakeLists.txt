@@ -3,9 +3,12 @@
 #        cmake -DSDL2_INCLUDE_DIR=/opt/SDL2/include/SDL2 [other stuff]
 
 cmake_minimum_required(VERSION 3.0.0)
-project(sdl12_compat)
+project(sdl12_compat
+        VERSION 0.0.1
+        LANGUAGES C)
 
 option(SDL12TESTS "Enable to build SDL-1.2 test programs" ON)
+option(SDL12DEVEL "Enable installing SDL-1.2 development headers" ON)
 
 set(CMAKE_SKIP_RPATH TRUE)
 
@@ -140,3 +143,12 @@ endif()
 install(TARGETS SDL
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
+
+if(SDL12DEVEL)
+  install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+  )
+  configure_file(sdl12_compat.pc.in sdl12_compat.pc @ONLY)
+  install(FILES ${CMAKE_BINARY_DIR}/sdl12_compat.pc
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
+  )
+endif()
