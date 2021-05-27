@@ -3776,12 +3776,30 @@ SDL_SoftStretch(SDL12_Surface *src12, SDL12_Rect *srcrect12, SDL12_Surface *dst1
 DECLSPEC int SDLCALL
 SDL_SetAlpha(SDL12_Surface *surface12, Uint32 flags12, Uint8 value)
 {
+    /* note that SDL 1.2 does not check if surface12 is NULL before dereferencing it either */
     const SDL_bool addkey = (flags12 & SDL12_SRCALPHA) ? SDL_TRUE : SDL_FALSE;
-    const int retval = SDL20_SetSurfaceAlphaMod(surface12->surface20, addkey ? value : 255);
-    if (SDL20_GetSurfaceAlphaMod(surface12->surface20, &surface12->format->alpha) < 0) {
-        surface12->format->alpha = 255;
+    int retval = -1;
+
+    if (addkey) {
+        if (!surface12->format->Amask) {  /* whole-surface alpha is ignored if surface has an alpha channel. */
+            retval = SDL20_SetSurfaceAlphaMod(surface12->surface20, value);
+            if (SDL20_GetSurfaceAlphaMod(surface12->surface20, &surface12->format->alpha) < 0) {
+                surface12->format->alpha = 255;
+            }
+        }
+        surface12->flags |= SDL12_SRCALPHA;
+        SDL20_SetSurfaceBlendMode(surface12->surface20, SDL_BLENDMODE_BLEND);
+    } else {
+        if (!surface12->format->Amask) {  /* whole-surface alpha is ignored if surface has an alpha channel. */
+            retval = SDL20_SetSurfaceAlphaMod(surface12->surface20, 255);
+            if (SDL20_GetSurfaceAlphaMod(surface12->surface20, &surface12->format->alpha) < 0) {
+                surface12->format->alpha = 255;
+            }
+        }
+        surface12->flags &= ~SDL12_SRCALPHA;
+        SDL20_SetSurfaceBlendMode(surface12->surface20, SDL_BLENDMODE_NONE);
     }
-    FIXME("Should this set SDL12_SRCALPHA on the surface?");
+
     return retval;
 }
 
