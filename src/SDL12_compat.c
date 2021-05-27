@@ -3846,11 +3846,12 @@ static void
 PresentScreen(void)
 {
     void *pixels = NULL;
+    SDL_Palette *logicalPal;
     int pitch = 0;
 
     SDL_assert(VideoSurface12 != NULL);
 
-    SDL_Palette *logicalPal = VideoSurface12->surface20->format->palette;
+    logicalPal = VideoSurface12->surface20->format->palette;
     VideoSurface12->surface20->format->palette = VideoPhysicalPalette20;
 
     if (SDL20_LockTexture(VideoTexture20, NULL, &pixels, &pitch) < 0) {
