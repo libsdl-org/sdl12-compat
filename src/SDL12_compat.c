@@ -3577,6 +3577,9 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
             }
             if (!VideoPhysicalPalette20) {
                 VideoPhysicalPalette20 = SDL20_AllocPalette(256);
+                if (!VideoPhysicalPalette20) {
+                    return EndVidModeCreate();
+                }
             }
             SDL20_SetPaletteColors(VideoPhysicalPalette20, VideoSurface12->format->palette->colors, 0, 256);
         }
