@@ -4253,8 +4253,8 @@ SDL_SetPalette(SDL12_Surface *surface12, int flags, const SDL_Color *colors,
             retval = -1;
         }
     }
-    
-    if (flags & SDL12_PHYSPAL) {
+
+    if ((flags & SDL12_PHYSPAL) && (surface12 == VideoSurface12) && VideoPhysicalPalette20) {
         if (SDL20_SetPaletteColors(VideoPhysicalPalette20, opaquecolors, firstcolor, ncolors) < 0) {
             retval = -1;
         }
