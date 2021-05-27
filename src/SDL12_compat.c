@@ -3851,6 +3851,11 @@ DECLSPEC SDL12_Surface * SDLCALL
 SDL_DisplayFormat(SDL12_Surface *surface12)
 {
     const Uint32 flags = surface12->flags & (SDL12_SRCCOLORKEY|SDL12_SRCALPHA|SDL12_RLEACCELOK);
+    if (!VideoSurface12) {
+        SDL20_SetError("No video mode has been set");
+        return NULL;
+    }
+
     return SDL_ConvertSurface(surface12, VideoSurface12->format, flags);
 }
 
