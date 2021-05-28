@@ -1736,13 +1736,15 @@ SDL_PollEvent(SDL12_Event *event12)
         return 0;  /* no events at the moment. */
     }
 
-    SDL20_memcpy(event12, &EventQueueHead->event12, sizeof (SDL12_Event));
-    next = EventQueueHead->next;
-    EventQueueHead->next = EventQueueAvailable;
-    EventQueueAvailable = EventQueueHead;
-    EventQueueHead = next;
-    if (!next) {
-        EventQueueTail = NULL;
+    if (event12 != NULL) {
+        SDL20_memcpy(event12, &EventQueueHead->event12, sizeof (SDL12_Event));
+        next = EventQueueHead->next;
+        EventQueueHead->next = EventQueueAvailable;
+        EventQueueAvailable = EventQueueHead;
+        EventQueueHead = next;
+        if (!next) {
+            EventQueueTail = NULL;
+        }
     }
 
     return 1;
@@ -1773,6 +1775,8 @@ SDL_PushEvent(SDL12_Event *event12)
 DECLSPEC int SDLCALL
 SDL_PeepEvents(SDL12_Event *events12, int numevents, SDL_eventaction action, Uint32 mask)
 {
+    SDL12_Event dummy_event;
+
     if (action == SDL_ADDEVENT) {
         int i;
         for (i = 0; i < numevents; i++) {
@@ -1780,6 +1784,12 @@ SDL_PeepEvents(SDL12_Event *events12, int numevents, SDL_eventaction action, Uin
                 break;  /* out of space for more events. */
         }
         return i;
+    }
+
+    if (!events12) {
+        action = SDL_PEEKEVENT;
+        numevents = 1;
+        events12 = &dummy_event;
     }
 
     if ((action == SDL_PEEKEVENT) || (action == SDL_GETEVENT)) {
@@ -1828,8 +1838,9 @@ DECLSPEC int SDLCALL
 SDL_WaitEvent(SDL12_Event *event12)
 {
     FIXME("In 1.2, this only fails (-1) if you haven't SDL_Init()'d.");
-    while (!SDL_PollEvent(event12))
+    while (!SDL_PollEvent(event12)) {
         SDL20_Delay(10);
+    }
     return 1;
 }
 
