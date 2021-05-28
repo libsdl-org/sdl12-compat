@@ -3892,43 +3892,6 @@ SDL_DisplayFormatAlpha(SDL12_Surface *surface12)
 static void
 PresentScreen(void)
 {
-    void *pixels = NULL;
-    SDL_Palette *logicalPal;
-    int pitch = 0;
-
-    SDL_assert(VideoSurface12 != NULL);
-
-    logicalPal = VideoSurface12->surface20->format->palette;
-    VideoSurface12->surface20->format->palette = VideoPhysicalPalette20;
-
-    if (SDL20_LockTexture(VideoTexture20, NULL, &pixels, &pitch) < 0) {
-        return;  /* oh well */
-    }
-
-    if (VideoConvertSurface20) {
-        VideoConvertSurface20->pixels = pixels;
-        VideoConvertSurface20->pitch = pitch;
-        SDL20_UpperBlit(VideoSurface12->surface20, NULL, VideoConvertSurface20, NULL);
-        VideoConvertSurface20->pixels = NULL;
-        VideoConvertSurface20->pitch = 0;
-    } else if (pitch == VideoSurface12->pitch) {
-        SDL20_memcpy(pixels, VideoSurface12->pixels, pitch * VideoSurface12->h);
-    } else {
-        const int srcpitch = VideoSurface12->pitch;
-        const int cpy = SDL_min(srcpitch, pitch);
-        const int h = VideoSurface12->h;
-        char *dst = (char *) pixels;
-        char *src = (char *) VideoSurface12->pixels;
-        int i = 0;
-        for (; i < h; i++) {
-            SDL20_memcpy(dst, src, cpy);
-            src += srcpitch;
-            dst += pitch;
-        }
-    }
-
-    SDL20_UnlockTexture(VideoTexture20);
-
     SDL20_RenderClear(VideoRenderer20);
     SDL20_RenderCopy(VideoRenderer20, VideoTexture20, NULL, NULL);
 
@@ -3941,9 +3904,29 @@ PresentScreen(void)
     }
 
     SDL20_RenderPresent(VideoRenderer20);
-    VideoSurface12->surface20->format->palette = logicalPal;
     VideoSurfaceLastPresentTicks = SDL20_GetTicks();
     VideoSurfacePresentTicks = 0;
+}
+
+static void
+UpdateRect12to20(SDL12_Surface *surface12, const SDL12_Rect *rect12, SDL_Rect *rect20, SDL_bool *whole_screen)
+{
+    Rect12to20(rect12, rect20);
+    if (!rect20->x && !rect20->y && !rect20->w && !rect20->h) {
+        *whole_screen = SDL_TRUE;
+        rect20->w = surface12->w;
+        rect20->h = surface12->h;
+    } else {
+        SDL_Rect surfacerect20;
+        surfacerect20.x = surfacerect20.y = 0;
+        surfacerect20.w = surface12->w;
+        surfacerect20.h = surface12->h;
+        Rect12to20(rect12, rect20);
+        SDL20_IntersectRect(&surfacerect20, rect20, rect20);
+        if ((rect20->x == 0) && (rect20->y == 0) && (rect20->w == surface12->w) && (rect20->h == surface12->h)) {
+            *whole_screen = SDL_TRUE;
+        }
+    }
 }
 
 DECLSPEC void SDLCALL
@@ -3961,18 +3944,56 @@ SDL_UpdateRects(SDL12_Surface *surface12, int numrects, SDL12_Rect *rects12)
      *  don't handle it correctly, so we have to work around it. */
     if (surface12 == VideoSurface12) {
         SDL_bool whole_screen = SDL_FALSE;
-        if (numrects == 1) {
-            const SDL12_Rect *r = rects12;
-            if (!r->x && !r->y && !r->w && !r->h) {
-                whole_screen = SDL_TRUE;
-            } else if (!r->x && !r->y && (r->w == surface12->w) && (r->h == surface12->h)) {
-                whole_screen = SDL_TRUE;
+        SDL_Rect rect20;
+        void *pixels = NULL;
+        int pitch = 0;
+        int i;
+
+        if (SDL20_LockTexture(VideoTexture20, NULL, &pixels, &pitch) < 0) {
+            return;  /* oh well */
+        }
+
+        if (VideoConvertSurface20) {
+            SDL_Palette *logicalPal = surface12->surface20->format->palette;
+            surface12->surface20->format->palette = VideoPhysicalPalette20;
+            VideoConvertSurface20->pixels = pixels;
+            VideoConvertSurface20->pitch = pitch;
+            for (i = 0; i < numrects; i++) {
+                UpdateRect12to20(surface12, &rects12[i], &rect20, &whole_screen);
+                if (rect20.w && rect20.h) {
+                    SDL20_UpperBlit(VideoSurface12->surface20, &rect20, VideoConvertSurface20, &rect20);
+                }
+            }
+            VideoConvertSurface20->pixels = NULL;
+            VideoConvertSurface20->pitch = 0;
+            surface12->surface20->format->palette = logicalPal;
+        } else {
+            const int srcpitch = surface12->pitch;
+            const int pixsize = surface12->format->BytesPerPixel;
+            for (i = 0; i < numrects; i++) {
+                UpdateRect12to20(surface12, &rects12[i], &rect20, &whole_screen);
+                if (rect20.w && rect20.h) {
+                    const int cpy = rect20.w * pixsize;
+                    const int h = surface12->h;
+                    char *dst = (((char *) pixels) + (rect20.y * pitch)) + (rect20.x * pixsize);
+                    char *src = (((char *) surface12->pixels) + (rect20.y * srcpitch)) + (rect20.x * pixsize);
+                    int j = 0;
+                    for (; j < h; j++) {
+                        SDL20_memcpy(dst, src, cpy);
+                        src += srcpitch;
+                        dst += pitch;
+                    }
+                }
             }
         }
+
+        SDL20_UnlockTexture(VideoTexture20);
 
         if (whole_screen) {
             PresentScreen();  /* flip it now. */
         } else {
+            FIXME("Don't hardcode 15, do this based on display refresh rate.");
+            FIXME("Maybe just flip it immediately in PumpEvents if this flag is set, instead?");
             VideoSurfacePresentTicks = VideoSurfaceLastPresentTicks + 15;  /* flip it later. */
         }
     }
@@ -3999,7 +4020,7 @@ SDL_Flip(SDL12_Surface *surface12)
     }
 
     if (surface12 == VideoSurface12) {
-        PresentScreen();
+        SDL_UpdateRect(surface12, 0, 0, 0, 0);  /* update the whole screen and present now. */
     }
 
     return 0;
