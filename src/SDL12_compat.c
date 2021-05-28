@@ -3862,8 +3862,25 @@ SDL_DisplayFormat(SDL12_Surface *surface12)
 DECLSPEC SDL12_Surface * SDLCALL
 SDL_DisplayFormatAlpha(SDL12_Surface *surface12)
 {
-    FIXME("This was correct when the display surface had an alpha channel, but isn't now.");
-    return SDL_DisplayFormat(surface12);
+    const Uint32 flags = surface12->flags & (SDL12_SRCALPHA|SDL12_RLEACCELOK);
+    SDL12_Surface *retval = NULL;
+    SDL_PixelFormat *fmt20 = NULL;
+    SDL12_PixelFormat fmt12;
+
+    if (!VideoSurface12) {
+        SDL20_SetError("No video mode has been set");
+        return NULL;
+    }
+
+    /* we only allow a few formats for the screen surface, and this is the appropriate alpha format for all of them. */
+    fmt20 = SDL20_AllocFormat(SDL_PIXELFORMAT_ARGB8888); FIXME("bgr instead of rgb?");
+    if (!fmt20) {
+        return NULL;
+    }
+
+    retval = SDL_ConvertSurface(surface12, PixelFormat20to12(&fmt12, NULL, fmt20), flags);
+    SDL20_FreeFormat(fmt20);
+    return retval;
 }
 
 static void
