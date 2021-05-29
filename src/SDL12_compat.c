@@ -1676,9 +1676,9 @@ SDL_SetError(const char *fmt, ...)
     va_end(ap);
 
     str = (char *) SDL20_malloc(len + 1);
-    if (!str)
+    if (!str) {
         SDL20_OutOfMemory();
-    else {
+    } else {
         va_start(ap, fmt);
         SDL20_vsnprintf(str, len + 1, fmt, ap);
         va_end(ap);
@@ -1780,8 +1780,9 @@ SDL_PeepEvents(SDL12_Event *events12, int numevents, SDL_eventaction action, Uin
     if (action == SDL_ADDEVENT) {
         int i;
         for (i = 0; i < numevents; i++) {
-            if (SDL_PushEvent(&events12[i]) < 0)
+            if (SDL_PushEvent(&events12[i]) < 0) {
                 break;  /* out of space for more events. */
+            }
         }
         return i;
     }
@@ -1793,30 +1794,31 @@ SDL_PeepEvents(SDL12_Event *events12, int numevents, SDL_eventaction action, Uin
     }
 
     if ((action == SDL_PEEKEVENT) || (action == SDL_GETEVENT)) {
-        const SDL_bool isGet = (action == SDL_GETEVENT)? SDL_TRUE : SDL_FALSE;
+        const SDL_bool is_get = (action == SDL_GETEVENT)? SDL_TRUE : SDL_FALSE;
         EventQueueType *prev = NULL;
         EventQueueType *item = EventQueueHead;
         EventQueueType *next = NULL;
         int chosen = 0;
-        while (chosen < numevents)
-        {
+        while (chosen < numevents) {
             EventQueueType *nextPrev = item;
-            if (!item)
+            if (!item) {
                 break;  /* no more events at the moment. */
+            }
 
             next = item->next;  /* copy, since we might overwrite item->next */
 
-            if (mask & (1<<item->event12.type))
-            {
+            if (mask & (1<<item->event12.type)) {
                 SDL20_memcpy(&events12[chosen++], &item->event12, sizeof (SDL12_Event));
-                if (isGet)  /* remove from list? */
-                {
-                    if (prev != NULL)
+                if (is_get) { /* remove from list? */
+                    if (prev != NULL) {
                         prev->next = next;
-                    if (item == EventQueueHead)
+                    }
+                    if (item == EventQueueHead) {
                         EventQueueHead = next;
-                    if (item == EventQueueTail)
+                    }
+                    if (item == EventQueueTail) {
                         EventQueueTail = prev;
+                    }
 
                     /* put it back in the free pool. */
                     item->next = EventQueueAvailable;
@@ -1849,8 +1851,9 @@ PushEventIfNotFiltered(SDL12_Event *event12)
 {
     if (event12->type != SDL12_NOEVENT) {
         if (EventStates[event12->type] != SDL_IGNORE) {
-            if ((!EventFilter12) || (EventFilter12(event12)))
+            if ((!EventFilter12) || (EventFilter12(event12))) {
                 return (SDL_PushEvent(event12) == 0)? SDL_TRUE : SDL_FALSE;
+            }
         }
     }
     return SDL_FALSE;
@@ -1863,8 +1866,9 @@ SDL_EventState(Uint8 type, int state)
     const Uint8 retval = EventStates[type];
     SDL12_Event e;
 
-    if (state != SDL_QUERY)
+    if (state != SDL_QUERY) {
         EventStates[type] = state;
+    }
     if (state == SDL_IGNORE) {  /* drop existing events of this type. */
         while (SDL_PeepEvents(&e, 1, SDL_GETEVENT, (1<<type))) {
           /* nothing */ ;
@@ -2461,8 +2465,9 @@ EventFilter20to12(void *data, SDL_Event *event20)
                     event12.key.keysym.scancode = 0;
                     event12.key.keysym.sym = SDLK12_UNKNOWN;
                     event12.key.keysym.unicode = firstChar;
-                    if (!FlushPendingKeydownEvent(firstChar))
+                    if (!FlushPendingKeydownEvent(firstChar)) {
                          PushEventIfNotFiltered(&event12);
+                    }
                     event12.key.keysym.unicode = secondChar;
                     PushEventIfNotFiltered(&event12);
                 } else {
@@ -2531,9 +2536,9 @@ EventFilter20to12(void *data, SDL_Event *event20)
             break;
 
         case SDL_MOUSEWHEEL:
-            if (event20->wheel.y == 0)
+            if (event20->wheel.y == 0) {
                 break;  /* don't support horizontal wheels in 1.2. */
-
+            }
             event12.type = SDL12_MOUSEBUTTONDOWN;
             event12.button.which = (Uint8) event20->wheel.which;
             event12.button.button = (event20->wheel.y > 0) ? 4 : 5;  /* wheelup is 4, down is 5. */
@@ -2659,26 +2664,29 @@ Surface20to12(SDL_Surface *surface20)
     SDL12_PixelFormat *format12 = NULL;
     Uint32 flags = 0;
 
-    if (!surface20)
+    if (!surface20) {
         return NULL;
-    if (surface20->pitch > 65535) {
+    } else if (surface20->pitch > 65535) {
         SDL20_SetError("Pitch is too large");  /* can't fit to 16-bits */
         return NULL;
     }
 
     surface12 = (SDL12_Surface *) SDL20_malloc(sizeof (SDL12_Surface));
-    if (!surface12)
+    if (!surface12) {
         goto failed;
+    }
 
     if (surface20->format->palette) {
         palette12 = (SDL12_Palette *) SDL20_malloc(sizeof (SDL12_Palette));
-        if (!palette12)
+        if (!palette12) {
             goto failed;
+        }
     }
 
     format12 = (SDL12_PixelFormat *) SDL20_malloc(sizeof (SDL12_PixelFormat));
-    if (!format12)
+    if (!format12) {
         goto failed;
+    }
 
     if (palette12) {
         SDL20_zerop(palette12);
@@ -3054,8 +3062,9 @@ DECLSPEC void SDLCALL
 SDL_FreeCursor(SDL12_Cursor *cursor12)
 {
     if (cursor12) {
-        if (cursor12->wm_cursor)
+        if (cursor12->wm_cursor) {
             SDL20_FreeCursor(cursor12->wm_cursor);
+        }
         SDL20_free(cursor12->data);
         SDL20_free(cursor12->mask);
         SDL20_free(cursor12);
@@ -3070,22 +3079,26 @@ SDL_CreateCursor(Uint8 *data, Uint8 *mask, int w, int h, int hot_x, int hot_y)
     SDL12_Cursor *retval = NULL;
 
     retval = (SDL12_Cursor *) SDL20_malloc(sizeof (SDL12_Cursor));
-    if (!retval)
+    if (!retval) {
         goto outofmem;
+    }
 
     SDL20_zerop(retval);
 
     retval->data = (Uint8 *) SDL20_malloc(datasize);
-    if (!retval->data)
+    if (!retval->data) {
         goto outofmem;
+    }
 
     retval->mask = (Uint8 *) SDL20_malloc(datasize);
-    if (!retval->mask)
+    if (!retval->mask) {
         goto outofmem;
+    }
 
     cursor20 = SDL20_CreateCursor(data, mask, w, h, hot_x, hot_y);
-    if (!cursor20)
+    if (!cursor20) {
         goto failed;
+    }
 
     retval->area.w = w;
     retval->area.h = h;
@@ -4053,8 +4066,9 @@ SDL_PumpEvents(void)
 
     /* If there's a pending KEYDOWN event, and we haven't got a TEXTINPUT
      * event which matches it, then let it through now. */
-    if (PendingKeydownEvent.type == SDL12_KEYDOWN)
+    if (PendingKeydownEvent.type == SDL12_KEYDOWN) {
         FlushPendingKeydownEvent(0);
+    }
 }
 
 DECLSPEC void SDLCALL
@@ -4586,8 +4600,9 @@ SDL_GL_LoadLibrary(const char *libname)
 DECLSPEC int SDLCALL
 SDL_GL_SetAttribute(SDL12_GLattr attr, int value)
 {
-    if (attr >= SDL12_GL_MAX_ATTRIBUTE)
+    if (attr >= SDL12_GL_MAX_ATTRIBUTE) {
         return SDL20_SetError("Unknown GL attribute");
+    }
 
     /* swap control was moved out of this API, everything else lines up. */
     if (attr == SDL12_GL_SWAP_CONTROL) {
@@ -4601,9 +4616,9 @@ SDL_GL_SetAttribute(SDL12_GLattr attr, int value)
 DECLSPEC int SDLCALL
 SDL_GL_GetAttribute(SDL12_GLattr attr, int* value)
 {
-    if (attr >= SDL12_GL_MAX_ATTRIBUTE)
+    if (attr >= SDL12_GL_MAX_ATTRIBUTE) {
         return SDL20_SetError("Unknown GL attribute");
-
+    }
     /* swap control was moved out of this API, everything else lines up. */
     if (attr == SDL12_GL_SWAP_CONTROL) {
         *value = SDL20_GL_GetSwapInterval();
@@ -4995,8 +5010,9 @@ DECLSPEC SDL12_RWops * SDLCALL
 SDL_AllocRW(void)
 {
     SDL12_RWops *rwops = (SDL12_RWops *) SDL20_malloc(sizeof (SDL12_RWops));
-    if (!rwops)
+    if (!rwops) {
         SDL20_OutOfMemory();
+    }
     return rwops;
 }
 
@@ -5030,8 +5046,9 @@ RWops20to12_close(struct SDL12_RWops *rwops12)
     int rc = 0;
     if (rwops12) {
         rc = rwops12->rwops20->close(rwops12->rwops20);
-        if (rc == 0)
+        if (rc == 0) {
             SDL_FreeRW(rwops12);
+        }
     }
     return rc;
 }
@@ -5041,12 +5058,14 @@ RWops20to12(SDL_RWops *rwops20)
 {
     SDL12_RWops *rwops12;
 
-    if (!rwops20)
+    if (!rwops20) {
         return NULL;
+    }
 
     rwops12 = SDL_AllocRW();
-    if (!rwops12)
+    if (!rwops12) {
         return NULL;
+    }
 
     SDL20_zerop(rwops12);
     rwops12->type = rwops20->type;
@@ -5122,8 +5141,9 @@ RWops12to20_size(struct SDL_RWops *rwops20)
     int size = (int) ((size_t) rwops20->hidden.unknown.data2);
     int pos;
 
-    if (size != -1)
+    if (size != -1) {
         return size;
+    }
 
     pos = rwops12->seek(rwops12, 0, RW_SEEK_CUR);
     if (pos == -1) {
@@ -5184,12 +5204,14 @@ RWops12to20(SDL12_RWops *rwops12)
 {
     SDL_RWops *rwops20;
 
-    if (!rwops12)
+    if (!rwops12) {
         return NULL;
+    }
 
     rwops20 = SDL20_AllocRW();
-    if (!rwops20)
+    if (!rwops20) {
         return NULL;
+    }
 
     SDL20_zerop(rwops20);
     rwops20->type = rwops12->type;
@@ -5209,10 +5231,12 @@ SDL_LoadBMP_RW(SDL12_RWops *rwops12, int freerwops12)
     SDL_RWops *rwops20 = RWops12to20(rwops12);
     SDL_Surface *surface20 = SDL20_LoadBMP_RW(rwops20, freerwops12);
     SDL12_Surface *surface12 = Surface20to12(surface20);
-    if (!freerwops12)  /* free our wrapper if SDL2 didn't close it. */
+    if (!freerwops12) { /* free our wrapper if SDL2 didn't close it. */
         SDL20_FreeRW(rwops20);
-    if ((!surface12) && (surface20))
+    }
+    if ((!surface12) && (surface20)) {
         SDL20_FreeSurface(surface20);
+    }
     return surface12;
 }
 
@@ -5222,8 +5246,9 @@ SDL_SaveBMP_RW(SDL12_Surface *surface12, SDL12_RWops *rwops12, int freerwops12)
     SDL_RWops *rwops20 = RWops12to20(rwops12);
     const int retval = SDL20_SaveBMP_RW(surface12->surface20, rwops20, freerwops12);
     FIXME("wrap surface");
-    if (!freerwops12)  /* free our wrapper if SDL2 didn't close it. */
+    if (!freerwops12) {  /* free our wrapper if SDL2 didn't close it. */
         SDL20_FreeRW(rwops20);
+    }
     return retval;
 }
 
@@ -5239,8 +5264,9 @@ SDL_LoadWAV_RW(SDL12_RWops *rwops12, int freerwops12,
         *buf = NULL;
         retval = NULL;
     }
-    if (!freerwops12)  /* free our wrapper if SDL2 didn't close it. */
+    if (!freerwops12) {  /* free our wrapper if SDL2 didn't close it. */
         SDL20_FreeRW(rwops20);
+    }
     return retval;
 }
 
