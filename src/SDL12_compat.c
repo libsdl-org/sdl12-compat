@@ -3808,7 +3808,7 @@ SDL_SetAlpha(SDL12_Surface *surface12, Uint32 flags12, Uint8 value)
 {
     /* note that SDL 1.2 does not check if surface12 is NULL before dereferencing it either */
     const SDL_bool addkey = (flags12 & SDL12_SRCALPHA) ? SDL_TRUE : SDL_FALSE;
-    int retval = -1;
+    int retval = 0;
 
     if (addkey) {
         if (!surface12->format->Amask) {  /* whole-surface alpha is ignored if surface has an alpha channel. */
