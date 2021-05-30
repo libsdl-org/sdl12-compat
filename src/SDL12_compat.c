@@ -2640,8 +2640,8 @@ Rect20to12(const SDL_Rect *rect20, SDL12_Rect *rect12)
 {
     rect12->x = (Sint16) rect20->x;
     rect12->y = (Sint16) rect20->y;
-    rect12->w = (Uint16) rect20->w;
-    rect12->h = (Uint16) rect20->h;
+    rect12->w = (Uint16) ((rect20->w <= 0) ? 0 : rect20->w);
+    rect12->h = (Uint16) ((rect20->h <= 0) ? 0 : rect20->h);
     return rect12;
 }
 
