@@ -1902,6 +1902,69 @@ SDL_EventState(Uint8 type, int state)
     return retval;
 }
 
+static SDL_Rect
+GetOpenGLLogicalScalingViewport()
+{
+    float want_aspect, real_aspect;
+    int drawablew, drawableh;
+    SDL_Rect dstrect;
+    SDL20_GL_GetDrawableSize(VideoWindow20, &drawablew, &drawableh);
+
+    want_aspect = ((float) OpenGLLogicalScalingWidth) / ((float) OpenGLLogicalScalingHeight);
+    real_aspect = ((float) drawablew) / ((float) drawableh);
+
+    if (SDL20_fabsf(want_aspect-real_aspect) < 0.0001f) {
+        /* The aspect ratios are the same, just scale appropriately */
+        dstrect.x = 0;
+        dstrect.y = 0;
+        dstrect.w = drawablew;
+        dstrect.h = drawableh;
+    } else if (want_aspect > real_aspect) {
+        /* We want a wider aspect ratio than is available - letterbox it */
+        const float scale = ((float) drawablew) / OpenGLLogicalScalingWidth;
+        dstrect.x = 0;
+        dstrect.w = drawablew;
+        dstrect.h = (int)SDL20_floorf(OpenGLLogicalScalingHeight * scale);
+        dstrect.y = (drawableh - dstrect.h) / 2;
+    } else {
+        /* We want a narrower aspect ratio than is available - use side-bars */
+        const float scale = ((float)drawableh) / OpenGLLogicalScalingHeight;
+        dstrect.y = 0;
+        dstrect.h = drawableh;
+        dstrect.w = (int)SDL20_floorf(OpenGLLogicalScalingWidth * scale);
+        dstrect.x = (drawablew - dstrect.w) / 2;
+    }
+
+    return dstrect;
+}
+
+static void
+AdjustOpenGLLogicalScalingPoint(int *x, int *y)
+{
+    SDL_Rect viewport;
+    float scale_x, scale_y;
+    int adjusted_x, adjusted_y;
+
+    /* Don't adjust anything if we're not using Logical Scaling */
+    if (!OpenGLLogicalScalingFBO) {
+        return;
+    }
+
+    /* These will need to be scaled further if we want to support High-DPI */
+    viewport = GetOpenGLLogicalScalingViewport();
+
+    scale_x = (float)OpenGLLogicalScalingWidth / viewport.w;
+    scale_y = (float)OpenGLLogicalScalingHeight / viewport.h;
+
+    adjusted_x = (*x - viewport.x) * scale_x;
+    adjusted_y = (*y - viewport.y) * scale_y;
+
+    /* Clamp the result to the visible window */
+    *x = SDL_max(SDL_min(adjusted_x, OpenGLLogicalScalingWidth), 0);
+    *y = SDL_max(SDL_min(adjusted_y, OpenGLLogicalScalingHeight), 0);
+}
+    
+
 static Uint8 MouseButtonState20to12(const Uint32 state20)
 {
     Uint8 retval = (state20 & 0x7);  /* left, right, and middle will match. */
@@ -2512,6 +2575,7 @@ EventFilter20to12(void *data, SDL_Event *event20)
             event12.type = SDL12_MOUSEMOTION;
             event12.motion.which = (Uint8) event20->motion.which;
             event12.motion.state = event20->motion.state;
+            AdjustOpenGLLogicalScalingPoint(&event20->motion.x, &event20->motion.y);
             event12.motion.x = (Uint16) event20->motion.x;
             event12.motion.y = (Uint16) event20->motion.y;
             event12.motion.xrel = (Sint16) event20->motion.xrel;
@@ -2543,6 +2607,7 @@ EventFilter20to12(void *data, SDL_Event *event20)
                 event12.button.button += 2; /* SDL_BUTTON_X1/2 */
             }
             event12.button.state = event20->button.state;
+            AdjustOpenGLLogicalScalingPoint(&event20->button.x, &event20->button.y);
             event12.button.x = (Uint16) event20->button.x;
             event12.button.y = (Uint16) event20->button.y;
             break;
@@ -2555,6 +2620,7 @@ EventFilter20to12(void *data, SDL_Event *event20)
                 event12.button.button += 2; /* SDL_BUTTON_X1/2 */
             }
             event12.button.state = event20->button.state;
+            AdjustOpenGLLogicalScalingPoint(&event20->button.x, &event20->button.y);
             event12.button.x = (Uint16) event20->button.x;
             event12.button.y = (Uint16) event20->button.y;
             break;
@@ -4378,6 +4444,7 @@ UpdateRelativeMouseMode(void)
                 /* reset position, we'll have to track it ourselves in SDL_MOUSEMOTION events, since 1.2
                  *  would give you window coordinates, even in relative mode. */
                 SDL20_GetMouseState(&MousePosition.x, &MousePosition.y);
+                AdjustOpenGLLogicalScalingPoint(&MousePosition.x, &MousePosition.y);
             }
             SDL20_SetRelativeMouseMode(MouseInputIsRelative);
         }
@@ -4845,37 +4912,9 @@ SDL_GL_SwapBuffers(void)
             const char *scale_method_env = SDL20_getenv("SDL12COMPAT_SCALE_METHOD");
             const SDL_bool want_nearest = (scale_method_env && !SDL20_strcmp(scale_method_env, "nearest"))? SDL_TRUE : SDL_FALSE;
             GLfloat clearcolor[4];
-            float want_aspect, real_aspect;
-            int drawablew, drawableh;
-            SDL_Rect dstrect;
+            SDL_Rect dstrect = GetOpenGLLogicalScalingViewport();
 
-            SDL20_GL_GetDrawableSize(VideoWindow20, &drawablew, &drawableh);
             OpenGLFuncs.glGetFloatv(GL_COLOR_CLEAR_VALUE, clearcolor);
-
-            want_aspect = ((float) OpenGLLogicalScalingWidth) / ((float) OpenGLLogicalScalingHeight);
-            real_aspect = ((float) drawablew) / ((float) drawableh);
-
-            if (SDL20_fabsf(want_aspect-real_aspect) < 0.0001f) {
-                /* The aspect ratios are the same, just scale appropriately */
-                dstrect.x = 0;
-                dstrect.y = 0;
-                dstrect.w = drawablew;
-                dstrect.h = drawableh;
-            } else if (want_aspect > real_aspect) {
-                /* We want a wider aspect ratio than is available - letterbox it */
-                const float scale = ((float) drawablew) / OpenGLLogicalScalingWidth;
-                dstrect.x = 0;
-                dstrect.w = drawablew;
-                dstrect.h = (int)SDL20_floorf(OpenGLLogicalScalingHeight * scale);
-                dstrect.y = (drawableh - dstrect.h) / 2;
-            } else {
-                /* We want a narrower aspect ratio than is available - use side-bars */
-                const float scale = ((float)drawableh) / OpenGLLogicalScalingHeight;
-                dstrect.y = 0;
-                dstrect.h = drawableh;
-                dstrect.w = (int)SDL20_floorf(OpenGLLogicalScalingWidth * scale);
-                dstrect.x = (drawablew - dstrect.w) / 2;
-            }
 
             if (has_scissor) {
                 OpenGLFuncs.glDisable(GL_SCISSOR_TEST);  /* scissor test affects framebuffer_blit */
