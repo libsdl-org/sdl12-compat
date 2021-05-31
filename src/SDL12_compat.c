@@ -3530,8 +3530,11 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
 
     } else {
         /* always use a renderer for non-OpenGL windows. */
-        const char *env = SDL20_getenv("SDL12COMPAT_SYNC_TO_VBLANK");
-        const SDL_bool want_vsync = (env && SDL20_atoi(env)) ? SDL_TRUE : SDL_FALSE;
+        const char *vsync_env = SDL20_getenv("SDL12COMPAT_SYNC_TO_VBLANK");
+        const char *old_scale_quality = SDL20_GetHint(SDL_HINT_RENDER_SCALE_QUALITY);
+        const char *scale_method_env = SDL20_getenv("SDL12COMPAT_SCALE_METHOD");
+        const SDL_bool want_vsync = (vsync_env && SDL20_atoi(vsync_env)) ? SDL_TRUE : SDL_FALSE;
+        const SDL_bool want_nearest = (scale_method_env && !SDL20_strcmp(scale_method_env, "nearest"));
         SDL_RendererInfo rinfo;
         SDL_assert(!VideoGLContext20);  /* either a new window or we destroyed all this */
         if (!VideoRenderer20 && want_vsync) {
@@ -3570,7 +3573,9 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
             VideoConvertSurface20 = NULL;
         }
 
+        SDL20_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, want_nearest?"0":"1");
         VideoTexture20 = SDL20_CreateTexture(VideoRenderer20, rinfo.texture_formats[0], SDL_TEXTUREACCESS_STREAMING, width, height);
+        SDL20_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, old_scale_quality);
         if (!VideoTexture20) {
             return EndVidModeCreate();
         }
@@ -4630,6 +4635,8 @@ SDL_GL_SwapBuffers(void)
     if (VideoWindow20) {
         if (OpenGLLogicalScalingFBO != 0) {
             const GLboolean has_scissor = OpenGLFuncs.glIsEnabled(GL_SCISSOR_TEST);
+            const char *scale_method_env = SDL20_getenv("SDL12COMPAT_SCALE_METHOD");
+            const SDL_bool want_nearest = (scale_method_env && !SDL20_strcmp(scale_method_env, "nearest"));
             GLfloat clearcolor[4];
             float want_aspect, real_aspect;
             int drawablew, drawableh;
@@ -4672,7 +4679,7 @@ SDL_GL_SwapBuffers(void)
             OpenGLFuncs.glClear(GL_COLOR_BUFFER_BIT);
             OpenGLFuncs.glBlitFramebuffer(0, 0, OpenGLLogicalScalingWidth, OpenGLLogicalScalingHeight,
                                           dstrect.x, dstrect.y, dstrect.x + dstrect.w, dstrect.y + dstrect.h,
-                                          GL_COLOR_BUFFER_BIT, GL_LINEAR);
+                                          GL_COLOR_BUFFER_BIT, want_nearest?GL_NEAREST:GL_LINEAR);
             OpenGLFuncs.glBindFramebuffer(GL_FRAMEBUFFER, 0);
             SDL20_GL_SwapWindow(VideoWindow20);
             OpenGLFuncs.glClearColor(clearcolor[0], clearcolor[1], clearcolor[2], clearcolor[3]);
