@@ -49,6 +49,9 @@ SDL20_SYM(Uint32,WasInit,(Uint32 a),(a),return)
 SDL20_SYM(char*,GetError,(void),(),return)
 SDL20_SYM_VARARGS(int,SetError,(const char *fmt, ...))
 
+SDL20_SYM(const char *,GetHint,(const char *a),(a),return)
+SDL20_SYM(SDL_bool,SetHint,(const char *a, const char *b),(a, b),return)
+
 SDL20_SYM(int,Error,(SDL_errorcode a),(a),return)
 SDL20_SYM_PASSTHROUGH(void,ClearError,(void),(),)
 SDL20_SYM(void,Quit,(void),(),)
