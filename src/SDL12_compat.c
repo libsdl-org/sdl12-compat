@@ -3534,7 +3534,7 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
         const char *old_scale_quality = SDL20_GetHint(SDL_HINT_RENDER_SCALE_QUALITY);
         const char *scale_method_env = SDL20_getenv("SDL12COMPAT_SCALE_METHOD");
         const SDL_bool want_vsync = (vsync_env && SDL20_atoi(vsync_env)) ? SDL_TRUE : SDL_FALSE;
-        const SDL_bool want_nearest = (scale_method_env && !SDL20_strcmp(scale_method_env, "nearest"));
+        const SDL_bool want_nearest = (scale_method_env && !SDL20_strcmp(scale_method_env, "nearest"))? SDL_TRUE : SDL_FALSE;
         SDL_RendererInfo rinfo;
         SDL_assert(!VideoGLContext20);  /* either a new window or we destroyed all this */
         if (!VideoRenderer20 && want_vsync) {
@@ -4636,7 +4636,7 @@ SDL_GL_SwapBuffers(void)
         if (OpenGLLogicalScalingFBO != 0) {
             const GLboolean has_scissor = OpenGLFuncs.glIsEnabled(GL_SCISSOR_TEST);
             const char *scale_method_env = SDL20_getenv("SDL12COMPAT_SCALE_METHOD");
-            const SDL_bool want_nearest = (scale_method_env && !SDL20_strcmp(scale_method_env, "nearest"));
+            const SDL_bool want_nearest = (scale_method_env && !SDL20_strcmp(scale_method_env, "nearest"))? SDL_TRUE : SDL_FALSE;
             GLfloat clearcolor[4];
             float want_aspect, real_aspect;
             int drawablew, drawableh;
