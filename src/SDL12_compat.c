@@ -3585,9 +3585,6 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
 
         VideoSurface12->flags &= ~SDL12_OPENGL;
         VideoSurface12->flags |= SDL12_DOUBLEBUF;
-        /* some apps check for the presence/lack of double buffering via MUSTLOCK
-         * so set SDL12_HWSURFACE so they are less confused */
-        VideoSurface12->flags |= SDL12_HWSURFACE;
         VideoSurface12->surface20->pixels = SDL20_malloc(height * VideoSurface12->pitch);
         VideoSurface12->pixels = VideoSurface12->surface20->pixels;
         if (!VideoSurface12->pixels) {
