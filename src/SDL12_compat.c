@@ -2787,7 +2787,7 @@ SetPalette12ForMasks(SDL12_Surface *surface12, const Uint32 Rmask, const Uint32 
         LOSSMASKSHIFTSETUP(R);
         LOSSMASKSHIFTSETUP(G);
         LOSSMASKSHIFTSETUP(B);
-        #undef LOSSMASSSHIFTSETUP
+        #undef LOSSMASKSHIFTSETUP
         format12->Amask = 0;
         format12->Ashift = 0;
         format12->Aloss = 8;
