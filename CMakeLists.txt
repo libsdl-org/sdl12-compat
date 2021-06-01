@@ -18,6 +18,7 @@ if(APPLE)
   # the following matches SDL-1.2 Xcode project file
   set(DYLIB_COMPAT_VERSION 1.0.0)
   set(DYLIB_CURRENT_VERSION 12.50.0)
+  include_directories("/opt/X11/include")  # hack.
 endif()
 if(WIN32)
   set(WIN32_SRCS "src/version.rc")
@@ -130,7 +131,8 @@ if(SDL12TESTS)
     test_program(torturethread "test/torturethread.c")
 
     if(APPLE)
-        target_link_libraries(testgl PRIVATE "-framework OpenGL")
+        target_link_libraries(testgl "-framework OpenGL")
+        set_target_properties(testgl PROPERTIES COMPILE_DEFINITIONS "GL_SILENCE_DEPRECATION=1")
     else()
         target_link_libraries(testgl "GL")
     endif()
