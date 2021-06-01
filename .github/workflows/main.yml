@@ -27,7 +27,7 @@ jobs:
     - name: Get sdl12-compat sources
       uses: actions/checkout@v2
     - name: Configure CMake
-      run: cmake -DSDL2_INCLUDE_DIR="$GITHUB_WORKSPACE/SDL2/include" -B build ${{ matrix.platform.flags }}
+      run: cmake -DSDL2_INCLUDE_DIR="${{ github.workspace }}/SDL2/include" -B build ${{ matrix.platform.flags }}
     - name: Build
       run: cmake --build build/
 
