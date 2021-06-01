@@ -7,6 +7,8 @@ project(sdl12_compat
         VERSION 0.0.1
         LANGUAGES C)
 
+set(SDL12_COMPAT_VERSION_STR "1.2.50")
+
 option(SDL12TESTS "Enable to build SDL-1.2 test programs" ON)
 option(SDL12DEVEL "Enable installing SDL-1.2 development headers" ON)
 
@@ -56,12 +58,12 @@ if(APPLE)
     )
 elseif(UNIX AND NOT ANDROID)
     set_target_properties(SDL PROPERTIES
-        VERSION "1.2.50"
+        VERSION "${SDL12_COMPAT_VERSION_STR}"
         SOVERSION "0"
         OUTPUT_NAME "SDL-1.2")
 else()
     set_target_properties(SDL PROPERTIES
-        VERSION "1.2.50"
+        VERSION "${SDL12_COMPAT_VERSION_STR}"
         SOVERSION "0"
       OUTPUT_NAME "SDL")
 endif()
@@ -153,4 +155,26 @@ if(SDL12DEVEL)
   install(FILES ${CMAKE_BINARY_DIR}/sdl12_compat.pc
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
   )
+
+  # !!! FIXME: lots of these sdl-config vars probably need more customization.
+
+  # !!! FIXME: do we _want_ static builds?
+  set(ENABLE_STATIC_TRUE "")
+  set(ENABLE_STATIC_FALSE "#")
+  set(ENABLE_SHARED_TRUE "")
+  set(ENABLE_SHARED_FALSE "#")
+
+  set(SDL_VERSION "${SDL12_COMPAT_VERSION_STR}")
+  set(SDL_CFLAGS "-D_GNU_SOURCE=1 -D_REENTRANT")
+  set(SDL_RLD_FLAGS "")  # !!! FIXME: this forces rpath, which we might want?
+  set(SDL_LIBS "-lSDL")
+  set(SDL_STATIC_LIBS "-lm -ldl -lpthread")
+  set(prefix ${CMAKE_INSTALL_PREFIX})
+  set(exec_prefix "\${prefix}")
+  set(libdir "\${exec_prefix}/lib${LIB_SUFFIX}")
+  set(bindir "\${exec_prefix}/bin")
+  set(includedir "\${prefix}/include")
+  configure_file("${CMAKE_SOURCE_DIR}/sdl-config.in" "${CMAKE_BINARY_DIR}/sdl-config" @ONLY)
+  install(PROGRAMS "${CMAKE_BINARY_DIR}/sdl-config" DESTINATION bin)
 endif()
+
