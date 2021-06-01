@@ -4377,7 +4377,7 @@ UpdateRelativeMouseMode(void)
             if (MouseInputIsRelative) {
                 /* reset position, we'll have to track it ourselves in SDL_MOUSEMOTION events, since 1.2
                  *  would give you window coordinates, even in relative mode. */
-                SDL_GetMouseState(&MousePosition.x, &MousePosition.y);
+                SDL20_GetMouseState(&MousePosition.x, &MousePosition.y);
             }
             SDL20_SetRelativeMouseMode(MouseInputIsRelative);
         }
