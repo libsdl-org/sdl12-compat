@@ -29,6 +29,6 @@ jobs:
     - name: Configure CMake
       run: cmake -DSDL2_INCLUDE_DIR="${{ github.workspace }}/SDL2/include" -B build ${{ matrix.platform.flags }}
     - name: Build
-      working-directory: .build
+      working-directory: build
       run: cmake --build .
 
