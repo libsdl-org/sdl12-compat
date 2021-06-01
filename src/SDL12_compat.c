@@ -889,31 +889,47 @@ static char loaderror[256];
     #define strcpy_fn  strcpy
     #define sprintf_fn sprintf
     static void *Loaded_SDL20 = NULL;
-    static char framework[4096];
     #define LookupSDL20Sym(sym) dlsym(Loaded_SDL20, sym)
     #define CloseSDL20Library() { if (Loaded_SDL20) { dlclose(Loaded_SDL20); Loaded_SDL20 = NULL; } }
     static SDL_bool LoadSDL20Library(void) {
-        const char *homedir = NULL;
-        struct passwd *pwent;
-        pwent = getpwuid(getuid());
-        if (pwent) {
-            homedir = pwent->pw_dir;
+        /* I don't know if this is the _right_ order to try, but this seems reasonable */
+        static const char * const dylib_locations[] = {
+            "@loader_path/" SDL20_LIBNAME, /* MyApp.app/Contents/MacOS/libSDL2-2.0.0.dylib */
+            "@loader_path/../Frameworks/" SDL20_FRAMEWORK, /* MyApp.app/Contents/Frameworks/SDL2.framework */
+            NULL,  /* /Users/username/Library/Frameworks/SDL2.framework */
+            "/Library/Frameworks" SDL20_FRAMEWORK, /* /Library/Frameworks/SDL2.framework */
+            SDL20_LIBNAME  /* oh well, anywhere the system can see the .dylib (/usr/local/lib or whatever) */
+        };
+
+        int i;
+        for (i = 0; i < SDL_arraysize(dylib_locations); i++) {
+            const char *location = dylib_locations[i];
+            if (location) {
+                Loaded_SDL20 = dlopen(location, RTLD_LOCAL|RTLD_NOW);
+            } else { /* hack to mean "try homedir" */
+                const char *homedir = NULL;
+                struct passwd *pwent = getpwuid(getuid());
+                if (pwent) {
+                    homedir = pwent->pw_dir;
+                }
+                if (!homedir) {
+                    homedir = getenv("HOME");
+                }
+                if (homedir) {
+                    char framework[512];
+                    const int rc = snprintf(framework, sizeof (framework), "%s/Library/Frameworks/" SDL20_FRAMEWORK, homedir);
+                    if ((rc > 0) && (rc < sizeof (framework))) {
+                        Loaded_SDL20 = dlopen(framework, RTLD_LOCAL|RTLD_NOW);
+                    }
+                }
+            }
+
+            if (Loaded_SDL20) {
+                return SDL_TRUE;
+            }
         }
-        if (!homedir) {
-            homedir = getenv("HOME");
-        }
-        if (homedir) {
-            sprintf_fn(framework, "%s%s/%s", homedir, "/Library/Frameworks", SDL20_FRAMEWORK);
-            Loaded_SDL20 = dlopen(framework, RTLD_LOCAL|RTLD_NOW);
-        }
-        if (!Loaded_SDL20) {
-            sprintf_fn(framework, "%s/%s", "/Library/Frameworks", SDL20_FRAMEWORK);
-            Loaded_SDL20 = dlopen(framework, RTLD_LOCAL|RTLD_NOW);
-        }
-        if (!Loaded_SDL20) {
-            Loaded_SDL20 = dlopen(SDL20_LIBNAME, RTLD_LOCAL|RTLD_NOW);
-        }
-        return (Loaded_SDL20 != NULL) ? SDL_TRUE : SDL_FALSE;
+
+        return SDL_FALSE; /* didn't find it anywhere reasonable. :( */
     }
 #elif defined(__unix__)
     #include <dlfcn.h>
