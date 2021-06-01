@@ -25,9 +25,10 @@ jobs:
       with:
         repository: libsdl-org/SDL
         ref: release-2.0.14
-        path: sdl12-compat/SDL2
+        path: SDL2
     - name: Configure CMake
       run: cmake -DSDL2_INCLUDE_DIR="${{ github.workspace }}/SDL2/include" -B build ${{ matrix.platform.flags }}
     - name: Build
       run: cmake --build build/
-
+    - name: debugging
+      run: find "${{ github.workspace }}"
