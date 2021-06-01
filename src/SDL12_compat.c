@@ -3365,6 +3365,11 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
     Uint32 fullscreen_flags20 = 0;
     Uint32 appfmt;
     SDL_bool use_gl_scaling = SDL_FALSE;
+    const char *env;
+    SDL_bool use_highdpi;
+
+    env = SDL20_getenv("SDL12COMPAT_HIGHDPI");
+    use_highdpi = (!env || SDL20_atoi(env)) ? SDL_TRUE : SDL_FALSE;
 
     FIXME("Should we offer scaling for windowed modes, too?");
     if (flags12 & SDL12_OPENGL) {
@@ -3376,7 +3381,7 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
            maybe need to export the symbol from here too, for those that link against
            OpenGL directly. UT2004 is known to use FBOs with SDL 1.2, and I assume
            idTech 4 games (Doom 3, Quake 4, Prey) do as well. */
-        const char *env = SDL20_getenv("SDL12COMPAT_OPENGL_SCALING");
+        env = SDL20_getenv("SDL12COMPAT_OPENGL_SCALING");
 
         /* for now we default GL scaling to ENABLED. If an app breaks or is linked directly
            to glBindFramebuffer, they'll need to turn it off with this environment variable */
@@ -3477,6 +3482,7 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
         if (flags12 & SDL12_OPENGL) { flags20 |= SDL_WINDOW_OPENGL; }
         if (flags12 & SDL12_RESIZABLE) { flags20 |= SDL_WINDOW_RESIZABLE; }
         if (flags12 & SDL12_NOFRAME) { flags20 |= SDL_WINDOW_BORDERLESS; }
+        if (use_highdpi) { flags20 |= SDL_WINDOW_ALLOW_HIGHDPI; }
 
         /* most platforms didn't check these environment variables, but the major
            ones did (x11, windib, quartz), so we'll just offer it everywhere. */
