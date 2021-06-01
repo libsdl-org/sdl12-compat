@@ -64,7 +64,6 @@ stage, though. Send patches if your platform lacks something. */
 #define HAVE_STDIO_H 1
 #define STDC_HEADERS 1
 #define HAVE_STDLIB_H 1
-#define HAVE_MALLOC_H 1
 #define HAVE_MEMORY_H 1
 #define HAVE_STRING_H 1
 #define HAVE_STRINGS_H 1
@@ -127,6 +126,7 @@ stage, though. Send patches if your platform lacks something. */
 
 /* things that aren't necessarily in Linux, some are MSVC C runtime, some are BSD. Send patches. */
 #if 0
+#define HAVE_MALLOC_H 1
 #define HAVE_BCOPY 1
 #define HAVE_ATOI 1
 #define HAVE_ATOF 1
