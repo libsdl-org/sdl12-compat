@@ -24,16 +24,11 @@ jobs:
         repository: libsdl-org/SDL
         ref: release-2.0.14
         path: SDL2
-    - name: Sanity check SDL2 headers 1
-      run: ls -l "${{ github.workspace }}"
-    - name: Sanity check SDL2 headers 2
-      run: ls -l "${{ github.workspace }}/SDL2"
-    - name: Sanity check SDL2 headers 3
-      run: ls -l "${{ github.workspace }}/SDL2/include"
     - name: Get sdl12-compat sources
       uses: actions/checkout@v2
     - name: Configure CMake
       run: cmake -DSDL2_INCLUDE_DIR="${{ github.workspace }}/SDL2/include" -B build ${{ matrix.platform.flags }}
     - name: Build
-      run: cmake --build build/
+      working-directory: .build
+      run: cmake --build .
 
