@@ -43,6 +43,10 @@ SDL12_PRIVATE void sdl12_compat_macos_init(void)
     [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
 }
 
+#ifndef MAC_OS_X_VERSION_10_12
+#define NSAlertStyleCritical NSCriticalAlertStyle
+#endif
+
 SDL12_PRIVATE void error_dialog(const char *errorMsg)
 {
     if (NSApp == nil) {
