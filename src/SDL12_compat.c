@@ -3040,7 +3040,7 @@ SDL_VideoModeOK(int width, int height, int bpp, Uint32 sdl12flags)
 DECLSPEC SDL12_Rect ** SDLCALL
 SDL_ListModes(const SDL12_PixelFormat *format12, Uint32 flags)
 {
-    Uint32 fmt;
+    Uint32 bpp;
     int i;
 
     if (!SDL20_WasInit(SDL_INIT_VIDEO)) {
@@ -3058,14 +3058,14 @@ SDL_ListModes(const SDL12_PixelFormat *format12, Uint32 flags)
     }
 
     if (format12 && (format12 != VideoInfo12.vfmt)) {
-        fmt = SDL20_MasksToPixelFormatEnum(format12->BitsPerPixel, format12->Rmask, format12->Gmask, format12->Bmask, format12->Amask);
+        bpp = (Uint32) format12->BitsPerPixel;
     } else {
-        fmt = VideoInfoVfmt20->format;
+        bpp = SDL_BITSPERPIXEL(VideoInfoVfmt20->format);
     }
 
     for (i = 0; i < VideoModesCount; i++) {
         VideoModeList *modes = &VideoModes[i];
-        if (SDL_BITSPERPIXEL(modes->format) == SDL_BITSPERPIXEL(fmt)) {
+        if (SDL_BITSPERPIXEL(modes->format) == bpp) {
             return modes->modes12;
         }
     }
