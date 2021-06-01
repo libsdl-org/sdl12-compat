@@ -21,7 +21,7 @@ jobs:
     - name: Get SDL2 headers
       uses: actions/checkout@v2
       with:
-        name: libsdl-org/SDL
+        repository: libsdl-org/SDL
         ref: release-2.0.14
         path: SDL2
     - name: Get sdl12-compat sources
