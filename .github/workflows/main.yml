@@ -22,7 +22,7 @@ jobs:
       uses: actions/checkout@v2
       with:
         name: libsdl-org/SDL
-        ref: refs/tags/release-2.0.14
+        ref: release-2.0.14
         path: SDL2
     - name: Get sdl12-compat sources
       uses: actions/checkout@v2
