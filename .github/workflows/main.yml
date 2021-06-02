@@ -17,7 +17,7 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         sudo apt-get update
-        sudo apt-get install cmake ninja-build libgl1-mesa-dev
+        sudo apt-get install cmake ninja-build libgl1-mesa-dev libglu1-mesa-dev
     - name: Get sdl12-compat sources
       uses: actions/checkout@v2
     - name: Get SDL2 headers
