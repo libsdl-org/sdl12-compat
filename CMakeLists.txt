@@ -97,7 +97,6 @@ if(SDL12TESTS)
         add_executable(${_NAME} ${_SRCS})
         target_include_directories(${_NAME} PRIVATE "include/SDL")
         target_link_libraries(${_NAME} SDL)
-        set_target_properties(${_NAME} PROPERTIES COMPILE_DEFINITIONS "HAVE_OPENGL")
         # Turn off MSVC's aggressive C runtime warnings for the old test programs.
         if(MSVC)
           set_target_properties(${_NAME} PROPERTIES COMPILE_DEFINITIONS "HAVE_OPENGL;_CRT_SECURE_NO_WARNINGS;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE")
