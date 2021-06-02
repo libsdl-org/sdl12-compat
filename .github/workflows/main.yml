@@ -17,7 +17,7 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         sudo apt-get update
-        sudo apt-get install cmake ninja-build
+        sudo apt-get install cmake ninja-build libgl1-mesa-dev
     - name: Get sdl12-compat sources
       uses: actions/checkout@v2
     - name: Get SDL2 headers
@@ -28,7 +28,5 @@ jobs:
         path: SDL2
     - name: Configure CMake
       run: cmake -DSDL2_INCLUDE_DIR="${{ github.workspace }}/SDL2/include" -B build ${{ matrix.platform.flags }}
-    - name: debugging
-      run: find "${{ github.workspace }}"
     - name: Build
       run: cmake --build build/
