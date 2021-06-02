@@ -37,6 +37,10 @@ include(GNUInstallDirs)
 include("cmake/modules/FindSDL2.cmake")
 target_include_directories(SDL PRIVATE ${SDL2_INCLUDE_DIRS})
 
+if (CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
+  add_definitions("-Werror=declaration-after-statement")  # force this universally.
+endif()
+
 # avoid DLL having 'lib' prefix with Windows MinGW builds
 if(WIN32)
   set(CMAKE_SHARED_LIBRARY_PREFIX "")
