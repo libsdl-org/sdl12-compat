@@ -1902,37 +1902,38 @@ SDL_EventState(Uint8 type, int state)
     return retval;
 }
 
+/* Calculates the Logical Scaling viewport based on a given window size.
+   We pass the DPI-unscaled pixel size in when using this for rendering, and
+   the DPI-scaled window size when using it to transform mouse coordinates. */
 static SDL_Rect
-GetOpenGLLogicalScalingViewport()
+GetOpenGLLogicalScalingViewport(int physical_width, int physical_height)
 {
     float want_aspect, real_aspect;
-    int drawablew, drawableh;
     SDL_Rect dstrect;
-    SDL20_GL_GetDrawableSize(VideoWindow20, &drawablew, &drawableh);
 
     want_aspect = ((float) OpenGLLogicalScalingWidth) / ((float) OpenGLLogicalScalingHeight);
-    real_aspect = ((float) drawablew) / ((float) drawableh);
+    real_aspect = ((float) physical_width) / ((float) physical_height);
 
     if (SDL20_fabsf(want_aspect-real_aspect) < 0.0001f) {
         /* The aspect ratios are the same, just scale appropriately */
         dstrect.x = 0;
         dstrect.y = 0;
-        dstrect.w = drawablew;
-        dstrect.h = drawableh;
+        dstrect.w = physical_width;
+        dstrect.h = physical_height;
     } else if (want_aspect > real_aspect) {
         /* We want a wider aspect ratio than is available - letterbox it */
-        const float scale = ((float) drawablew) / OpenGLLogicalScalingWidth;
+        const float scale = ((float) physical_width) / OpenGLLogicalScalingWidth;
         dstrect.x = 0;
-        dstrect.w = drawablew;
+        dstrect.w = physical_width;
         dstrect.h = (int)SDL20_floorf(OpenGLLogicalScalingHeight * scale);
-        dstrect.y = (drawableh - dstrect.h) / 2;
+        dstrect.y = (physical_height - dstrect.h) / 2;
     } else {
         /* We want a narrower aspect ratio than is available - use side-bars */
-        const float scale = ((float)drawableh) / OpenGLLogicalScalingHeight;
+        const float scale = ((float)physical_height) / OpenGLLogicalScalingHeight;
         dstrect.y = 0;
-        dstrect.h = drawableh;
+        dstrect.h = physical_height;
         dstrect.w = (int)SDL20_floorf(OpenGLLogicalScalingWidth * scale);
-        dstrect.x = (drawablew - dstrect.w) / 2;
+        dstrect.x = (physical_width - dstrect.w) / 2;
     }
 
     return dstrect;
@@ -1942,6 +1943,7 @@ static void
 AdjustOpenGLLogicalScalingPoint(int *x, int *y)
 {
     SDL_Rect viewport;
+    int physical_w, physical_h;
     float scale_x, scale_y;
     int adjusted_x, adjusted_y;
 
@@ -1950,8 +1952,9 @@ AdjustOpenGLLogicalScalingPoint(int *x, int *y)
         return;
     }
 
-    /* These will need to be scaled further if we want to support High-DPI */
-    viewport = GetOpenGLLogicalScalingViewport();
+    /* we want to scale based on the window size, which is dpi-scaled */
+    SDL20_GetWindowSize(VideoWindow20, &physical_w, &physical_h);
+    viewport = GetOpenGLLogicalScalingViewport(physical_w, physical_h);
 
     scale_x = (float)OpenGLLogicalScalingWidth / viewport.w;
     scale_y = (float)OpenGLLogicalScalingHeight / viewport.h;
@@ -4911,8 +4914,13 @@ SDL_GL_SwapBuffers(void)
             const GLboolean has_scissor = OpenGLFuncs.glIsEnabled(GL_SCISSOR_TEST);
             const char *scale_method_env = SDL20_getenv("SDL12COMPAT_SCALE_METHOD");
             const SDL_bool want_nearest = (scale_method_env && !SDL20_strcmp(scale_method_env, "nearest"))? SDL_TRUE : SDL_FALSE;
+            int physical_w, physical_h;
             GLfloat clearcolor[4];
-            SDL_Rect dstrect = GetOpenGLLogicalScalingViewport();
+            SDL_Rect dstrect;
+
+            /* use the drawable size, which is != window size for HIGHDPI systems */
+            SDL20_GL_GetDrawableSize(VideoWindow20, &physical_w, &physical_h);
+            dstrect = GetOpenGLLogicalScalingViewport(physical_w, physical_h);
 
             OpenGLFuncs.glGetFloatv(GL_COLOR_CLEAR_VALUE, clearcolor);
 
