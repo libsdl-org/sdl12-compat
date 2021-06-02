@@ -60,11 +60,11 @@ void RGBtoYUV(Uint8 *rgb, int *yuv, int monochrome, int luminance)
     if (monochrome)
     {
 #if 1 /* these are the two formulas that I found on the FourCC site... */
-        yuv[0] = 0.299*rgb[0] + 0.587*rgb[1] + 0.114*rgb[2];
+        yuv[0] = (int) (0.299*rgb[0] + 0.587*rgb[1] + 0.114*rgb[2]);
         yuv[1] = 128;
         yuv[2] = 128;
 #else
-        yuv[0] = (0.257 * rgb[0]) + (0.504 * rgb[1]) + (0.098 * rgb[2]) + 16;
+        yuv[0] = (int) ((0.257 * rgb[0]) + (0.504 * rgb[1]) + (0.098 * rgb[2]) + 16);
         yuv[1] = 128;
         yuv[2] = 128;
 #endif
@@ -72,13 +72,13 @@ void RGBtoYUV(Uint8 *rgb, int *yuv, int monochrome, int luminance)
     else
     {
 #if 1 /* these are the two formulas that I found on the FourCC site... */
-        yuv[0] = 0.299*rgb[0] + 0.587*rgb[1] + 0.114*rgb[2];
-        yuv[1] = (rgb[2]-yuv[0])*0.565 + 128;
-        yuv[2] = (rgb[0]-yuv[0])*0.713 + 128;
+        yuv[0] = (int) (0.299*rgb[0] + 0.587*rgb[1] + 0.114*rgb[2]);
+        yuv[1] = (int) ((rgb[2]-yuv[0])*0.565 + 128);
+        yuv[2] = (int) ((rgb[0]-yuv[0])*0.713 + 128);
 #else
-        yuv[0] = (0.257 * rgb[0]) + (0.504 * rgb[1]) + (0.098 * rgb[2]) + 16;
-        yuv[1] = 128 - (0.148 * rgb[0]) - (0.291 * rgb[1]) + (0.439 * rgb[2]);
-        yuv[2] = 128 + (0.439 * rgb[0]) - (0.368 * rgb[1]) - (0.071 * rgb[2]);
+        yuv[0] = (int) ((0.257 * rgb[0]) + (0.504 * rgb[1]) + (0.098 * rgb[2]) + 16);
+        yuv[1] = (int) (128 - (0.148 * rgb[0]) - (0.291 * rgb[1]) + (0.439 * rgb[2]));
+        yuv[2] = (int) (128 + (0.439 * rgb[0]) - (0.368 * rgb[1]) - (0.071 * rgb[2]));
 #endif
     }
 
@@ -290,7 +290,7 @@ int main(int argc, char **argv)
     int resized=0;
     int i;
     int fps=12;
-    int fpsdelay;
+    Uint32 fpsdelay;
     int overlay_format=SDL_YUY2_OVERLAY;
     int scale=5;
 
@@ -503,7 +503,7 @@ int main(int argc, char **argv)
 
     /* set the start frame */
     i=0;
-    fpsdelay=1000/fps;
+    fpsdelay=(Uint32)(1000/fps);
 
     /* Ignore key up events, they don't even get filtered */
     SDL_EventState(SDL_KEYUP, SDL_IGNORE);
