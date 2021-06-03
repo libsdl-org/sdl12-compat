@@ -28,6 +28,7 @@ $(SHLIB): $(OBJ)
 	$(LD) -o $@ $(LDFLAGS) $(OBJ) $(LDLIBS)
 	ln -s $(SHLIB) libSDL-1.2.so
 	ln -s $(SHLIB) libSDL-1.2.so.0
+	ln -s $(SHLIB) libSDL.so
 
 .c.o:
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(INCLUDES) -o $@ -c $<

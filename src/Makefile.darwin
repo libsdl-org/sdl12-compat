@@ -33,12 +33,13 @@ all: $(DYLIB)
 
 $(DYLIB): $(OBJ)
 	$(LD) -o $@ $(LDFLAGS) $(OBJ) $(LDLIBS)
+	ln -s $(DYLIB) libSDL.dylib
 .c.o:
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(INCLUDES) -o $@ -c $<
 .m.o:
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(INCLUDES) -o $@ -c $<
 
 distclean: clean
-	$(RM) $(DYLIB)
+	$(RM) *.dylib
 clean:
 	$(RM) *.o
