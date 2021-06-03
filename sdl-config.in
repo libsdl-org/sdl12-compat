@@ -7,10 +7,11 @@
 
 # Copied and modified from SDL2's sdl2-compat.
 
-prefix=@prefix@
-exec_prefix=@exec_prefix@
+prefix=@CMAKE_INSTALL_PREFIX@
+exec_prefix=${prefix}
 exec_prefix_set=no
-libdir=@libdir@
+libdir=@CMAKE_INSTALL_FULL_LIBDIR@
+includedir=@CMAKE_INSTALL_FULL_INCLUDEDIR@
 
 @ENABLE_STATIC_FALSE@usage="\
 @ENABLE_STATIC_FALSE@Usage: $0 [--prefix[=DIR]] [--exec-prefix[=DIR]] [--version] [--cflags] [--libs]"
@@ -49,14 +50,14 @@ while test $# -gt 0; do
       echo @SDL_VERSION@
       ;;
     --cflags)
-      echo -I@includedir@/SDL2 @SDL_CFLAGS@
+      echo -I${includedir}/SDL @SDL_CFLAGS@
       ;;
 @ENABLE_SHARED_TRUE@    --libs)
-@ENABLE_SHARED_TRUE@      echo -L@libdir@ @SDL_RLD_FLAGS@ @SDL_LIBS@
+@ENABLE_SHARED_TRUE@      echo -L${libdir} @SDL_RLD_FLAGS@ @SDL_LIBS@
 @ENABLE_SHARED_TRUE@      ;;
 @ENABLE_STATIC_TRUE@@ENABLE_SHARED_TRUE@    --static-libs)
 @ENABLE_STATIC_TRUE@@ENABLE_SHARED_FALSE@    --libs|--static-libs)
-@ENABLE_STATIC_TRUE@      echo -L@libdir@ @SDL_LIBS@ @SDL_STATIC_LIBS@
+@ENABLE_STATIC_TRUE@      echo -L${libdir} @SDL_LIBS@ @SDL_STATIC_LIBS@
 @ENABLE_STATIC_TRUE@      ;;
     *)
       echo "${usage}" 1>&2

@@ -167,6 +167,12 @@ install(TARGETS SDL
 )
 
 if(SDL12DEVEL)
+  set(SDL_VERSION "${SDL12_COMPAT_VERSION_STR}")
+  set(SDL_CFLAGS "-D_GNU_SOURCE=1 -D_REENTRANT")
+  set(SDL_RLD_FLAGS "")  # !!! FIXME: this forces rpath, which we might want?
+  set(SDL_LIBS "-lSDL")
+  set(SDL_STATIC_LIBS "-lm -ldl -lpthread")
+
   install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
   )
   configure_file(sdl12_compat.pc.in sdl12_compat.pc @ONLY)
@@ -174,24 +180,12 @@ if(SDL12DEVEL)
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
   )
 
-  # !!! FIXME: lots of these sdl-config vars probably need more customization.
-
   # !!! FIXME: do we _want_ static builds?
   set(ENABLE_STATIC_TRUE "")
   set(ENABLE_STATIC_FALSE "#")
   set(ENABLE_SHARED_TRUE "")
   set(ENABLE_SHARED_FALSE "#")
 
-  set(SDL_VERSION "${SDL12_COMPAT_VERSION_STR}")
-  set(SDL_CFLAGS "-D_GNU_SOURCE=1 -D_REENTRANT")
-  set(SDL_RLD_FLAGS "")  # !!! FIXME: this forces rpath, which we might want?
-  set(SDL_LIBS "-lSDL")
-  set(SDL_STATIC_LIBS "-lm -ldl -lpthread")
-  set(prefix ${CMAKE_INSTALL_PREFIX})
-  set(exec_prefix "\${prefix}")
-  set(libdir "\${exec_prefix}/lib${LIB_SUFFIX}")
-  set(bindir "\${exec_prefix}/bin")
-  set(includedir "\${prefix}/include")
   configure_file("${CMAKE_SOURCE_DIR}/sdl-config.in" "${CMAKE_BINARY_DIR}/sdl-config" @ONLY)
   install(PROGRAMS "${CMAKE_BINARY_DIR}/sdl-config" DESTINATION bin)
 endif()
