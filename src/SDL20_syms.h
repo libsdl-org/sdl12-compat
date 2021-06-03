@@ -329,6 +329,31 @@ OPENGL_SYM(Core,void,glCopyTexImage2D,(GLenum a, GLint b, GLenum c, GLint d, GLi
 OPENGL_SYM(Core,void,glCopyTexSubImage2D,(GLenum a, GLint b, GLint c, GLint d, GLint e, GLint f, GLsizei g, GLsizei h),(a,b,c,d,e,f,g,h),)
 OPENGL_SYM(Core,void,glCopyTexSubImage3D,(GLenum a, GLint b, GLint c, GLint d, GLint e, GLint f, GLsizei g, GLsizei h, GLint i),(a,b,c,d,e,f,g,h,i),)
 
+OPENGL_SYM(Core,void,glDeleteTextures,(GLsizei a, const GLuint *b),(a,b),)
+OPENGL_SYM(Core,void,glGenTextures,(GLsizei a, GLuint *b),(a,b),)
+OPENGL_SYM(Core,void,glPopAttrib,(),(),)
+OPENGL_SYM(Core,void,glPopClientAttrib,(),(),)
+OPENGL_SYM(Core,void,glPopMatrix,(),(),)
+OPENGL_SYM(Core,void,glBegin,(GLenum a),(a),)
+OPENGL_SYM(Core,void,glPushAttrib,(GLbitfield a),(a),)
+OPENGL_SYM(Core,void,glPushClientAttrib,(GLbitfield a),(a),)
+OPENGL_SYM(Core,void,glBindTexture,(GLenum a, GLuint b),(a,b),)
+OPENGL_SYM(Core,void,glEnd,(),(),)
+OPENGL_SYM(Core,void,glTexEnvf,(GLenum a, GLenum b, GLfloat c),(a,b,c),)
+OPENGL_SYM(Core,void,glTexParameteri,(GLenum a, GLenum b, GLint c),(a,b,c),)
+OPENGL_SYM(Core,void,glPixelStorei,(GLenum a, GLint b),(a,b),)
+OPENGL_SYM(Core,void,glBlendFunc,(GLenum a, GLenum b),(a,b),)
+OPENGL_SYM(Core,void,glColor4f,(GLfloat a, GLfloat b, GLfloat c, GLfloat d),(a,b,c,d),)
+OPENGL_SYM(Core,void,glMatrixMode,(GLenum a),(a),)
+OPENGL_SYM(Core,void,glLoadIdentity,(),(),)
+OPENGL_SYM(Core,void,glPushMatrix,(),(),)
+OPENGL_SYM(Core,void,glOrtho,(GLdouble a, GLdouble b, GLdouble c, GLdouble d, GLdouble e, GLdouble f),(a,b,c,d,e,f),)
+OPENGL_SYM(Core,void,glTexImage2D,(GLenum a, GLint b, GLint c, GLsizei d, GLsizei e, GLint f, GLenum g, GLenum h, const GLvoid *i),(a,b,c,d,e,f,g,h,i),)
+OPENGL_SYM(Core,void,glTexSubImage2D,(GLenum a, GLint b, GLint c, GLint d, GLsizei e, GLsizei f, GLenum g, GLenum h, const GLvoid *i),(a,b,c,d,e,f,g,h,i),)
+OPENGL_SYM(Core,void,glVertex2i,(GLint a, GLint b),(a,b),)
+OPENGL_SYM(Core,void,glTexCoord2f,(GLfloat a, GLfloat b),(a,b),)
+
+
 OPENGL_EXT(GL_ARB_framebuffer_object)
 OPENGL_SYM(GL_ARB_framebuffer_object,void,glBindRenderbuffer,(GLenum a, GLuint b),(a,b),)
 OPENGL_SYM(GL_ARB_framebuffer_object,void,glDeleteRenderbuffers,(GLsizei a, const GLuint *b),(a,b),)
@@ -343,6 +368,8 @@ OPENGL_SYM(GL_ARB_framebuffer_object,void,glGenFramebuffers,(GLsizei a, GLuint *
 OPENGL_SYM(GL_ARB_framebuffer_object,GLenum,glCheckFramebufferStatus,(GLenum a),(a),return)
 OPENGL_SYM(GL_ARB_framebuffer_object,void,glFramebufferRenderbuffer,(GLenum a, GLenum b, GLenum c, GLuint d),(a,b,c,d),)
 OPENGL_SYM(GL_ARB_framebuffer_object,void,glBlitFramebuffer,(GLint a, GLint b, GLint c, GLint d, GLint e, GLint f, GLint g, GLint h, GLbitfield i, GLenum j),(a,b,c,d,e,f,g,h,i,j),)
+
+OPENGL_EXT(GL_ARB_texture_non_power_of_two)
 
 #undef SDL20_SYM
 #undef SDL20_SYM_PASSTHROUGH

@@ -815,6 +815,8 @@ static Uint8 KeyState[SDLK12_LAST];
 static SDL_bool MouseInputIsRelative = SDL_FALSE;
 static SDL_Point MousePosition = { 0, 0 };
 static OpenGLEntryPoints OpenGLFuncs;
+static int OpenGLBlitLockCount = 0;
+static GLuint OpenGLBlitTexture = 0;
 static int OpenGLLogicalScalingWidth = 0;
 static int OpenGLLogicalScalingHeight = 0;
 static GLuint OpenGLLogicalScalingFBO = 0;
@@ -3273,6 +3275,10 @@ SetupScreenSaver(const int flags12)
 static SDL12_Surface *
 EndVidModeCreate(void)
 {
+    if (OpenGLBlitTexture) {
+        OpenGLFuncs.glDeleteTextures(1, &OpenGLBlitTexture);
+        OpenGLBlitTexture = 0;
+    }
     if (VideoTexture20) {
         SDL20_DestroyTexture(VideoTexture20);
         VideoTexture20 = NULL;
@@ -3306,6 +3312,7 @@ EndVidModeCreate(void)
     }
 
     SDL_zero(OpenGLFuncs);
+    OpenGLBlitLockCount = 0;
     OpenGLLogicalScalingWidth = 0;
     OpenGLLogicalScalingHeight = 0;
     OpenGLLogicalScalingFBO = 0;
@@ -3371,6 +3378,10 @@ LoadOpenGLFunctions(void)
     /* GL_ARB_framebuffer_object is in core OpenGL 3.0+ with the same entry point names as the extension version. */
     if (major >= 3) {
         OpenGLFuncs.SUPPORTS_GL_ARB_framebuffer_object = SDL_TRUE;
+    }
+
+    if (major >= 2) {
+        OpenGLFuncs.SUPPORTS_GL_ARB_texture_non_power_of_two = SDL_TRUE;  /* core since 2.0 */
     }
 
     /* load everything we can. */
@@ -3609,12 +3620,6 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
         }
     }
 
-    if ((flags12 & SDL12_OPENGLBLIT) == SDL12_OPENGLBLIT) {
-        FIXME("No OPENGLBLIT support at the moment");
-        SDL20_SetError("SDL_OPENGLBLIT is (currently) unsupported");
-        return NULL;
-    }
-
     FIXME("handle SDL_ANYFORMAT");
 
     if ((width < 0) || (height < 0)) {
@@ -3664,6 +3669,8 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
         SDL20_GL_DeleteContext(VideoGLContext20);
         VideoGLContext20 = NULL;
         SDL_zero(OpenGLFuncs);
+        OpenGLBlitTexture = 0;
+        OpenGLBlitLockCount = 0;
         OpenGLLogicalScalingWidth = 0;
         OpenGLLogicalScalingHeight = 0;
         OpenGLLogicalScalingFBO = 0;
@@ -3764,6 +3771,30 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
                 fullscreen_flags20 |= SDL_WINDOW_FULLSCREEN;
                 SDL20_SetWindowFullscreen(VideoWindow20, fullscreen_flags20);
             }
+        }
+
+        if ((flags12 & SDL12_OPENGLBLIT) == SDL12_OPENGLBLIT) {
+            const int pixsize = VideoSurface12->format->BytesPerPixel;
+            const GLenum glfmt = (pixsize == 4) ? GL_RGBA : GL_RGB;
+            const GLenum gltype = (pixsize == 4) ? GL_UNSIGNED_BYTE : GL_UNSIGNED_SHORT_5_6_5;
+
+            if (!OpenGLFuncs.SUPPORTS_GL_ARB_texture_non_power_of_two) {
+                SDL20_SetError("Your OpenGL drivers don't support NPOT textures for SDL_OPENGLBLIT; please upgrade.");
+                return EndVidModeCreate();
+            }
+
+            OpenGLFuncs.glGenTextures(1, &OpenGLBlitTexture);
+            OpenGLFuncs.glBindTexture(GL_TEXTURE_2D, OpenGLBlitTexture);
+            OpenGLFuncs.glTexImage2D(GL_TEXTURE_2D, 0, (pixsize == 4) ? GL_RGBA : GL_RGB, VideoSurface12->w, VideoSurface12->h, 0, glfmt, gltype, NULL);
+
+            VideoSurface12->surface20->pixels = SDL20_malloc(height * VideoSurface12->pitch);
+            VideoSurface12->pixels = VideoSurface12->surface20->pixels;
+            if (!VideoSurface12->pixels) {
+                SDL20_OutOfMemory();
+                return EndVidModeCreate();
+            }
+            SDL20_memset(VideoSurface12->pixels, 0xFF, height * VideoSurface12->pitch);  /* SDL 1.2 default OPENGLBLIT surface to full intensity */
+            VideoSurface12->flags |= SDL12_OPENGLBLIT;
         }
 
     } else {
@@ -4192,11 +4223,130 @@ UpdateRect12to20(SDL12_Surface *surface12, const SDL12_Rect *rect12, SDL_Rect *r
     }
 }
 
+/* SDL_OPENGLBLIT support APIs. https://discourse.libsdl.org/t/ogl-and-sdl/2775/3 */
+DECLSPEC void SDLCALL
+SDL_GL_Lock(void)
+{
+    if (!OpenGLBlitTexture) {
+        return;
+    }
+
+    if (++OpenGLBlitLockCount == 1) {
+        OpenGLFuncs.glPushAttrib(GL_ALL_ATTRIB_BITS);
+        OpenGLFuncs.glPushClientAttrib(GL_CLIENT_PIXEL_STORE_BIT);
+        OpenGLFuncs.glEnable(GL_TEXTURE_2D);
+        OpenGLFuncs.glEnable(GL_BLEND);
+        OpenGLFuncs.glDisable(GL_FOG);
+        OpenGLFuncs.glDisable(GL_ALPHA_TEST);
+        OpenGLFuncs.glDisable(GL_DEPTH_TEST);
+        OpenGLFuncs.glDisable(GL_SCISSOR_TEST);
+        OpenGLFuncs.glDisable(GL_STENCIL_TEST);
+        OpenGLFuncs.glDisable(GL_CULL_FACE);
+
+        OpenGLFuncs.glBindTexture(GL_TEXTURE_2D, OpenGLBlitTexture);
+        OpenGLFuncs.glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+        OpenGLFuncs.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        OpenGLFuncs.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        OpenGLFuncs.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        OpenGLFuncs.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+        OpenGLFuncs.glPixelStorei(GL_UNPACK_ROW_LENGTH, VideoSurface12->pitch / VideoSurface12->format->BytesPerPixel);
+        OpenGLFuncs.glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        OpenGLFuncs.glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+
+        OpenGLFuncs.glViewport(0, 0, VideoSurface12->w, VideoSurface12->h);
+        OpenGLFuncs.glMatrixMode(GL_PROJECTION);
+        OpenGLFuncs.glPushMatrix();
+        OpenGLFuncs.glLoadIdentity();
+
+        OpenGLFuncs.glOrtho(0.0, (GLdouble) VideoSurface12->w, (GLdouble) VideoSurface12->h, 0.0, 0.0, 1.0);
+
+        OpenGLFuncs.glMatrixMode(GL_MODELVIEW);
+        OpenGLFuncs.glPushMatrix();
+        OpenGLFuncs.glLoadIdentity();
+    }
+}
+
+DECLSPEC void SDLCALL
+SDL_GL_UpdateRects(int numrects, SDL12_Rect *rects12)
+{
+    if (OpenGLBlitTexture) {
+        const int srcpitch = VideoSurface12->pitch;
+        const int pixsize = VideoSurface12->format->BytesPerPixel;
+        const GLenum glfmt = (pixsize == 4) ? GL_RGBA : GL_RGB;
+        const GLenum gltype = (pixsize == 4) ? GL_UNSIGNED_BYTE : GL_UNSIGNED_SHORT_5_6_5;
+        SDL_Rect surfacerect20;
+        int i;
+
+        surfacerect20.x = surfacerect20.y = 0;
+        surfacerect20.w = VideoSurface12->w;
+        surfacerect20.h = VideoSurface12->h;
+
+        for (i = 0; i < numrects; i++) {
+            SDL_Rect rect20;
+            SDL_Rect intersected20;
+            Uint8 *src;
+
+            SDL20_IntersectRect(Rect12to20(&rects12[i], &rect20), &surfacerect20, &intersected20);
+
+            src = (((Uint8 *) VideoSurface12->pixels) + (intersected20.y * srcpitch)) + (intersected20.x * pixsize);
+            OpenGLFuncs.glTexSubImage2D(GL_TEXTURE_2D, 0, intersected20.x, intersected20.y, intersected20.w, intersected20.h, glfmt, gltype, src);
+
+            OpenGLFuncs.glBegin(GL_TRIANGLE_STRIP);
+            {
+                const GLfloat tex_x1 = ((GLfloat) intersected20.x) / ((GLfloat) VideoSurface12->w);
+                const GLfloat tex_y1 = ((GLfloat) intersected20.y) / ((GLfloat) VideoSurface12->h);
+                const GLfloat tex_x2 = tex_x1 + ((GLfloat) intersected20.w) / ((GLfloat) VideoSurface12->w);
+                const GLfloat tex_y2 = tex_y1 + ((GLfloat) intersected20.h) / ((GLfloat) VideoSurface12->h);
+                const GLint vert_x1 = (GLint) intersected20.x;
+                const GLint vert_y1 = (GLint) intersected20.y;
+                const GLint vert_x2 = vert_x1 + (GLint) intersected20.w;
+                const GLint vert_y2 = vert_y1 + (GLint) intersected20.h;
+                OpenGLFuncs.glTexCoord2f(tex_x1, tex_y1);
+                OpenGLFuncs.glVertex2i(vert_x1, vert_y1);
+                OpenGLFuncs.glTexCoord2f(tex_x2, tex_y1);
+                OpenGLFuncs.glVertex2i(vert_x2, vert_y1);
+                OpenGLFuncs.glTexCoord2f(tex_x1, tex_y2);
+                OpenGLFuncs.glVertex2i(vert_x1, vert_y2);
+                OpenGLFuncs.glTexCoord2f(tex_x2, tex_y2);
+                OpenGLFuncs.glVertex2i(vert_x2, vert_y2);
+            }
+            OpenGLFuncs.glEnd();
+        }
+    }
+}
+
+
+DECLSPEC void SDLCALL
+SDL_GL_Unlock(void)
+{
+    if (OpenGLBlitTexture) {
+        if (OpenGLBlitLockCount > 0) {
+            if (--OpenGLBlitLockCount == 0) {
+                OpenGLFuncs.glPopMatrix();
+                OpenGLFuncs.glMatrixMode(GL_PROJECTION);
+                OpenGLFuncs.glPopMatrix();
+                OpenGLFuncs.glPopClientAttrib();
+                OpenGLFuncs.glPopAttrib();
+            }
+        }
+    }
+}
+
+
 DECLSPEC void SDLCALL
 SDL_UpdateRects(SDL12_Surface *surface12, int numrects, SDL12_Rect *rects12)
 {
     /* strangely, SDL 1.2 doesn't check if surface12 is NULL before touching it */
     /* (UpdateRect, singular, does...) */
+
+    if ((surface12 == VideoSurface12) && ((surface12->flags & SDL12_OPENGLBLIT) == SDL12_OPENGLBLIT)) {
+        SDL_GL_Lock();
+        SDL_GL_UpdateRects(numrects, rects12);
+        SDL_GL_Unlock();
+        return;
+    }
+
     if (surface12->flags & SDL12_OPENGL) {
         SDL20_SetError("Use SDL_GL_SwapBuffers() on OpenGL surfaces");
         return;
@@ -5620,28 +5770,6 @@ SDL_CloseAudio(void)
     audio_cbdata = NULL;
 }
 
-
-/* !!! FIXME: these are just stubs for now, but Sam thinks that maybe these
-were added at Loki for Heavy Gear 2's UI. They just make GL calls. */
-DECLSPEC void SDLCALL
-SDL_GL_Lock(void)
-{
-    FIXME("write me");
-}
-
-DECLSPEC void SDLCALL
-SDL_GL_UpdateRects(int numrects, SDL12_Rect *rects)
-{
-    (void) numrects;
-    (void) rects;
-    FIXME("write me");
-}
-
-DECLSPEC void SDLCALL
-SDL_GL_Unlock(void)
-{
-    FIXME("write me");
-}
 
 
 /* SDL_GL_DisableContext and SDL_GL_EnableContext_Thread are not real SDL 1.2
