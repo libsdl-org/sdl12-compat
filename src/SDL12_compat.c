@@ -3797,6 +3797,8 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
             VideoSurface12->flags |= SDL12_OPENGLBLIT;
         }
 
+        SDL20_GL_SetSwapInterval(SwapInterval);
+
     } else {
         /* always use a renderer for non-OpenGL windows. */
         const char *vsync_env = SDL20_getenv("SDL12COMPAT_SYNC_TO_VBLANK");
