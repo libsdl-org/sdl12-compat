@@ -3525,6 +3525,7 @@ InitializeOpenGLScaling(const int w, const int h)
     OpenGLFuncs.glBindRenderbuffer(GL_RENDERBUFFER, OpenGLLogicalScalingDepth);
     OpenGLFuncs.glRenderbufferStorageMultisample(GL_RENDERBUFFER, OpenGLLogicalScalingSamples, GL_DEPTH24_STENCIL8, w, h);
     OpenGLFuncs.glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, OpenGLLogicalScalingDepth);
+    OpenGLFuncs.glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, OpenGLLogicalScalingDepth);
     OpenGLFuncs.glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
     if ( (OpenGLFuncs.glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) || OpenGLFuncs.glGetError() ) {
@@ -3545,8 +3546,9 @@ InitializeOpenGLScaling(const int w, const int h)
         OpenGLFuncs.glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, OpenGLLogicalScalingMultisampleColor);
         OpenGLFuncs.glGenRenderbuffers(1, &OpenGLLogicalScalingMultisampleDepth);
         OpenGLFuncs.glBindRenderbuffer(GL_RENDERBUFFER, OpenGLLogicalScalingMultisampleDepth);
-        OpenGLFuncs.glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, w, h);  /* !!! FIXME: is an extension (or core 3.0) */
+        OpenGLFuncs.glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, w, h);  FIXME("is an extension (or core 3.0)?");
         OpenGLFuncs.glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, OpenGLLogicalScalingMultisampleDepth);
+        OpenGLFuncs.glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, OpenGLLogicalScalingMultisampleDepth);
         OpenGLFuncs.glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
         if ( (OpenGLFuncs.glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) || OpenGLFuncs.glGetError() ) {
