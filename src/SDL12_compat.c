@@ -1439,6 +1439,58 @@ GetVideoDisplay(void)
     }
 }
 
+/* returns true if mode1 should sort before mode2 */
+static int
+VidModeSizeGreater(SDL12_Rect *mode1, SDL12_Rect *mode2)
+{
+    if (mode1->w > mode2->w) {
+        return 1;
+    } else if (mode2->w > mode1->w) {
+        return 0;
+    } else {
+        return (mode1->h > mode2->h);
+    }
+}
+
+static int
+AddVidModeToList(VideoModeList *vmode, SDL12_Rect *mode)
+{
+    void *ptr = NULL;
+    int i;
+
+    /* make sure we don't have this one already (with a different refresh rate, etc). */
+    for (i = 0; i < vmode->nummodes; i++) {
+        if ((vmode->modeslist12[i].w == mode->w) && (vmode->modeslist12[i].h == mode->h)) {
+            break;
+        }
+    }
+
+    if (i < vmode->nummodes) {
+        return 0;  /* already have this one. */
+    }
+
+    ptr = SDL20_realloc(vmode->modeslist12, sizeof (SDL12_Rect) * (vmode->nummodes + 1));
+    if (ptr == NULL) {
+        return SDL20_OutOfMemory();
+    }
+    vmode->modeslist12 = (SDL12_Rect *) ptr;
+
+    vmode->modeslist12[vmode->nummodes] = *mode;
+
+    vmode->nummodes++;
+
+    return 0;
+}
+
+/* A list of fake video modes which are included. */
+static SDL12_Rect fake_modes[] = {
+    { 0, 0, 1920, 1080 },
+    { 0, 0, 1280, 720 },
+    { 0, 0, 1024, 768 },
+    { 0, 0, 800, 600 },
+    { 0, 0, 640, 480 }
+};
+
 /* This sets up VideoModes and VideoModesCount. You end up with arrays by pixel
     format, each with a value that 1.2's SDL_ListModes() can return. */
 static int
@@ -1448,6 +1500,10 @@ Init12VidModes(void)
     VideoModeList *vmode = NULL;
     void *ptr = NULL;
     int i, j;
+    SDL12_Rect prev_mode = { 0, 0, 0, 0 }, current_mode = { 0, 0, 0, 0 };
+    /* We only want to enable fake modes if OpenGL Logical Scaling is enabled. */
+    char *env = SDL20_getenv("SDL12COMPAT_OPENGL_SCALING");
+    SDL_bool use_fake_modes = (!env || SDL20_atoi(env)) ? SDL_TRUE : SDL_FALSE;
 
     if (VideoModesCount > 0) {
         return 0;  /* already did this. */
@@ -1483,29 +1539,37 @@ Init12VidModes(void)
             VideoModesCount++;
         }
 
-        /* make sure we don't have this one already (with a different refresh rate, etc). */
-        for (j = 0; j < vmode->nummodes; j++) {
-            if ((vmode->modeslist12[j].w == mode.w) && (vmode->modeslist12[j].h == mode.h)) {
-                break;
+        current_mode.w = mode.w;
+        current_mode.h = mode.h;
+
+        /* Attempt to add all of the fake modes. */
+        if (use_fake_modes) {
+            for (j = 0; j < sizeof(fake_modes) / sizeof(fake_modes[0]); ++j) {
+                if (VidModeSizeGreater(&prev_mode, &fake_modes[j]) && VidModeSizeGreater(&fake_modes[j], &current_mode)) {
+                    if (AddVidModeToList(vmode, &fake_modes[j])) {
+                        return SDL20_OutOfMemory();
+                    }
+                }
             }
         }
 
-        if (j < vmode->nummodes) {
-            continue;  /* already have this one. */
-        }
-
-        ptr = SDL20_realloc(vmode->modeslist12, sizeof (SDL12_Rect) * (vmode->nummodes + 1));
-        if (ptr == NULL) {
+        if (AddVidModeToList(vmode, &current_mode)) {
             return SDL20_OutOfMemory();
         }
-        vmode->modeslist12 = (SDL12_Rect *) ptr;
 
-        vmode->modeslist12[vmode->nummodes].x = 0;
-        vmode->modeslist12[vmode->nummodes].y = 0;
-        vmode->modeslist12[vmode->nummodes].w = mode.w;
-        vmode->modeslist12[vmode->nummodes].h = mode.h;
+        prev_mode.w = mode.w;
+        prev_mode.h = mode.h;
+    }
 
-        vmode->nummodes++;
+    /* we need to try to add fake modes to the end of the list once there are no more real modes */
+    if (use_fake_modes) {
+        for (i = 0; i < sizeof(fake_modes) / sizeof(fake_modes[0]); ++i) {
+            if (VidModeSizeGreater(&prev_mode, &fake_modes[i])) {
+                if (AddVidModeToList(vmode, &fake_modes[i])) {
+                    return SDL20_OutOfMemory();
+                }
+            }
+        }
     }
 
     /* link up modes12 for SDL_ListModes()'s use... */
@@ -3317,7 +3381,7 @@ SDL_GetVideoInfo(void)
 DECLSPEC int SDLCALL
 SDL_VideoModeOK(int width, int height, int bpp, Uint32 sdl12flags)
 {
-    int i, nummodes, actual_bpp = 0;
+    int i, j, actual_bpp = 0;
 
     if (!SDL20_WasInit(SDL_INIT_VIDEO)) {
         return 0;
@@ -3329,16 +3393,17 @@ SDL_VideoModeOK(int width, int height, int bpp, Uint32 sdl12flags)
         return SDL_BITSPERPIXEL(mode.format);
     }
 
-    nummodes = SDL20_GetNumDisplayModes(VideoDisplayIndex);
-    for (i = 0; i < nummodes; ++i) {
-        SDL_DisplayMode mode;
-        SDL20_GetDisplayMode(VideoDisplayIndex, i, &mode);
-        if (!mode.w || !mode.h || (width == mode.w && height == mode.h)) {
-            if (!mode.format) {
-                return bpp;
-            }
-            if (SDL_BITSPERPIXEL(mode.format) >= (Uint32) bpp) {
-                actual_bpp = SDL_BITSPERPIXEL(mode.format);
+    for (i = 0; i < VideoModesCount; ++i) {
+        VideoModeList *vmode = &VideoModes[i];
+        for (j = 0; j < vmode->nummodes; ++j) {
+            if (vmode->modeslist12[j].w == width && vmode->modeslist12[j].h == height)
+            {
+                if (!vmode->format) {
+                    return bpp;
+                }
+                if (SDL_BITSPERPIXEL(vmode->format) >= (Uint32) bpp) {
+                    actual_bpp = SDL_BITSPERPIXEL(vmode->format);
+                }
             }
         }
     }
