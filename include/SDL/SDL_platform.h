@@ -27,7 +27,8 @@ real SDL-1.2 available to you. */
 #define SDL_platform_h_
 
 /* this was taken from SDL2's zlib-licensed headers. This drops BeOS (not Haiku)
-and MacOS Classic, but SDL2 doesn't run on them anyhow. Send patches. :) */
+and MacOS Classic, but SDL2 doesn't run on them anyhow. Mac OS X target >= 10.6
+requirement is dropped too. Send patches. :) */
 
 #if defined(_AIX)
 #undef __AIX__
@@ -84,9 +85,6 @@ and MacOS Classic, but SDL2 doesn't run on them anyhow. Send patches. :) */
 /* if not compiling for iOS */
 #undef __MACOSX__
 #define __MACOSX__  1
-#if MAC_OS_X_VERSION_MIN_REQUIRED < 1060
-# error SDL for Mac OS X only supports deploying on 10.6 and above.
-#endif /* MAC_OS_X_VERSION_MIN_REQUIRED < 1060 */
 #endif /* TARGET_OS_IPHONE */
 #endif /* defined(__APPLE__) */
 
