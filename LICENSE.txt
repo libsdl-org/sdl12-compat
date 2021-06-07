@@ -16,3 +16,7 @@ freely, subject to the following restrictions:
    misrepresented as being the original software.
 3. This notice may not be removed or altered from any source distribution.
 
+
+
+This project includes code from dr_mp3 ( https://github.com/mackron/dr_libs )
+which can be treated as public domain or MIT-0 licensed, at your option.

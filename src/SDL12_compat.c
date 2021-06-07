@@ -747,6 +747,34 @@ typedef enum
 } SDL12_GLattr;
 
 
+typedef enum
+{
+    SDL12_CD_TRAYEMPTY,
+    SDL12_CD_STOPPED,
+    SDL12_CD_PLAYING,
+    SDL12_CD_PAUSED,
+    SDL12_CD_ERROR = -1
+} SDL12_CDstatus;
+
+typedef struct
+{
+    Uint8 id;
+    Uint8 type;
+    Uint16 unused;
+    Uint32 length;
+    Uint32 offset;
+} SDL12_CDtrack;
+
+typedef struct SDL12_CD
+{
+    int id;
+    SDL12_CDstatus status;
+    int numtracks;
+    int cur_track;
+    int cur_frame;
+    SDL12_CDtrack track[100];  /* in 1.2, this was SDL_MAX_TRACKS+1 */
+} SDL12_CD;
+
 typedef struct
 {
     Uint32 format;
@@ -805,7 +833,9 @@ static char *WindowIconTitle = NULL;
 static SDL_Surface *VideoIcon20 = NULL;
 static int EnabledUnicode = 0;
 static int VideoDisplayIndex = 0;
-static int CDRomInit = 0;
+static SDL_bool CDRomInit = SDL_FALSE;
+static char *CDRomPath = NULL;
+static SDL12_CD *CDRomDevice = NULL;
 static SDL12_EventFilter EventFilter12 = NULL;
 static SDL12_Cursor *CurrentCursor12 = NULL;
 static Uint8 EventStates[SDL12_NUMEVENTS];
@@ -853,6 +883,7 @@ static char loaderror[256];
     #define WIN32_LEAN_AND_MEAN 1
     #endif
     #include <windows.h>
+    #define DIRSEP "\\"
     #define SDL20_LIBNAME "SDL2.dll"
     /* require SDL2 >= 2.0.12 for SDL_CreateThread binary compatibility */
     #define SDL20_REQUIRED_VER SDL_VERSIONNUM(2,0,12)
@@ -864,6 +895,7 @@ static char loaderror[256];
     #define sprintf_fn wsprintfA
 #elif defined(__OS2__)
     #include <os2.h>
+    #define DIRSEP "\\"
     #define SDL20_LIBNAME "SDL2.dll"
     #define SDL20_REQUIRED_VER SDL_VERSIONNUM(2,0,9)
     #define strcpy_fn  strcpy
@@ -954,6 +986,11 @@ static char loaderror[256];
 #else
     #error Please define your platform.
 #endif
+
+#ifndef DIRSEP
+#define DIRSEP "/"
+#endif
+
 
 static void *
 LoadSDL20Symbol(const char *fn, int *okay)
@@ -1538,6 +1575,11 @@ SDL_VideoInit(const char *driver, Uint32 flags)
     return SDL20_VideoInit(driver);
 }
 
+
+static void InitializeCDSubsystem(void);
+static void QuitCDSubsystem(void);
+
+
 DECLSPEC int SDLCALL
 SDL_InitSubSystem(Uint32 sdl12flags)
 {
@@ -1558,9 +1600,11 @@ SDL_InitSubSystem(Uint32 sdl12flags)
     SETFLAG(NOPARACHUTE);
     #undef SETFLAG
 
-    /* There's no CDROM in 2.0, but we'll just pretend it succeeded. */
-    if (sdl12flags & SDL12_INIT_CDROM)
-        CDRomInit = 1;
+    /* There's no CDROM in 2.0, but we fake it. */
+    if (sdl12flags & SDL12_INIT_CDROM) {
+        /* this never reports failure, even if there's a legit problem. You just won't see any drives. */
+        InitializeCDSubsystem();
+    }
 
     rc = SDL20_Init(sdl20flags);
     if ((rc == 0) && (sdl20flags & SDL_INIT_VIDEO)) {
@@ -1663,7 +1707,7 @@ SDL_QuitSubSystem(Uint32 sdl12flags)
     InitFlags12To20(sdl12flags, &sdl20flags, &extraflags);
 
     if (extraflags & SDL12_INIT_CDROM) {
-        CDRomInit = 0;
+        QuitCDSubsystem();
     }
 
     if (sdl12flags & SDL12_INIT_VIDEO) {
@@ -5238,66 +5282,6 @@ SDL_putenv(const char *_var)
 }
 
 
-/* CD-ROM support is gone from SDL 2.0, so just have stubs that fail. */
-
-typedef void *SDL12_CD;  /* close enough.  :) */
-typedef int SDL12_CDstatus;  /* close enough.  :) */
-
-DECLSPEC int SDLCALL
-SDL_CDNumDrives(void)
-{
-    FIXME("should return -1 without SDL_INIT_CDROM");
-    return 0;
-}
-
-DECLSPEC const char *SDLCALL SDL_CDName(int drive) {
-    SDL20_Unsupported();
-    (void)drive;
-    return NULL;
-}
-DECLSPEC SDL12_CD *SDLCALL SDL_CDOpen(int drive) {
-    SDL20_Unsupported();
-    (void)drive;
-    return NULL;
-}
-DECLSPEC SDL12_CDstatus SDLCALL SDL_CDStatus(SDL12_CD *cdrom) {
-    (void) cdrom;
-    return SDL20_Unsupported();
-}
-DECLSPEC int SDLCALL SDL_CDPlayTracks(SDL12_CD *cdrom, int start_track, int start_frame, int ntracks, int nframes) {
-    (void) cdrom;
-    (void) start_track;
-    (void) start_frame;
-    (void) ntracks;
-    (void) nframes;
-    return SDL20_Unsupported();
-}
-DECLSPEC int SDLCALL SDL_CDPlay(SDL12_CD *cdrom, int start, int length) {
-    (void) cdrom;
-    (void) start;
-    (void) length;
-    return SDL20_Unsupported();
-}
-DECLSPEC int SDLCALL SDL_CDPause(SDL12_CD *cdrom) {
-    (void) cdrom;
-    return SDL20_Unsupported();
-}
-DECLSPEC int SDLCALL SDL_CDResume(SDL12_CD *cdrom) {
-    (void) cdrom;
-    return SDL20_Unsupported();
-}
-DECLSPEC int SDLCALL SDL_CDStop(SDL12_CD *cdrom) {
-    (void) cdrom;
-    return SDL20_Unsupported();
-}
-DECLSPEC int SDLCALL SDL_CDEject(SDL12_CD *cdrom) {
-    (void) cdrom;
-    return SDL20_Unsupported();
-}
-DECLSPEC void SDLCALL SDL_CDClose(SDL12_CD *cdrom) {
-    (void) cdrom;
-}
-
 #if (defined(_WIN32) || defined(__OS2__)) && !defined(SDL_PASSED_BEGINTHREAD_ENDTHREAD)
 #error SDL_PASSED_BEGINTHREAD_ENDTHREAD not defined
 #endif
@@ -5693,45 +5677,818 @@ SDL_LoadWAV_RW(SDL12_RWops *rwops12, int freerwops12,
     return retval;
 }
 
+
+/* CD-ROM API!
+   We don't support physical CD drives in sdl12-compat. In modern times, it's
+   hard to find discs at all, let alone discs with audio tracks. Drives are
+   also getting scarce, and ones that are plugged into the sound output
+   hardware moreso. With this in mind, sdl12-compat can be instructed to
+   point to a filesystem directory full .mp3 files, and will pretend this is
+   an audio CD-ROM, and will decode these files and mix them into an audio
+   stream as if they were playing from a disc. */
+
+#define CDAUDIO_FPS 75  /* CD audio frames per second. */
+
+/* public domain, single-header MP3 decoder for fake CD-ROM audio support! */
+#define DR_MP3_IMPLEMENTATION
+#define DR_MP3_NO_STDIO 1
+#define DR_MP3_FLOAT_OUTPUT 1
+#define DRMP3_ASSERT(x) SDL_assert((x))
+#define DRMP3_MALLOC(sz) SDL20_malloc((sz))
+#define DRMP3_REALLOC(p, sz) SDL20_realloc((p), (sz))
+#define DRMP3_FREE(p) SDL20_free((p))
+#define DRMP3_COPY_MEMORY(dst, src, sz) SDL20_memcpy((dst), (src), (sz))
+#define DRMP3_ZERO_MEMORY(p, sz) SDL20_memset((p), 0, (sz))
+
+#if !defined(__clang_analyzer__)
+#ifdef memset
+#undef memset
+#endif
+#ifdef memcpy
+#undef memcpy
+#endif
+#ifdef memmove
+#undef memmove
+#endif
+#define memset SDL20_memset
+#define memcpy SDL20_memcpy
+#define memmove SDL20_memmove
+#endif
+
+#include "dr_mp3.h"
+
+static size_t
+mp3_sdlrwops_read(void *data, void *buf, size_t bytesToRead)
+{
+    return SDL20_RWread((SDL_RWops *) data, buf, 1, bytesToRead);
+}
+
+static drmp3_bool32
+mp3_sdlrwops_seek(void *data, int offset, drmp3_seek_origin origin)
+{
+    const int whence = (origin == drmp3_seek_origin_start) ? RW_SEEK_SET : RW_SEEK_CUR;
+    SDL_assert((origin == drmp3_seek_origin_start) || (origin == drmp3_seek_origin_current));
+    return (SDL20_RWseek((SDL_RWops *) data, offset, whence) == -1) ? DRMP3_FALSE : DRMP3_TRUE;
+}
+
+
+static int OpenSDL2AudioDevice(SDL_AudioSpec *);
+static void CloseSDL2AudioDevice(void);
+static SDL_bool ResetAudioStream(SDL_AudioStream **_stream, SDL_AudioSpec *spec, const SDL_AudioSpec *to, const SDL_AudioFormat fromfmt, const Uint8 fromchannels, const int fromfreq);
+
 typedef struct
 {
-    void (SDLCALL *app_callback)(void *userdata, Uint8 *stream, int len);
-    void *app_userdata;
-    Uint8 silence;
+    SDL_AudioSpec device_format;
+
+    SDL_bool app_callback_opened;
+    SDL_bool app_callback_paused;
+    SDL_AudioSpec app_callback_format;
+    SDL_AudioStream *app_callback_stream;
+
+    SDL_bool cdrom_opened;
+    SDL_AudioSpec cdrom_format;
+    SDL_AudioStream *cdrom_stream;
+
+    SDL12_CDstatus cdrom_status;
+    int cdrom_pcm_frames_written;
+    int cdrom_cur_track;
+    int cdrom_cur_frame;
+    int cdrom_stop_ntracks;
+    int cdrom_stop_nframes;
+    drmp3 cdrom_mp3;
+
+    Uint8 *mix_buffer;
+    size_t mixbuflen;
 } AudioCallbackWrapperData;
 
 static AudioCallbackWrapperData *audio_cbdata = NULL;
+
+
+
+static void
+FreeMp3(drmp3 *mp3)
+{
+    SDL_RWops *rw = (SDL_RWops *) mp3->pUserData;
+    if (rw) {
+        drmp3_uninit(mp3);
+        mp3->pUserData = NULL;
+        SDL20_RWclose(rw);
+    }
+}
+
+
+static SDL_bool
+CDSubsystemIsInitialized(void)
+{
+    if (!CDRomInit) {
+        SDL20_SetError("CD-ROM subsystem not initialized");
+        return SDL_FALSE;
+    }
+    return SDL_TRUE;
+}
+
+/* This never reports failure; if there's a problem, we report zero drives found. */
+static void
+InitializeCDSubsystem(void)
+{
+    const char *cdpath;
+
+    FIXME("Is subsystem init reference counted in SDL 1.2?");  /* it is in SDL2, but I don't know for 1.2. */
+    if (CDRomInit) {
+        return;
+    }
+
+    cdpath = SDL20_getenv("SDL12COMPAT_FAKE_CDROM_PATH");
+    if (cdpath) {
+        CDRomPath = SDL_strdup(cdpath);
+    }
+
+    CDRomInit = SDL_TRUE;
+}
+
+static void
+QuitCDSubsystem(void)
+{
+    if (!CDRomInit) {
+        return;
+    }
+    SDL_free(CDRomPath);
+    CDRomPath = NULL;
+    CDRomInit = SDL_FALSE;
+}
+
+DECLSPEC int SDLCALL
+SDL_CDNumDrives(void)
+{
+    if (!CDSubsystemIsInitialized()) {
+        return -1;
+    }
+
+    if (!CDRomPath) {
+        static SDL_bool warned_once = SDL_FALSE;
+        if (!warned_once) {
+            warned_once = SDL_TRUE;
+            SDL20_Log("This app is looking for CD-ROM drives, but no path was specified");
+            SDL20_Log("Set the SDL12COMPAT_FAKE_CDROM_PATH environment variable to a directory");
+            SDL20_Log("of MP3 files named NUM.mp3, where NUM is a track number from 0 to 99");
+        }
+    }
+
+    return CDRomPath ? 1 : 0;
+}
+
+static SDL_bool
+ValidCDDriveIndex(const int drive)
+{
+    if (!CDSubsystemIsInitialized()) {
+        return SDL_FALSE;
+    }
+
+    if (!CDRomPath || (drive != 0)) {
+        SDL_SetError("Invalid CD-ROM drive index");
+        return SDL_FALSE;
+    }
+
+    return SDL_TRUE;
+}
+
+DECLSPEC const char * SDLCALL
+SDL_CDName(int drive)
+{
+    return ValidCDDriveIndex(drive) ? CDRomPath : NULL;
+}
+
+DECLSPEC SDL12_CD * SDLCALL
+SDL_CDOpen(int drive)
+{
+    SDL12_CD *retval;
+    size_t alloclen;
+    char *fullpath;
+    Uint32 total_track_offset = 0;
+
+    if (!ValidCDDriveIndex(drive)) {
+        return NULL;
+    }
+
+    retval = (SDL12_CD *) SDL20_calloc(1, sizeof(SDL12_CD));
+    if (!retval) {
+        SDL20_OutOfMemory();
+        return NULL;
+    }
+
+    alloclen = SDL20_strlen(CDRomPath) + 32;
+    fullpath = (char *) SDL20_malloc(alloclen);
+    if (fullpath == NULL) {
+        SDL20_free(retval);
+        SDL20_OutOfMemory();
+        return NULL;
+    }
+
+    /* We should probably do a proper enumeration of this directory,
+       but that needs platform-specific code that SDL2 doesn't offer.
+       readdir() is surprisingly hard to do without a bunch of different
+       platform backends! We just open files until we fail to do so,
+       and then stop. */
+    FIXME("Can we do something more robust than this for directory enumeration?");
+    for (;;) {
+        SDL_RWops *rw;
+        drmp3 mp3;
+        drmp3_uint64 pcmframes;
+        drmp3_uint32 samplerate;
+        SDL12_CDtrack *track;
+
+        /* we only report audio tracks, starting at 0... */
+        FIXME("Let there be fake data tracks (quake1's audio starts at track 2, etc).");
+        SDL20_snprintf(fullpath, alloclen, "%s%s%d.mp3", CDRomPath, DIRSEP, retval->numtracks);
+        rw = SDL20_RWFromFile(fullpath, "rb");
+        if (!rw) {
+            break;  /* ok, we're done looking for more. */
+        }
+
+        if (!drmp3_init(&mp3, mp3_sdlrwops_read, mp3_sdlrwops_seek, rw, NULL)) {
+            SDL20_RWclose(rw);
+            break;  /* ok, we're done looking for more. */
+        }
+
+        pcmframes = drmp3_get_pcm_frame_count(&mp3);
+        samplerate = mp3.sampleRate;
+        FreeMp3(&mp3);
+
+        track = &retval->track[retval->numtracks];
+        track->id = retval->numtracks;
+        track->type = 0;  /* audio track. Data tracks are 4. */
+        track->length = (Uint32) ((((double) pcmframes) / ((double) samplerate)) * CDAUDIO_FPS);
+        track->offset = total_track_offset;
+        total_track_offset += track->length;
+
+        retval->numtracks++;
+
+        if (retval->numtracks == 99) {
+            break;  /* max tracks you can have on an audio CD. */
+        }
+    }
+    SDL20_free(fullpath);
+
+    retval->id = 1;  /* just to be non-zero, I guess. */
+    retval->status = (retval->numtracks > 0) ? SDL12_CD_STOPPED : SDL12_CD_TRAYEMPTY;
+
+    if (retval->numtracks > 0) {
+        SDL_AudioSpec want;
+        SDL_zero(want);
+        want.freq = 44100;
+        want.format = AUDIO_F32SYS;
+        want.channels = 2;
+        want.samples = 4096;
+
+        if (!OpenSDL2AudioDevice(&want)) {
+            retval->numtracks = 0;
+            retval->status = SDL12_CD_TRAYEMPTY;
+        } else {
+            /* Device is locked now, even if was opened and playing before. Set up some things. */
+            SDL20_memcpy(&audio_cbdata->cdrom_format, &want, sizeof (SDL_AudioSpec));
+            audio_cbdata->cdrom_opened = SDL_TRUE;
+            audio_cbdata->cdrom_status = SDL12_CD_STOPPED;
+            audio_cbdata->cdrom_pcm_frames_written = 0;
+            audio_cbdata->cdrom_cur_track = 0;
+            audio_cbdata->cdrom_cur_frame = 0;
+            SDL20_UnlockAudio();
+        }
+    }
+
+    CDRomDevice = retval;  /* NULL API args use the last opened device. */
+
+    return retval;
+}
+
+static SDL12_CD *
+ValidCDDevice(SDL12_CD *cdrom)
+{
+    if (!CDSubsystemIsInitialized()) {
+        return NULL;
+    } else if (!cdrom) {
+        if (!CDRomDevice) {
+            SDL20_SetError("CD-ROM not opened");
+        } else {
+            cdrom = CDRomDevice;
+        }
+    }
+    return cdrom;
+}
+
+
+DECLSPEC SDL12_CDstatus SDLCALL
+SDL_CDStatus(SDL12_CD *cdrom)
+{
+    SDL12_CDstatus retval;
+
+    if ((cdrom = ValidCDDevice(cdrom)) == NULL) {
+        return SDL12_CD_ERROR;
+    }
+
+    SDL20_LockAudio();  /* we update this during the audio callback. */
+    if (audio_cbdata) {
+        cdrom->status = audio_cbdata->cdrom_status;
+        cdrom->cur_track = audio_cbdata->cdrom_cur_track;
+        cdrom->cur_frame = audio_cbdata->cdrom_cur_frame;
+    }
+    retval = cdrom->status;
+    SDL20_UnlockAudio();
+
+    return retval;
+}
+
+static SDL_bool
+LoadCDTrack(const int tracknum, drmp3 *mp3)
+{
+    const SDL_AudioSpec *have = &audio_cbdata->device_format;
+    SDL_RWops *rw = NULL;
+    const size_t alloclen = SDL20_strlen(CDRomPath) + 32;
+    char *fullpath = (char *) SDL_malloc(alloclen);
+
+    if (!fullpath) {
+        return SDL_FALSE;
+    }
+
+    SDL20_snprintf(fullpath, alloclen, "%s%s%d.mp3", CDRomPath, DIRSEP, tracknum);
+    rw = SDL20_RWFromFile(fullpath, "rb");
+    SDL20_free(fullpath);
+
+    if (!rw) {
+        return SDL_FALSE;
+    }
+
+    if (!drmp3_init(mp3, mp3_sdlrwops_read, mp3_sdlrwops_seek, rw, NULL)) {
+        SDL20_RWclose(rw);
+        return SDL_FALSE;
+    }
+
+    if (!ResetAudioStream(&audio_cbdata->cdrom_stream, &audio_cbdata->cdrom_format, have, AUDIO_F32SYS, mp3->channels, mp3->sampleRate)) {
+        FreeMp3(mp3);
+        return SDL_FALSE;
+    }
+
+    return SDL_TRUE;
+}
+
+static int
+StartCDAudioPlaying(SDL12_CD *cdrom, const int start_track, const int start_frame, const int ntracks, const int nframes)
+{
+    drmp3 mp3;
+    const SDL_bool loaded = LoadCDTrack(start_track, &mp3);
+    const SDL_bool seeking = loaded && (start_frame > 0);
+    const drmp3_uint64 pcm_frame = seeking ? ((drmp3_uint64) ((start_frame / 75.0) * mp3.sampleRate)) : 0;
+
+    if (seeking) {   /* do seeking before handing off to the audio thread. */
+        drmp3_seek_to_pcm_frame(&mp3, pcm_frame);
+    }
+
+    SDL20_LockAudio();
+    if (audio_cbdata) {
+        cdrom->status = audio_cbdata->cdrom_status = loaded ? SDL12_CD_PLAYING : SDL12_CD_TRAYEMPTY;
+        audio_cbdata->cdrom_pcm_frames_written = (int) pcm_frame;
+        audio_cbdata->cdrom_cur_track = start_track;
+        audio_cbdata->cdrom_cur_frame = start_frame;
+        audio_cbdata->cdrom_stop_ntracks = ntracks;
+        audio_cbdata->cdrom_stop_nframes = nframes;
+        FreeMp3(&audio_cbdata->cdrom_mp3);
+        if (loaded) {
+            SDL20_memcpy(&audio_cbdata->cdrom_mp3, &mp3, sizeof (drmp3));
+        }
+    }
+    SDL20_UnlockAudio();
+
+    return loaded ? 0 : SDL20_SetError("Failed to start CD track");
+}
+
+
+DECLSPEC int SDLCALL
+SDL_CDPlayTracks(SDL12_CD *cdrom, int start_track, int start_frame, int ntracks, int nframes)
+{
+    if ((cdrom = ValidCDDevice(cdrom)) == NULL) {
+        return -1;
+    } else if (cdrom->status == SDL12_CD_TRAYEMPTY) {
+        return SDL20_SetError("Tray empty");
+    } else if ((start_track < 0) || (start_track >= cdrom->numtracks)) {
+        return SDL20_SetError("Invalid start track");
+    } else if ((start_frame < 0) || (start_frame >= cdrom->track[start_track].length)) {
+        return SDL20_SetError("Invalid start frame");
+    } else if ((ntracks < 0) || ((start_track + ntracks) >= cdrom->numtracks)) {
+        return SDL20_SetError("Invalid number of tracks");
+    } else if ((nframes < 0) || (nframes >= cdrom->track[start_track + ntracks].length)) {
+        return SDL20_SetError("Invalid number of frames");
+    }
+
+    if (!ntracks && !nframes) {
+        ntracks = cdrom->numtracks - start_track;
+        nframes = cdrom->track[cdrom->numtracks - 1].length;
+    }
+
+    return StartCDAudioPlaying(cdrom, start_track, start_frame, ntracks, nframes);
+}
+
+DECLSPEC int SDLCALL
+SDL_CDPlay(SDL12_CD *cdrom, int start, int length)
+{
+    int remain = length;
+    int start_track = -1;
+    int start_frame = -1;
+    int ntracks = -1;
+    int nframes = -1;
+    int i;
+
+    if ((cdrom = ValidCDDevice(cdrom)) == NULL) {
+        return -1;
+    } else if (cdrom->status == SDL12_CD_TRAYEMPTY) {
+        return SDL20_SetError("Tray empty");
+    }
+
+    for (i = 0; i < cdrom->numtracks; i++) {
+        if ((start >= cdrom->track[i].offset) && (start < (cdrom->track[i].offset + cdrom->track[i].length))) {
+            start_track = i;
+            break;
+        }
+    }
+
+    if (start_track == -1) {
+        return SDL20_SetError("Invalid start");
+    }
+
+    start_frame = start - cdrom->track[start_track].offset;
+
+    if (remain < (cdrom->track[start_frame].length - start_frame)) {
+        ntracks = 0;
+        nframes = remain;
+        remain = 0;
+    } else {
+        remain -= (cdrom->track[start_frame].length - start_frame);
+        for (i = start_track + 1; i < cdrom->numtracks; i++) {
+            if (remain < cdrom->track[i].length) {
+                ntracks = i - start_track;
+                nframes = remain;
+                remain = 0;
+                break;
+            }
+            remain -= cdrom->track[i].length;
+        }
+    }
+
+    if (remain) {
+        ntracks = (cdrom->numtracks - start_track) - 1;
+        nframes = cdrom->track[cdrom->numtracks - 1].length;
+    }
+
+    return StartCDAudioPlaying(cdrom, start_track, start_frame, ntracks, nframes);
+}
+
+DECLSPEC int SDLCALL
+SDL_CDPause(SDL12_CD *cdrom)
+{
+    if ((cdrom = ValidCDDevice(cdrom)) == NULL) {
+        return -1;
+    } else if (cdrom->status == SDL12_CD_TRAYEMPTY) {
+        return SDL20_SetError("Tray empty");
+    }
+
+    SDL20_LockAudio();
+    if (audio_cbdata) {
+        if (audio_cbdata->cdrom_status == SDL12_CD_PLAYING) {
+            audio_cbdata->cdrom_status = SDL12_CD_PAUSED;
+        }
+        cdrom->status = audio_cbdata->cdrom_status;
+    }
+    SDL20_UnlockAudio();
+    return 0;
+}
+
+DECLSPEC int SDLCALL
+SDL_CDResume(SDL12_CD *cdrom)
+{
+    if ((cdrom = ValidCDDevice(cdrom)) == NULL) {
+        return -1;
+    } else if (cdrom->status == SDL12_CD_TRAYEMPTY) {
+        return SDL20_SetError("Tray empty");
+    }
+
+    SDL20_LockAudio();
+    if (audio_cbdata) {
+        if (audio_cbdata->cdrom_status == SDL12_CD_PAUSED) {
+            audio_cbdata->cdrom_status = SDL12_CD_PLAYING;
+        }
+        cdrom->status = audio_cbdata->cdrom_status;
+    }
+    SDL20_UnlockAudio();
+    return 0;
+}
+
+
+DECLSPEC int SDLCALL
+SDL_CDStop(SDL12_CD *cdrom)
+{
+    SDL_RWops *oldrw = NULL;
+
+    if ((cdrom = ValidCDDevice(cdrom)) == NULL) {
+        return -1;
+    }
+
+    SDL20_LockAudio();
+    if (audio_cbdata) {
+        if ((audio_cbdata->cdrom_status == SDL12_CD_PLAYING) || (audio_cbdata->cdrom_status == SDL12_CD_PAUSED)) {
+            audio_cbdata->cdrom_status = SDL12_CD_STOPPED;
+            FreeMp3(&audio_cbdata->cdrom_mp3);
+        }
+        cdrom->status = audio_cbdata->cdrom_status;
+    }
+    SDL20_UnlockAudio();
+
+    if (oldrw) {
+        SDL20_RWclose(oldrw);
+    }
+    return 0;
+}
+
+DECLSPEC int SDLCALL
+SDL_CDEject(SDL12_CD *cdrom)
+{
+    if ((cdrom = ValidCDDevice(cdrom)) == NULL) {
+        return -1;
+    }
+
+    SDL20_LockAudio();
+    if (audio_cbdata) {
+        audio_cbdata->cdrom_status = SDL12_CD_TRAYEMPTY;
+        FreeMp3(&audio_cbdata->cdrom_mp3);
+    }
+    cdrom->status = SDL12_CD_TRAYEMPTY;
+    SDL20_UnlockAudio();
+    return 0;
+}
+
+DECLSPEC void SDLCALL
+SDL_CDClose(SDL12_CD *cdrom)
+{
+    if ((cdrom = ValidCDDevice(cdrom)) == NULL) {
+        return;
+    }
+
+    SDL20_LockAudio();
+    if (audio_cbdata) {
+        audio_cbdata->cdrom_opened = SDL_FALSE;
+    }
+    SDL20_UnlockAudio();
+
+    if (audio_cbdata) {
+        FreeMp3(&audio_cbdata->cdrom_mp3);
+        SDL20_FreeAudioStream(audio_cbdata->cdrom_stream);
+        audio_cbdata->cdrom_stream = NULL;
+    }
+
+    CloseSDL2AudioDevice();
+
+    if (cdrom == CDRomDevice) {
+        CDRomDevice = NULL;
+    }
+    SDL20_free(cdrom);
+}
+
+
+static void
+FakeCdRomAudioCallback(AudioCallbackWrapperData *data, Uint8 *stream, int len, const SDL_bool must_mix)
+{
+    Uint32 total_available, available = 0;
+    Uint32 channels, want_frames;
+
+    if (data->cdrom_status != SDL12_CD_PLAYING) {
+        if (!must_mix) {
+            SDL20_memset(stream, data->device_format.silence, len);
+        }
+        return;
+    }
+
+    SDL_assert((data->cdrom_status == SDL12_CD_PLAYING) && (data->cdrom_mp3.pUserData != NULL));
+
+    channels = data->cdrom_format.channels;
+    want_frames = data->cdrom_format.samples / channels;
+
+    while ((!data->cdrom_mp3.atEnd) && (SDL20_AudioStreamAvailable(data->cdrom_stream) < len)) {
+        const Uint32 frames_read = (Uint32) drmp3_read_pcm_frames_f32(&data->cdrom_mp3, want_frames, (float *) data->mix_buffer);
+        const Uint32 bytes_read = frames_read * channels * sizeof (float);
+        SDL_assert(bytes_read <= data->cdrom_format.size);
+        if ((!bytes_read) || (SDL20_AudioStreamPut(data->cdrom_stream, data->mix_buffer, bytes_read) == -1)) {  /* probably out of memory if failed */
+            data->cdrom_mp3.atEnd = DRMP3_TRUE;  /* force this to fail from now on */
+            SDL20_AudioStreamFlush(data->cdrom_stream);  /* make sure all we've put is available to get. */
+            break;
+        }
+    }
+
+    total_available = SDL20_AudioStreamAvailable(data->cdrom_stream);
+    available = (len < total_available) ? len : total_available;
+    if (len < available) {
+        available = len;
+    }
+
+    if (available > 0) {
+        if (!must_mix) {
+            SDL20_AudioStreamGet(data->cdrom_stream, stream, available);
+        } else {
+            SDL20_AudioStreamGet(data->cdrom_stream, data->mix_buffer, available);
+            SDL20_MixAudio(stream, data->mix_buffer, available, SDL_MIX_MAXVOLUME);
+        }
+
+        data->cdrom_pcm_frames_written += (available / ((double) SDL_AUDIO_BITSIZE(data->device_format.format) / 8.0)) / data->device_format.channels;
+        data->cdrom_cur_frame = (int) ((((double)data->cdrom_pcm_frames_written) / ((double)data->device_format.freq)) * CDAUDIO_FPS);
+        if (data->cdrom_stop_ntracks == 0) {
+            if (data->cdrom_cur_frame >= data->cdrom_stop_nframes) {
+                data->cdrom_mp3.atEnd = DRMP3_TRUE;  /* played all that was requested! */
+            }
+        }
+    }
+
+    if ((total_available == 0) && (data->cdrom_mp3.atEnd)) {  /* mp3 is done for whatever reason */
+        SDL_bool silence = ((!must_mix) && (available < len));  /* silence any section we couldn't provide */
+
+        FreeMp3(&data->cdrom_mp3);
+
+        if (data->cdrom_stop_ntracks > 0) {
+            data->cdrom_stop_ntracks--;
+            data->cdrom_pcm_frames_written = 0;
+            data->cdrom_cur_frame = 0;
+
+            if (data->cdrom_status == SDL12_CD_PLAYING) {  /* go on to next track? */
+                const SDL_bool loaded = LoadCDTrack(++data->cdrom_cur_track, &data->cdrom_mp3);
+                if (!loaded) {
+                    data->cdrom_status = SDL12_CD_TRAYEMPTY;  FIXME("Maybe just mark it stopped?");
+                } else {  /* let new track fill out rest of callback. */
+                    if (available < len) {
+                        FakeCdRomAudioCallback(data, stream + available, len - available, must_mix);
+                        silence = SDL_FALSE;
+                    }
+                }
+            }
+        } else {
+            data->cdrom_status = SDL12_CD_STOPPED;  /* played all that was requested! */
+        }
+
+        if (silence) {
+            SDL20_memset(stream + available, data->device_format.silence, len - available);
+        }
+    }
+}
+
 
 static void SDLCALL
 AudioCallbackWrapper(void *userdata, Uint8 *stream, int len)
 {
     AudioCallbackWrapperData *data = (AudioCallbackWrapperData *) userdata;
-    SDL20_memset(stream, data->silence, len);  /* SDL2 doesn't clear the stream before calling in here, but 1.2 expects it. */
-    data->app_callback(data->app_userdata, stream, len);
+    SDL_bool must_mix = SDL_FALSE;
+
+    if (data->app_callback_opened && !data->app_callback_paused) {
+        while (SDL20_AudioStreamAvailable(data->app_callback_stream) < len) {
+            SDL20_memset(data->mix_buffer, data->app_callback_format.silence, data->app_callback_format.size);  /* SDL2 doesn't clear the stream before calling in here, but 1.2 expects it. */
+            data->app_callback_format.callback(data->app_callback_format.userdata, data->mix_buffer, data->app_callback_format.size);
+            if (SDL20_AudioStreamPut(data->app_callback_stream, data->mix_buffer, data->app_callback_format.size) == -1) {  /* probably out of memory if failed */
+                break;  /* this will make the AudioStreamGet call fail. */
+            }
+        }
+        if (SDL20_AudioStreamGet(data->app_callback_stream, stream, len) != len) {
+            SDL20_memset(stream, data->device_format.silence, len);
+        } else {
+            must_mix = SDL_TRUE;
+        }
+    }
+
+    FakeCdRomAudioCallback(data, stream, len, must_mix);
+}
+
+
+static SDL_bool
+ResetAudioStream(SDL_AudioStream **_stream, SDL_AudioSpec *spec, const SDL_AudioSpec *to, const SDL_AudioFormat fromfmt, const Uint8 fromchannels, const int fromfreq)
+{
+    if ((!*_stream) || (spec->channels != fromchannels) || (spec->format != fromfmt) || (spec->freq != fromfreq)) {
+        SDL20_FreeAudioStream(*_stream);
+        *_stream = SDL20_NewAudioStream(fromfmt, fromchannels, fromfreq, to->format, to->channels, to->freq);
+        if (!*_stream) {
+            return SDL_FALSE;
+        }
+
+        spec->channels = fromchannels;
+        spec->format = fromfmt;
+        spec->freq = fromfreq;
+        spec->size = spec->samples * spec->channels * (SDL_AUDIO_BITSIZE(spec->format) / 8);
+
+        if (audio_cbdata->mixbuflen < spec->size) {
+            void *ptr = SDL20_realloc(audio_cbdata->mix_buffer, spec->size);
+            if (!ptr) {
+                SDL20_FreeAudioStream(*_stream);
+                *_stream = NULL;
+                SDL20_OutOfMemory();
+                return SDL_FALSE;
+            }
+            audio_cbdata->mixbuflen = spec->size;
+            audio_cbdata->mix_buffer = (Uint8 *) ptr;
+        }
+    }
+    return SDL_TRUE;
+}
+
+static SDL_bool
+ResetAudioStreamForDeviceChange(SDL_AudioStream **_stream, SDL_AudioSpec *spec)
+{
+    if (*_stream == NULL) {
+        return SDL_TRUE;  /* no stream, no need to reset it. */
+    }
+    SDL20_FreeAudioStream(*_stream);  /* force it to rebuild because destination format changed. */
+    *_stream = NULL;
+    return ResetAudioStream(_stream, spec, &audio_cbdata->device_format, spec->format, spec->channels, spec->freq);
+}
+
+static int
+OpenSDL2AudioDevice(SDL_AudioSpec *want)
+{
+    void (SDLCALL *orig_callback)(void *userdata, Uint8 *stream, int len) = want->callback;
+    void *orig_userdata = want->userdata;
+    int retval;
+
+    /* Two things use the audio device: the app, through 1.2's SDL_OpenAudio,
+       and the fake CD-ROM device. Either can open the device, and both write
+       to SDL_AudioStreams to buffer and convert data. We try to open the device
+       in a format that accommodates both inputs, but we might close the device
+       and reopen it if we need more channels, etc. */
+    if (audio_cbdata != NULL) {  /* device is already open. */
+        SDL_AudioSpec *have = &audio_cbdata->device_format;
+        if ( (want->freq > have->freq) ||
+             (want->channels > have->channels) ||
+             (want->samples > have->samples) ||
+             ( (SDL_AUDIO_ISFLOAT(want->format)) && (!SDL_AUDIO_ISFLOAT(have->format)) ) ||
+             ( SDL_AUDIO_BITSIZE(want->format) > SDL_AUDIO_BITSIZE(have->format) ) ) {
+            SDL20_CloseAudio();
+        } else {
+            SDL20_LockAudio();  /* Device is already at acceptable parameters, just pause it for further setup by caller. */
+            return SDL_TRUE;
+        }
+    } else {
+        audio_cbdata = (AudioCallbackWrapperData *) SDL20_calloc(1, sizeof (AudioCallbackWrapperData));
+        if (!audio_cbdata) {
+            SDL20_OutOfMemory();
+            return SDL_FALSE;
+        }
+    }
+
+    FIXME("if this fails, we need to deal with app callback or cd-rom no longer working");
+    want->callback = AudioCallbackWrapper;
+    want->userdata = audio_cbdata;
+    retval = (SDL20_OpenAudio(want, &audio_cbdata->device_format) == 0);
+    want->callback = orig_callback;
+    want->userdata = orig_userdata;
+    want->size = want->samples * want->channels * (SDL_AUDIO_BITSIZE(want->format) / 8);
+
+    /* reset audiostreams if device format changed. */
+    FIXME("deal with failure in here");
+    ResetAudioStreamForDeviceChange(&audio_cbdata->app_callback_stream, &audio_cbdata->app_callback_format);
+    ResetAudioStreamForDeviceChange(&audio_cbdata->cdrom_stream, &audio_cbdata->cdrom_format);
+
+    SDL20_LockAudio();
+    SDL20_PauseAudio(0);  /* always unpause, but caller will unlock after finalizing setup. */
+
+    return retval;
+}
+
+static void
+CloseSDL2AudioDevice(void)
+{
+    int close_sdl2_device;
+
+    SDL20_LockAudio();
+    close_sdl2_device = (audio_cbdata && !audio_cbdata->app_callback_opened && !audio_cbdata->cdrom_opened);
+    SDL20_UnlockAudio();
+
+    if (close_sdl2_device) {
+        SDL20_CloseAudio();
+        SDL20_FreeAudioStream(audio_cbdata->app_callback_stream);
+        SDL20_FreeAudioStream(audio_cbdata->cdrom_stream);
+        SDL20_free(audio_cbdata->mix_buffer);
+        SDL20_free(audio_cbdata);
+        audio_cbdata = NULL;
+    }
 }
 
 
 DECLSPEC int SDLCALL
 SDL_OpenAudio(SDL_AudioSpec *want, SDL_AudioSpec *obtained)
 {
-    AudioCallbackWrapperData *data;
-    int retval;
+    int already_opened;
 
     /* SDL2 uses a NULL callback to mean "we plan to use SDL_QueueAudio()" */
     if (want && (want->callback == NULL)) {
         return SDL20_SetError("Callback can't be NULL");
     }
 
-    data = (AudioCallbackWrapperData *) SDL20_calloc(1, sizeof (AudioCallbackWrapperData));
-    if (!data) {
-        return SDL20_OutOfMemory();
+    SDL20_LockAudio();
+    already_opened = audio_cbdata && audio_cbdata->app_callback_opened;
+    SDL20_UnlockAudio();
+    if (already_opened) {
+        return SDL20_SetError("Audio device already opened");
     }
-    data->app_callback = want->callback;
-    data->app_userdata = want->userdata;
-    want->callback = AudioCallbackWrapper;
-    want->userdata = data;
-    /* to avoid receiving a possible incompatible configuration
-     * from SDL2, always pass NULL as the 'obtained' pointer.  */
+
     FIXME("Respect 1.2 environment variables for defining format here.");
     if (!want->format) {
         want->format = AUDIO_S16SYS;
@@ -5749,29 +6506,73 @@ SDL_OpenAudio(SDL_AudioSpec *want, SDL_AudioSpec *obtained)
         while (pow2 < samp) pow2 <<= 1;
         want->samples = pow2;
     }
-    retval = SDL20_OpenAudio(want, NULL);
-    want->callback = data->app_callback;
-    want->userdata = data->app_userdata;
-    if (retval < 0) {
-        SDL20_free(data);
-    } else {
-        data->silence = want->silence;
-        SDL_assert(audio_cbdata==NULL);
-        audio_cbdata = data;
-        if (obtained) {
-            SDL20_memcpy(obtained, want, sizeof (SDL_AudioSpec));
-        }
+
+    /* the app always passes callback data through an SDL_AudioStream, since it
+       has to share with the fake CD-ROM support. This also avoids the risk of
+       getting an incompatible device configuration from SDL2. As such,
+       the app always gets the format it requests. */
+    if (!OpenSDL2AudioDevice(want)) {
+        return -1;
     }
 
+    /* Device is locked now, unconditionally. Set up some things. */
+
+    if (obtained) {  /* the app always gets the format it requests */
+        SDL20_memcpy(obtained, want, sizeof (SDL_AudioSpec));
+    }
+
+    SDL20_memcpy(&audio_cbdata->app_callback_format, want, sizeof (SDL_AudioSpec));
+    audio_cbdata->app_callback_opened = SDL_TRUE;
+    audio_cbdata->app_callback_paused = SDL_TRUE;  /* app callback always starts paused after open. */
+
+    FIXME("Cleanup from failures in here");
+    SDL_assert(audio_cbdata->app_callback_stream == NULL);
+
+    if (!ResetAudioStream(&audio_cbdata->app_callback_stream, &audio_cbdata->app_callback_format, &audio_cbdata->device_format, want->format, want->channels, want->freq)) {
+        FIXME("Close audio device if nothing else was using it");
+        return -1;
+    }
+
+    SDL20_UnlockAudio();  /* we're off and going. */
+
+    return 0;
+}
+
+DECLSPEC void SDLCALL
+SDL_PauseAudio(int pause_on)
+{
+    SDL20_LockAudio();
+    if (audio_cbdata && audio_cbdata->app_callback_opened) {
+        audio_cbdata->app_callback_paused = pause_on ? SDL_TRUE : SDL_FALSE;
+    }
+    SDL20_UnlockAudio();
+}
+
+DECLSPEC SDL_AudioStatus SDLCALL
+SDL_GetAudioStatus(void)
+{
+    SDL_AudioStatus retval = SDL_AUDIO_STOPPED;
+    SDL20_LockAudio();
+    if (audio_cbdata && audio_cbdata->app_callback_opened) {
+        retval = audio_cbdata->app_callback_paused ? SDL_AUDIO_PAUSED : SDL_AUDIO_PLAYING;
+    }
+    SDL20_UnlockAudio();
     return retval;
 }
 
 DECLSPEC void SDLCALL
 SDL_CloseAudio(void)
 {
-    SDL20_CloseAudio();
-    SDL20_free(audio_cbdata);
-    audio_cbdata = NULL;
+    SDL20_LockAudio();
+    if (audio_cbdata) {
+        audio_cbdata->app_callback_opened = SDL_FALSE;
+    }
+    SDL20_UnlockAudio();
+
+    SDL20_FreeAudioStream(audio_cbdata->app_callback_stream);
+    audio_cbdata->app_callback_stream = NULL;
+
+    CloseSDL2AudioDevice();
 }
 
 
