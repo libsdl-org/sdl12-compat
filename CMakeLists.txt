@@ -188,5 +188,15 @@ if(SDL12DEVEL)
 
   configure_file("${CMAKE_SOURCE_DIR}/sdl-config.in" "${CMAKE_BINARY_DIR}/sdl-config" @ONLY)
   install(PROGRAMS "${CMAKE_BINARY_DIR}/sdl-config" DESTINATION bin)
+
+  set(SOEXT ${CMAKE_SHARED_LIBRARY_SUFFIX})
+  get_target_property(SONAME SDL OUTPUT_NAME)
+  if(UNIX AND NOT ANDROID)
+    install(CODE "
+      execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink
+        \"lib${SONAME}${SOPOSTFIX}${SOEXT}\" \"libSDL${SOPOSTFIX}${SOEXT}\"
+        WORKING_DIRECTORY \"${CMAKE_BINARY_DIR}\")")
+    install(FILES ${CMAKE_BINARY_DIR}/libSDL${SOPOSTFIX}${SOEXT} DESTINATION "${CMAKE_INSTALL_LIBDIR}")
+  endif()
 endif()
 
