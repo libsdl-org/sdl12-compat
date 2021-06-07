@@ -18,8 +18,8 @@ if(APPLE)
   set(OSX_SRCS "src/SDL12_compat_objc.m")
   set_source_files_properties(${OSX_SRCS} PROPERTIES LANGUAGE C)
   # the following matches SDL-1.2 Xcode project file
-  set(DYLIB_COMPAT_VERSION 1.0.0)
-  set(DYLIB_CURRENT_VERSION 12.50.0)
+  set(DYLIB_COMPAT_VERSION 1.0.0 CACHE STRING "library compatibility version")
+  set(DYLIB_CURRENT_VERSION 12.50.0 CACHE STRING "library current version")
   include_directories("/opt/X11/include")  # hack.
 endif()
 if(WIN32)
