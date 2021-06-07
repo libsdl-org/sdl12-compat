@@ -6036,7 +6036,7 @@ StartCDAudioPlaying(SDL12_CD *cdrom, const int start_track, const int start_fram
 {
     drmp3 mp3;
     const SDL_bool loaded = LoadCDTrack(start_track, &mp3);
-    const SDL_bool seeking = loaded && (start_frame > 0);
+    const SDL_bool seeking = (loaded && (start_frame > 0))? SDL_TRUE : SDL_FALSE;
     const drmp3_uint64 pcm_frame = seeking ? ((drmp3_uint64) ((start_frame / 75.0) * mp3.sampleRate)) : 0;
 
     if (seeking) {   /* do seeking before handing off to the audio thread. */
@@ -6305,7 +6305,7 @@ FakeCdRomAudioCallback(AudioCallbackWrapperData *data, Uint8 *stream, int len, c
     }
 
     if ((total_available == 0) && (data->cdrom_mp3.atEnd)) {  /* mp3 is done for whatever reason */
-        SDL_bool silence = ((!must_mix) && (available < len));  /* silence any section we couldn't provide */
+        SDL_bool silence = ((!must_mix) && (available < len))? SDL_TRUE : SDL_FALSE;  /* silence any section we couldn't provide */
 
         FreeMp3(&data->cdrom_mp3);
 
