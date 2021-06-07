@@ -3693,6 +3693,7 @@ DRMP3_API drmp3_uint64 drmp3_read_pcm_frames_f32(drmp3* pMP3, drmp3_uint64 frame
 #endif
 }
 
+#ifndef DR_MP3_NO_S16
 DRMP3_API drmp3_uint64 drmp3_read_pcm_frames_s16(drmp3* pMP3, drmp3_uint64 framesToRead, drmp3_int16* pBufferOut)
 {
     if (pMP3 == NULL || pMP3->onRead == NULL) {
@@ -3729,6 +3730,7 @@ DRMP3_API drmp3_uint64 drmp3_read_pcm_frames_s16(drmp3* pMP3, drmp3_uint64 frame
     }
 #endif
 }
+#endif
 
 static void drmp3_reset(drmp3* pMP3)
 {
