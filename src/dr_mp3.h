@@ -90,6 +90,12 @@ Build Options
 extern "C" {
 #endif
 
+#ifndef DR_MP3_NO_S16
+#ifndef DR_MP3_FLOAT_OUTPUT
+#define DR_MP3_FLOAT_OUTPUT
+#endif
+#endif
+
 #define DRMP3_STRINGIFY(x)      #x
 #define DRMP3_XSTRINGIFY(x)     DRMP3_STRINGIFY(x)
 
@@ -272,9 +278,10 @@ DRMP3_API void drmp3dec_init(drmp3dec *dec);
 /* Reads a frame from a low level decoder. */
 DRMP3_API int drmp3dec_decode_frame(drmp3dec *dec, const drmp3_uint8 *mp3, int mp3_bytes, void *pcm, drmp3dec_frame_info *info);
 
+#ifndef DR_MP3_NO_S16
 /* Helper for converting between f32 and s16. */
 DRMP3_API void drmp3dec_f32_to_s16(const float *in, drmp3_int16 *out, size_t num_samples);
-
+#endif
 
 
 /*
@@ -418,12 +425,14 @@ Note that framesToRead specifies the number of PCM frames to read, _not_ the num
 */
 DRMP3_API drmp3_uint64 drmp3_read_pcm_frames_f32(drmp3* pMP3, drmp3_uint64 framesToRead, float* pBufferOut);
 
+#ifndef DR_MP3_NO_S16
 /*
 Reads PCM frames as interleaved signed 16-bit integer PCM.
 
 Note that framesToRead specifies the number of PCM frames to read, _not_ the number of MP3 frames.
 */
 DRMP3_API drmp3_uint64 drmp3_read_pcm_frames_s16(drmp3* pMP3, drmp3_uint64 framesToRead, drmp3_int16* pBufferOut);
+#endif
 
 /*
 Seeks to a specific frame.
@@ -482,14 +491,20 @@ On output pConfig will receive the channel count and sample rate of the stream.
 Free the returned pointer with drmp3_free().
 */
 DRMP3_API float* drmp3_open_and_read_pcm_frames_f32(drmp3_read_proc onRead, drmp3_seek_proc onSeek, void* pUserData, drmp3_config* pConfig, drmp3_uint64* pTotalFrameCount, const drmp3_allocation_callbacks* pAllocationCallbacks);
+#ifndef DR_MP3_NO_S16
 DRMP3_API drmp3_int16* drmp3_open_and_read_pcm_frames_s16(drmp3_read_proc onRead, drmp3_seek_proc onSeek, void* pUserData, drmp3_config* pConfig, drmp3_uint64* pTotalFrameCount, const drmp3_allocation_callbacks* pAllocationCallbacks);
+#endif
 
 DRMP3_API float* drmp3_open_memory_and_read_pcm_frames_f32(const void* pData, size_t dataSize, drmp3_config* pConfig, drmp3_uint64* pTotalFrameCount, const drmp3_allocation_callbacks* pAllocationCallbacks);
+#ifndef DR_MP3_NO_S16
 DRMP3_API drmp3_int16* drmp3_open_memory_and_read_pcm_frames_s16(const void* pData, size_t dataSize, drmp3_config* pConfig, drmp3_uint64* pTotalFrameCount, const drmp3_allocation_callbacks* pAllocationCallbacks);
+#endif
 
 #ifndef DR_MP3_NO_STDIO
 DRMP3_API float* drmp3_open_file_and_read_pcm_frames_f32(const char* filePath, drmp3_config* pConfig, drmp3_uint64* pTotalFrameCount, const drmp3_allocation_callbacks* pAllocationCallbacks);
+#ifndef DR_MP3_NO_S16
 DRMP3_API drmp3_int16* drmp3_open_file_and_read_pcm_frames_s16(const char* filePath, drmp3_config* pConfig, drmp3_uint64* pTotalFrameCount, const drmp3_allocation_callbacks* pAllocationCallbacks);
+#endif
 #endif
 
 /*
@@ -2308,6 +2323,7 @@ DRMP3_API int drmp3dec_decode_frame(drmp3dec *dec, const drmp3_uint8 *mp3, int m
     return success*drmp3_hdr_frame_samples(dec->header);
 }
 
+#ifndef DR_MP3_NO_S16
 DRMP3_API void drmp3dec_f32_to_s16(const float *in, drmp3_int16 *out, size_t num_samples)
 {
     size_t i = 0;
@@ -2363,7 +2379,7 @@ DRMP3_API void drmp3dec_f32_to_s16(const float *in, drmp3_int16 *out, size_t num
         }
     }
 }
-
+#endif
 
 
 /************************************************************************************************************************************************************
@@ -3590,7 +3606,6 @@ static void drmp3_s16_to_f32(float* dst, const drmp3_int16* src, drmp3_uint64 sa
 }
 #endif
 
-
 static drmp3_uint64 drmp3_read_pcm_frames_raw(drmp3* pMP3, drmp3_uint64 framesToRead, void* pBufferOut)
 {
     drmp3_uint64 totalFramesRead = 0;
@@ -4214,6 +4229,7 @@ static float* drmp3__full_read_and_close_f32(drmp3* pMP3, drmp3_config* pConfig,
     return pFrames;
 }
 
+#ifndef DR_MP3_NO_S16
 static drmp3_int16* drmp3__full_read_and_close_s16(drmp3* pMP3, drmp3_config* pConfig, drmp3_uint64* pTotalFrameCount)
 {
     drmp3_uint64 totalFramesRead = 0;
@@ -4280,7 +4296,7 @@ static drmp3_int16* drmp3__full_read_and_close_s16(drmp3* pMP3, drmp3_config* pC
 
     return pFrames;
 }
-
+#endif
 
 DRMP3_API float* drmp3_open_and_read_pcm_frames_f32(drmp3_read_proc onRead, drmp3_seek_proc onSeek, void* pUserData, drmp3_config* pConfig, drmp3_uint64* pTotalFrameCount, const drmp3_allocation_callbacks* pAllocationCallbacks)
 {
@@ -4292,6 +4308,7 @@ DRMP3_API float* drmp3_open_and_read_pcm_frames_f32(drmp3_read_proc onRead, drmp
     return drmp3__full_read_and_close_f32(&mp3, pConfig, pTotalFrameCount);
 }
 
+#ifndef DR_MP3_NO_S16
 DRMP3_API drmp3_int16* drmp3_open_and_read_pcm_frames_s16(drmp3_read_proc onRead, drmp3_seek_proc onSeek, void* pUserData, drmp3_config* pConfig, drmp3_uint64* pTotalFrameCount, const drmp3_allocation_callbacks* pAllocationCallbacks)
 {
     drmp3 mp3;
@@ -4301,7 +4318,7 @@ DRMP3_API drmp3_int16* drmp3_open_and_read_pcm_frames_s16(drmp3_read_proc onRead
 
     return drmp3__full_read_and_close_s16(&mp3, pConfig, pTotalFrameCount);
 }
-
+#endif
 
 DRMP3_API float* drmp3_open_memory_and_read_pcm_frames_f32(const void* pData, size_t dataSize, drmp3_config* pConfig, drmp3_uint64* pTotalFrameCount, const drmp3_allocation_callbacks* pAllocationCallbacks)
 {
@@ -4313,6 +4330,7 @@ DRMP3_API float* drmp3_open_memory_and_read_pcm_frames_f32(const void* pData, si
     return drmp3__full_read_and_close_f32(&mp3, pConfig, pTotalFrameCount);
 }
 
+#ifndef DR_MP3_NO_S16
 DRMP3_API drmp3_int16* drmp3_open_memory_and_read_pcm_frames_s16(const void* pData, size_t dataSize, drmp3_config* pConfig, drmp3_uint64* pTotalFrameCount, const drmp3_allocation_callbacks* pAllocationCallbacks)
 {
     drmp3 mp3;
@@ -4322,7 +4340,7 @@ DRMP3_API drmp3_int16* drmp3_open_memory_and_read_pcm_frames_s16(const void* pDa
 
     return drmp3__full_read_and_close_s16(&mp3, pConfig, pTotalFrameCount);
 }
-
+#endif
 
 #ifndef DR_MP3_NO_STDIO
 DRMP3_API float* drmp3_open_file_and_read_pcm_frames_f32(const char* filePath, drmp3_config* pConfig, drmp3_uint64* pTotalFrameCount, const drmp3_allocation_callbacks* pAllocationCallbacks)
@@ -4335,6 +4353,7 @@ DRMP3_API float* drmp3_open_file_and_read_pcm_frames_f32(const char* filePath, d
     return drmp3__full_read_and_close_f32(&mp3, pConfig, pTotalFrameCount);
 }
 
+#ifndef DR_MP3_NO_S16
 DRMP3_API drmp3_int16* drmp3_open_file_and_read_pcm_frames_s16(const char* filePath, drmp3_config* pConfig, drmp3_uint64* pTotalFrameCount, const drmp3_allocation_callbacks* pAllocationCallbacks)
 {
     drmp3 mp3;
@@ -4344,6 +4363,7 @@ DRMP3_API drmp3_int16* drmp3_open_file_and_read_pcm_frames_s16(const char* fileP
 
     return drmp3__full_read_and_close_s16(&mp3, pConfig, pTotalFrameCount);
 }
+#endif
 #endif
 
 DRMP3_API void* drmp3_malloc(size_t sz, const drmp3_allocation_callbacks* pAllocationCallbacks)

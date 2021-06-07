@@ -5692,6 +5692,7 @@ SDL_LoadWAV_RW(SDL12_RWops *rwops12, int freerwops12,
 /* public domain, single-header MP3 decoder for fake CD-ROM audio support! */
 #define DR_MP3_IMPLEMENTATION
 #define DR_MP3_NO_STDIO 1
+#define DR_MP3_NO_S16 1
 #define DR_MP3_FLOAT_OUTPUT 1
 #define DRMP3_ASSERT(x) SDL_assert((x))
 #define DRMP3_MALLOC(sz) SDL20_malloc((sz))
