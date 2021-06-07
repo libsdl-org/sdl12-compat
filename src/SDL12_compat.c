@@ -5694,6 +5694,7 @@ SDL_LoadWAV_RW(SDL12_RWops *rwops12, int freerwops12,
 #define DR_MP3_NO_STDIO 1
 #define DR_MP3_NO_S16 1
 #define DR_MP3_FLOAT_OUTPUT 1
+#define DR_MP3_NO_FULL_READ 1
 #define DRMP3_ASSERT(x) SDL_assert((x))
 #define DRMP3_MALLOC(sz) SDL20_malloc((sz))
 #define DRMP3_REALLOC(p, sz) SDL20_realloc((p), (sz))

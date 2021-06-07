@@ -483,6 +483,7 @@ Use drmp3_calculate_seek_points() to calculate the seek points.
 DRMP3_API drmp3_bool32 drmp3_bind_seek_table(drmp3* pMP3, drmp3_uint32 seekPointCount, drmp3_seek_point* pSeekPoints);
 
 
+#ifndef DR_MP3_NO_FULL_READ
 /*
 Opens an decodes an entire MP3 stream as a single operation.
 
@@ -504,6 +505,7 @@ DRMP3_API drmp3_int16* drmp3_open_memory_and_read_pcm_frames_s16(const void* pDa
 DRMP3_API float* drmp3_open_file_and_read_pcm_frames_f32(const char* filePath, drmp3_config* pConfig, drmp3_uint64* pTotalFrameCount, const drmp3_allocation_callbacks* pAllocationCallbacks);
 #ifndef DR_MP3_NO_S16
 DRMP3_API drmp3_int16* drmp3_open_file_and_read_pcm_frames_s16(const char* filePath, drmp3_config* pConfig, drmp3_uint64* pTotalFrameCount, const drmp3_allocation_callbacks* pAllocationCallbacks);
+#endif
 #endif
 #endif
 
@@ -4161,7 +4163,7 @@ DRMP3_API drmp3_bool32 drmp3_bind_seek_table(drmp3* pMP3, drmp3_uint32 seekPoint
     return DRMP3_TRUE;
 }
 
-
+#ifndef DR_MP3_NO_FULL_READ
 static float* drmp3__full_read_and_close_f32(drmp3* pMP3, drmp3_config* pConfig, drmp3_uint64* pTotalFrameCount)
 {
     drmp3_uint64 totalFramesRead = 0;
@@ -4363,6 +4365,7 @@ DRMP3_API drmp3_int16* drmp3_open_file_and_read_pcm_frames_s16(const char* fileP
 
     return drmp3__full_read_and_close_s16(&mp3, pConfig, pTotalFrameCount);
 }
+#endif
 #endif
 #endif
 
