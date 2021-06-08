@@ -18,6 +18,7 @@ CPPFLAGS = -DDLL_EXPORT -DNDEBUG
 CFLAGS  = -O3 -Wall
 LDFLAGS = -nostdlib -shared -Wl,--no-undefined -Wl,--enable-auto-image-base -Wl,--out-implib,$(LIB)
 LDLIBS  = -lkernel32 -luser32
+LDLIBS += -static-libgcc -lgcc
 
 LIB = libSDL.dll.a
 DLL = SDL.dll
