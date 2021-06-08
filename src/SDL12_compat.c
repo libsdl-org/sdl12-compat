@@ -2005,8 +2005,8 @@ AdjustOpenGLLogicalScalingPoint(int *x, int *y)
     scale_x = (float)OpenGLLogicalScalingWidth / viewport.w;
     scale_y = (float)OpenGLLogicalScalingHeight / viewport.h;
 
-    adjusted_x = (*x - viewport.x) * scale_x;
-    adjusted_y = (*y - viewport.y) * scale_y;
+    adjusted_x = (int) ((*x - viewport.x) * scale_x);
+    adjusted_y = (int) ((*y - viewport.y) * scale_y);
 
     /* Clamp the result to the visible window */
     *x = SDL_max(SDL_min(adjusted_x, OpenGLLogicalScalingWidth), 0);
@@ -6087,11 +6087,11 @@ SDL_CDPlayTracks(SDL12_CD *cdrom, int start_track, int start_frame, int ntracks,
         return SDL20_SetError("Tray empty");
     } else if ((start_track < 0) || (start_track >= cdrom->numtracks)) {
         return SDL20_SetError("Invalid start track");
-    } else if ((start_frame < 0) || (start_frame >= cdrom->track[start_track].length)) {
+    } else if ((start_frame < 0) || (((Uint32) start_frame) >= cdrom->track[start_track].length)) {
         return SDL20_SetError("Invalid start frame");
     } else if ((ntracks < 0) || ((start_track + ntracks) >= cdrom->numtracks)) {
         return SDL20_SetError("Invalid number of tracks");
-    } else if ((nframes < 0) || (nframes >= cdrom->track[start_track + ntracks].length)) {
+    } else if ((nframes < 0) || (((Uint32) nframes) >= cdrom->track[start_track + ntracks].length)) {
         return SDL20_SetError("Invalid number of frames");
     }
 
@@ -6106,7 +6106,8 @@ SDL_CDPlayTracks(SDL12_CD *cdrom, int start_track, int start_frame, int ntracks,
 DECLSPEC int SDLCALL
 SDL_CDPlay(SDL12_CD *cdrom, int start, int length)
 {
-    int remain = length;
+    const Uint32 ui32start = (Uint32) start;
+    Uint32 remain = (Uint32) length;
     int start_track = -1;
     int start_frame = -1;
     int ntracks = -1;
@@ -6117,10 +6118,14 @@ SDL_CDPlay(SDL12_CD *cdrom, int start, int length)
         return -1;
     } else if (cdrom->status == SDL12_CD_TRAYEMPTY) {
         return SDL20_SetError("Tray empty");
+    } else if (start < 0) {
+        return SDL20_SetError("Invalid start");
+    } else if (length < 0) {
+        return SDL20_SetError("Invalid length");
     }
 
     for (i = 0; i < cdrom->numtracks; i++) {
-        if ((start >= cdrom->track[i].offset) && (start < (cdrom->track[i].offset + cdrom->track[i].length))) {
+        if ((ui32start >= cdrom->track[i].offset) && (ui32start < (cdrom->track[i].offset + cdrom->track[i].length))) {
             start_track = i;
             break;
         }
