@@ -321,7 +321,6 @@ static void PrintUsage(char *argv0)
 int main(int argc, char **argv)
 {
 	char *argv0 = argv[0];
-	int flip;
 	int delay;
 	int desired_bpp;
 	Uint32 video_flags, overlay_format;
@@ -332,7 +331,6 @@ int main(int argc, char **argv)
 	int i;
 
 	/* Set default options and check command-line */
-	flip = 0;
 	scale=0;
         monochrome=0;
         luminance=100;
@@ -473,7 +471,6 @@ int main(int argc, char **argv)
 			(screen->flags&SDL_HWSURFACE) ? "video" : "system");
 	if ( screen->flags & SDL_DOUBLEBUF ) {
 		printf("Double-buffering enabled\n");
-		flip = 1;
 	}
 
 	/* Set the window manager title bar */
