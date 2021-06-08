@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
 		SDL_UnloadObject(lib);
 	}
 	SDL_Quit();
-	return(0);
+	return retval;
 }
 
 
