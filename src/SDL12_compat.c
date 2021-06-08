@@ -2380,6 +2380,140 @@ Keysym20to12(const SDL_Keycode keysym20)
     return SDLK12_UNKNOWN;
 }
 
+static Uint8
+Scancode20to12(SDL_Scancode sc)
+{
+    /* SDL 1.2 scancodes are the actual raw scancodes (for the most part), and
+       so differ wildly between different systems. Fortunately, this means
+       they're rarely used, and often have fallbacks. Here, we support them
+       for three systems: Win32, Mac OS X, and a synthesized pseudo-Linux that
+       should work.
+       Windows scancodes are bascially just Linux ones - 8. OS X has a totally
+       different set of scancodes from everyone else. Linux's scancodes change
+       depending on what driver you're using, but only really for a few keys.
+       Since there are applications (DOSBox) which look this up and behave
+       accordingly, but have fallbacks, those keys have scancodes of 0 here,
+       to trigger the fallbacks. */
+    switch(sc) {
+#if defined(_WIN32)
+#define CASESCANCODE20TO12(sc20, sc12, sc12mac) case SDL_SCANCODE_##sc20: return (sc12 ? (sc12 - 8) : 0)
+#elif defined(__MACOSX__)
+#define CASESCANCODE20TO12(sc20, sc12, sc12mac) case SDL_SCANCODE_##sc20: return sc12mac
+#else
+#define CASESCANCODE20TO12(sc20, sc12, sc12mac) case SDL_SCANCODE_##sc20: return sc12
+#endif
+    CASESCANCODE20TO12(0, 0x13, 0x1D);
+    CASESCANCODE20TO12(1, 0x0A, 0x12);
+    CASESCANCODE20TO12(2, 0x0B, 0x13);
+    CASESCANCODE20TO12(3, 0x0C, 0x14);
+    CASESCANCODE20TO12(4, 0x0D, 0x15);
+    CASESCANCODE20TO12(5, 0x0E, 0x17);
+    CASESCANCODE20TO12(6, 0x0F, 0x16);
+    CASESCANCODE20TO12(7, 0x10, 0x1A);
+    CASESCANCODE20TO12(8, 0x11, 0x1C);
+    CASESCANCODE20TO12(9, 0x12, 0x19);
+    CASESCANCODE20TO12(A, 0x26, 0x19);
+    CASESCANCODE20TO12(APOSTROPHE, 0x30, 0x27);
+    CASESCANCODE20TO12(B, 0x38, 0x0B);
+    CASESCANCODE20TO12(BACKSLASH, 0x33, 0x2A);
+    CASESCANCODE20TO12(BACKSPACE, 0x16, 0x33);
+    CASESCANCODE20TO12(C, 0x36, 0x08);
+    CASESCANCODE20TO12(CAPSLOCK, 0x42, 0x39);
+    CASESCANCODE20TO12(COMMA, 0x3B, 0x2B);
+    CASESCANCODE20TO12(D, 0x28, 0x02);
+    CASESCANCODE20TO12(DELETE, 0x00, 0x75);
+    CASESCANCODE20TO12(DOWN, 0x00, 0x7D);
+    CASESCANCODE20TO12(E, 0x1A, 0x0E);
+    CASESCANCODE20TO12(END, 0x00, 0x77);
+    CASESCANCODE20TO12(EQUALS, 0x15, 0x18);
+    CASESCANCODE20TO12(ESCAPE, 0x09, 0x35);
+    CASESCANCODE20TO12(F, 0x29, 0x03);
+    CASESCANCODE20TO12(F1, 0x43, 0x7A);
+    CASESCANCODE20TO12(F10, 0x4C, 0x6E);
+    CASESCANCODE20TO12(F11, 0x5F, 0x67);
+    CASESCANCODE20TO12(F12, 0x60, 0x6F);
+    CASESCANCODE20TO12(F2, 0x44, 0x78);
+    CASESCANCODE20TO12(F3, 0x45, 0x63);
+    CASESCANCODE20TO12(F4, 0x46, 0x76);
+    CASESCANCODE20TO12(F5, 0x47, 0x60);
+    CASESCANCODE20TO12(F6, 0x48, 0x61);
+    CASESCANCODE20TO12(F7, 0x49, 0x62);
+    CASESCANCODE20TO12(F8, 0x4A, 0x64);
+    CASESCANCODE20TO12(F9, 0x4B, 0x65);
+    CASESCANCODE20TO12(G, 0x2A, 0x05);
+    CASESCANCODE20TO12(GRAVE, 0x31, 0x32);
+    CASESCANCODE20TO12(H, 0x2B, 0x04);
+    CASESCANCODE20TO12(HOME, 0x00, 0x73);
+    CASESCANCODE20TO12(I, 0x1F, 0x22);
+    CASESCANCODE20TO12(INSERT, 0x00, 0x72);
+    CASESCANCODE20TO12(J, 0x2C, 0x26);
+    CASESCANCODE20TO12(K, 0x2D, 0x28);
+    CASESCANCODE20TO12(KP_0, 0x5A, 0x52);
+    CASESCANCODE20TO12(KP_1, 0x57, 0x53);
+    CASESCANCODE20TO12(KP_2, 0x58, 0x54);
+    CASESCANCODE20TO12(KP_3, 0x59, 0x55);
+    CASESCANCODE20TO12(KP_4, 0x53, 0x56);
+    CASESCANCODE20TO12(KP_5, 0x54, 0x57);
+    CASESCANCODE20TO12(KP_6, 0x55, 0x58);
+    CASESCANCODE20TO12(KP_7, 0x4F, 0x59);
+    CASESCANCODE20TO12(KP_8, 0x50, 0x5B);
+    CASESCANCODE20TO12(KP_9, 0x51, 0x5C);
+    CASESCANCODE20TO12(KP_DIVIDE, 0x00, 0x4B);
+    CASESCANCODE20TO12(KP_ENTER, 0x00, 0x4C);
+    CASESCANCODE20TO12(KP_EQUALS, 0x00, 0x51);
+    CASESCANCODE20TO12(KP_MINUS, 0x52, 0x4E);
+    CASESCANCODE20TO12(KP_MULTIPLY, 0x3F, 0x42);
+    CASESCANCODE20TO12(KP_PERIOD, 0x5B, 0x41);
+    CASESCANCODE20TO12(KP_PLUS, 0x56, 0x44);
+    CASESCANCODE20TO12(L, 0x2E, 0x25);
+    CASESCANCODE20TO12(LALT, 0x40, 0x3A);
+    CASESCANCODE20TO12(LCTRL, 0x25, 0x4B);
+    CASESCANCODE20TO12(LEFT, 0x00, 0x7B);
+    CASESCANCODE20TO12(LEFTBRACKET, 0x22, 0x21);
+    CASESCANCODE20TO12(LGUI, 0x85, 0x37);
+    CASESCANCODE20TO12(LSHIFT, 0x32, 0x38);
+    CASESCANCODE20TO12(M, 0x3A, 0x29);
+    CASESCANCODE20TO12(MINUS, 0x14, 0x1B);
+    CASESCANCODE20TO12(N, 0x39, 0x28);
+    CASESCANCODE20TO12(NUMLOCKCLEAR, 0x4D, 0x47);
+    CASESCANCODE20TO12(O, 0x20, 0x1F);
+    CASESCANCODE20TO12(P, 0x21, 0x23);
+    CASESCANCODE20TO12(PAGEDOWN, 0x00, 0x79);
+    CASESCANCODE20TO12(PAGEUP, 0x00, 0x74);
+    CASESCANCODE20TO12(PERIOD, 0x3C, 0x2F);
+    CASESCANCODE20TO12(PRINTSCREEN, 0x6B, 0x6B);
+    CASESCANCODE20TO12(Q, 0x18, 0x0C);
+    CASESCANCODE20TO12(R, 0x1B, 0x0F);
+    CASESCANCODE20TO12(RETURN, 0x24, 0x24);
+    CASESCANCODE20TO12(RIGHT, 0x00, 0x7C);
+    CASESCANCODE20TO12(RIGHTBRACKET, 0x23, 0x1E);
+    CASESCANCODE20TO12(S, 0x27, 0x01);
+    CASESCANCODE20TO12(SCROLLLOCK, 0x4E, 0x71);
+    CASESCANCODE20TO12(SEMICOLON, 0x2F, 0x29);
+    CASESCANCODE20TO12(SLASH, 0x3D, 0x2C);
+    CASESCANCODE20TO12(SPACE, 0x41, 0x31);
+    CASESCANCODE20TO12(T, 0x1C, 0x11);
+    CASESCANCODE20TO12(TAB, 0x17, 0x30);
+    CASESCANCODE20TO12(U, 0x00, 0x20);
+    CASESCANCODE20TO12(UP, 0x00, 0x7E);
+    CASESCANCODE20TO12(V, 0x37, 0x09);
+    CASESCANCODE20TO12(W, 0x19, 0x0D);
+    CASESCANCODE20TO12(X, 0x35, 0x07);
+    CASESCANCODE20TO12(Y, 0x1D, 0x10);
+    CASESCANCODE20TO12(Z, 0x34, 0x06);
+#undef CASESCANCODE20TO12    
+    default:
+        /* If we don't know it, return 0, which is "unknown" on everything
+           except Mac OS X, where it's "A" for whatever reason. */
+#ifdef __MACOSX__
+        return 0x34;    /* DOSBox should treat this as unknown. */
+#else
+        return 0;
+#endif
+    }
+    return 0;
+}
+
 DECLSPEC Uint8 * SDLCALL
 SDL_GetKeyState(int *numkeys)
 {
@@ -2522,9 +2656,8 @@ EventFilter20to12(void *data, SDL_Event *event20)
             event12.type = (event20->type == SDL_KEYDOWN) ? SDL12_KEYDOWN : SDL12_KEYUP;
             event12.key.which = 0;
             event12.key.state = event20->key.state;
-            FIXME("SDL1.2 and SDL2.0 scancodes are incompatible");
             /* turns out that some apps actually made use of the hardware scancodes (checking for platform beforehand) */
-            event12.key.keysym.scancode = 0;
+            event12.key.keysym.scancode = Scancode20to12(event20->key.keysym.scancode);
             event12.key.keysym.mod = event20->key.keysym.mod;  /* these match up between 1.2 and 2.0! */
             event12.key.keysym.unicode = 0;
 
@@ -2548,9 +2681,8 @@ EventFilter20to12(void *data, SDL_Event *event20)
             PendingKeydownEvent.type = (event20->type == SDL_KEYDOWN) ? SDL12_KEYDOWN : SDL12_KEYUP;
             PendingKeydownEvent.key.which = 0;
             PendingKeydownEvent.key.state = event20->key.state;
-            FIXME("SDL1.2 and SDL2.0 scancodes are incompatible");
             /* turns out that some apps actually made use of the hardware scancodes (checking for platform beforehand) */
-            PendingKeydownEvent.key.keysym.scancode = 0;
+            PendingKeydownEvent.key.keysym.scancode = Scancode20to12(event20->key.keysym.scancode);
             PendingKeydownEvent.key.keysym.mod = event20->key.keysym.mod;  /* these match up between 1.2 and 2.0! */
             PendingKeydownEvent.key.keysym.unicode = 0;
 
