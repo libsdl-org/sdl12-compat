@@ -5866,6 +5866,7 @@ SDL_CDOpen(int drive)
     SDL12_CD *retval;
     size_t alloclen;
     char *fullpath;
+    drmp3 *mp3 = NULL;
     Uint32 total_track_offset = 0;
 
     if (!ValidCDDriveIndex(drive)) {
@@ -5886,6 +5887,14 @@ SDL_CDOpen(int drive)
         return NULL;
     }
 
+    mp3 = (drmp3 *) SDL20_malloc(sizeof (drmp3));
+    if (!mp3) {
+        SDL20_free(fullpath);
+        SDL20_free(retval);
+        SDL20_OutOfMemory();
+        return NULL;
+    }
+
     /* We should probably do a proper enumeration of this directory,
        but that needs platform-specific code that SDL2 doesn't offer.
        readdir() is surprisingly hard to do without a bunch of different
@@ -5894,7 +5903,6 @@ SDL_CDOpen(int drive)
     FIXME("Can we do something more robust than this for directory enumeration?");
     for (;;) {
         SDL_RWops *rw;
-        drmp3 mp3;
         drmp3_uint64 pcmframes;
         drmp3_uint32 samplerate;
         SDL12_CDtrack *track;
@@ -5907,14 +5915,14 @@ SDL_CDOpen(int drive)
             break;  /* ok, we're done looking for more. */
         }
 
-        if (!drmp3_init(&mp3, mp3_sdlrwops_read, mp3_sdlrwops_seek, rw, NULL)) {
+        if (!drmp3_init(mp3, mp3_sdlrwops_read, mp3_sdlrwops_seek, rw, NULL)) {
             SDL20_RWclose(rw);
             break;  /* ok, we're done looking for more. */
         }
 
-        pcmframes = drmp3_get_pcm_frame_count(&mp3);
-        samplerate = mp3.sampleRate;
-        FreeMp3(&mp3);
+        pcmframes = drmp3_get_pcm_frame_count(mp3);
+        samplerate = mp3->sampleRate;
+        FreeMp3(mp3);
 
         track = &retval->track[retval->numtracks];
         track->id = retval->numtracks;
@@ -5929,6 +5937,7 @@ SDL_CDOpen(int drive)
             break;  /* max tracks you can have on an audio CD. */
         }
     }
+    SDL20_free(mp3);
     SDL20_free(fullpath);
 
     retval->id = 1;  /* just to be non-zero, I guess. */
@@ -6035,13 +6044,17 @@ LoadCDTrack(const int tracknum, drmp3 *mp3)
 static int
 StartCDAudioPlaying(SDL12_CD *cdrom, const int start_track, const int start_frame, const int ntracks, const int nframes)
 {
-    drmp3 mp3;
-    const SDL_bool loaded = LoadCDTrack(start_track, &mp3);
+    drmp3 *mp3 = (drmp3 *) SDL20_malloc(sizeof (drmp3));
+    const SDL_bool loaded = mp3 ? LoadCDTrack(start_track, mp3) : SDL_FALSE;
     const SDL_bool seeking = (loaded && (start_frame > 0))? SDL_TRUE : SDL_FALSE;
-    const drmp3_uint64 pcm_frame = seeking ? ((drmp3_uint64) ((start_frame / 75.0) * mp3.sampleRate)) : 0;
+    const drmp3_uint64 pcm_frame = seeking ? ((drmp3_uint64) ((start_frame / 75.0) * mp3->sampleRate)) : 0;
+
+    if (!mp3) {
+        return SDL20_OutOfMemory();
+    }
 
     if (seeking) {   /* do seeking before handing off to the audio thread. */
-        drmp3_seek_to_pcm_frame(&mp3, pcm_frame);
+        drmp3_seek_to_pcm_frame(mp3, pcm_frame);
     }
 
     SDL20_LockAudio();
@@ -6054,10 +6067,12 @@ StartCDAudioPlaying(SDL12_CD *cdrom, const int start_track, const int start_fram
         audio_cbdata->cdrom_stop_nframes = nframes;
         FreeMp3(&audio_cbdata->cdrom_mp3);
         if (loaded) {
-            SDL20_memcpy(&audio_cbdata->cdrom_mp3, &mp3, sizeof (drmp3));
+            SDL20_memcpy(&audio_cbdata->cdrom_mp3, mp3, sizeof (drmp3));
         }
     }
     SDL20_UnlockAudio();
+
+    SDL20_free(mp3);
 
     return loaded ? 0 : SDL20_SetError("Failed to start CD track");
 }
