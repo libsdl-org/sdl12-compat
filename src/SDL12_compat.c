@@ -6303,9 +6303,9 @@ FakeCdRomAudioCallback(AudioCallbackWrapperData *data, Uint8 *stream, int len, c
     }
 
     total_available = SDL20_AudioStreamAvailable(data->cdrom_stream);
-    available = (len < total_available) ? len : total_available;
-    if (len < available) {
-        available = len;
+    available = total_available;
+    if (((Uint32) len) < available) {
+        available = (Uint32) len;
     }
 
     if (available > 0) {
@@ -6316,7 +6316,7 @@ FakeCdRomAudioCallback(AudioCallbackWrapperData *data, Uint8 *stream, int len, c
             SDL20_MixAudio(stream, data->mix_buffer, available, SDL_MIX_MAXVOLUME);
         }
 
-        data->cdrom_pcm_frames_written += (available / ((double) SDL_AUDIO_BITSIZE(data->device_format.format) / 8.0)) / data->device_format.channels;
+        data->cdrom_pcm_frames_written += (int) ((available / ((double) SDL_AUDIO_BITSIZE(data->device_format.format) / 8.0)) / data->device_format.channels);
         data->cdrom_cur_frame = (int) ((((double)data->cdrom_pcm_frames_written) / ((double)data->device_format.freq)) * CDAUDIO_FPS);
         if (data->cdrom_stop_ntracks == 0) {
             if (data->cdrom_cur_frame >= data->cdrom_stop_nframes) {
@@ -6326,7 +6326,7 @@ FakeCdRomAudioCallback(AudioCallbackWrapperData *data, Uint8 *stream, int len, c
     }
 
     if ((total_available == 0) && (data->cdrom_mp3.atEnd)) {  /* mp3 is done for whatever reason */
-        SDL_bool silence = ((!must_mix) && (available < len))? SDL_TRUE : SDL_FALSE;  /* silence any section we couldn't provide */
+        SDL_bool silence = ((!must_mix) && (available < ((Uint32) len))) ? SDL_TRUE : SDL_FALSE;  /* silence any section we couldn't provide */
 
         FreeMp3(&data->cdrom_mp3);
 
@@ -6340,7 +6340,7 @@ FakeCdRomAudioCallback(AudioCallbackWrapperData *data, Uint8 *stream, int len, c
                 if (!loaded) {
                     data->cdrom_status = SDL12_CD_TRAYEMPTY;  FIXME("Maybe just mark it stopped?");
                 } else {  /* let new track fill out rest of callback. */
-                    if (available < len) {
+                    if (available < ((Uint32) len)) {
                         FakeCdRomAudioCallback(data, stream + available, len - available, must_mix);
                         silence = SDL_FALSE;
                     }
