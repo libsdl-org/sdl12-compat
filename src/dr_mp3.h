@@ -3551,6 +3551,7 @@ DRMP3_API void drmp3_uninit(drmp3* pMP3)
     drmp3__free_from_callbacks(pMP3->pData, &pMP3->allocationCallbacks);
 }
 
+#ifndef DR_MP3_NO_S16
 #if defined(DR_MP3_FLOAT_OUTPUT)
 static void drmp3_f32_to_s16(drmp3_int16* dst, const float* src, drmp3_uint64 sampleCount)
 {
@@ -3606,6 +3607,7 @@ static void drmp3_s16_to_f32(float* dst, const drmp3_int16* src, drmp3_uint64 sa
         dst[i] = x;
     }
 }
+#endif
 #endif
 
 static drmp3_uint64 drmp3_read_pcm_frames_raw(drmp3* pMP3, drmp3_uint64 framesToRead, void* pBufferOut)
