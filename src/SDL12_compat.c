@@ -2647,9 +2647,6 @@ EventFilter20to12(void *data, SDL_Event *event20)
                 return 1;  /* ignore 2.0-style key repeat events */
             }
             event12.key.keysym.sym = Keysym20to12(event20->key.keysym.sym);
-            if (event12.key.keysym.sym == SDLK12_UNKNOWN) {
-                return 1;  /* drop it if we can't map it */
-            }
 
             KeyState[event12.key.keysym.sym] = event20->key.state;
 
@@ -2672,9 +2669,6 @@ EventFilter20to12(void *data, SDL_Event *event20)
             }
 
             PendingKeydownEvent.key.keysym.sym = Keysym20to12(event20->key.keysym.sym);
-            if (PendingKeydownEvent.key.keysym.sym == SDLK12_UNKNOWN) {
-                return 1;  /* drop it if we can't map it */
-            }
 
             KeyState[PendingKeydownEvent.key.keysym.sym] = event20->key.state;
 
