@@ -11,6 +11,7 @@ set(SDL12_COMPAT_VERSION_STR "1.2.50")
 
 option(SDL12TESTS "Enable to build SDL-1.2 test programs" ON)
 option(SDL12DEVEL "Enable installing SDL-1.2 development headers" ON)
+option(STATICDEVEL "Enable installing static link library" OFF)
 
 set(CMAKE_SKIP_RPATH TRUE)
 
@@ -202,3 +203,42 @@ if(SDL12DEVEL)
   install(FILES "${CMAKE_SOURCE_DIR}/sdl.m4" DESTINATION "${CMAKE_INSTALL_FULL_DATAROOTDIR}/aclocal")
 endif()
 
+if(STATICDEVEL AND SDL12DEVEL)
+  add_library(SDL-static STATIC ${SDL12COMPAT_SRCS})
+  target_include_directories(SDL-static PRIVATE ${SDL2_INCLUDE_DIRS})
+  if(UNIX AND NOT APPLE)
+      set_target_properties(SDL-static PROPERTIES COMPILE_DEFINITIONS "_REENTRANT")
+      target_link_libraries(SDL-static PRIVATE dl)
+  endif()
+  if(APPLE)
+      set_target_properties(SDL-static PROPERTIES COMPILE_DEFINITIONS "_THREAD_SAFE")
+      target_link_libraries(SDL-static PRIVATE "-framework AppKit")
+      set_target_properties(SDL-static PROPERTIES
+          MACOSX_RPATH 1
+          OUTPUT_NAME "SDL"
+      )
+  else()
+      set_target_properties(SDL-static PROPERTIES
+          VERSION "${SDL12_COMPAT_VERSION_STR}"
+        OUTPUT_NAME "SDL")
+  endif()
+
+  if(MINGW)
+      set_target_properties(SDL-static PROPERTIES LINK_FLAGS "-nostdlib")
+  endif()
+  if(MSVC)
+      # Don't try to link with the default set of libraries.
+      set_target_properties(SDL-static PROPERTIES COMPILE_FLAGS "/GS-")
+      set_target_properties(SDL-static PROPERTIES LINK_FLAGS "/NODEFAULTLIB")
+      # Make sure /RTC1 is disabled: (from SDL2 CMake)
+      foreach(flag_var
+        CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
+        CMAKE_C_FLAGS_MINSIZEREL CMAKE_C_FLAGS_RELWITHDEBINFO)
+        string(REGEX REPLACE "/RTC(su|[1su])" "" ${flag_var} "${${flag_var}}")
+      endforeach(flag_var)
+  endif()
+
+  install(TARGETS SDL-static
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  )
+endif()
