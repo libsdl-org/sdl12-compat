@@ -54,10 +54,10 @@ static void PrintKey(SDL_keysym *sym, int pressed)
 {
 	/* Print the keycode, name and state */
 	if ( sym->sym ) {
-		printf("Key %s:  %d-%s ", pressed ?  "pressed" : "released",
-					sym->sym, SDL_GetKeyName(sym->sym));
+		printf("Key %s:  %d-%s (scancode = %d [0x%x])", pressed ?  "pressed" : "released",
+					sym->sym, SDL_GetKeyName(sym->sym), sym->scancode, sym->scancode);
 	} else {
-		printf("Unknown Key (scancode = %d) %s ", sym->scancode,
+		printf("Unknown Key (scancode = %d [0x%x]) %s ", sym->scancode, sym->scancode,
 					pressed ?  "pressed" : "released");
 	}
 
