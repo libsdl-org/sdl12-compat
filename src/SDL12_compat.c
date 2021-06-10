@@ -5815,6 +5815,12 @@ SDL_LoadWAV_RW(SDL12_RWops *rwops12, int freerwops12,
 
 /* public domain, single-header MP3 decoder for fake CD-ROM audio support! */
 #define DR_MP3_IMPLEMENTATION
+#if defined(__GNUC__) && (__GNUC__ >= 4) && \
+  !(defined(_WIN32) || defined(__EMX__))
+#define DRMP3_API __attribute__((visibility("hidden")))
+#elif defined(__APPLE__)
+#define DRMP3_API __private_extern__
+#endif
 #define DR_MP3_NO_STDIO 1
 #define DR_MP3_NO_S16 1
 #define DR_MP3_FLOAT_OUTPUT 1
