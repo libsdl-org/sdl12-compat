@@ -14,6 +14,7 @@ option(SDL12DEVEL "Enable installing SDL-1.2 development headers" ON)
 option(STATICDEVEL "Enable installing static link library" OFF)
 
 set(CMAKE_SKIP_RPATH TRUE)
+set(CMAKE_C_VISIBILITY_PRESET hidden)
 
 if(APPLE)
   set(OSX_SRCS "src/SDL12_compat_objc.m")
