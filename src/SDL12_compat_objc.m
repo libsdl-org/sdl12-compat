@@ -49,6 +49,8 @@ SDL12_PRIVATE void sdl12_compat_macos_init(void)
 
 SDL12_PRIVATE void error_dialog(const char *errorMsg)
 {
+    NSAlert *alert;
+
     if (NSApp == nil) {
         ProcessSerialNumber psn = { 0, kCurrentProcess };
         TransformProcessType(&psn, kProcessTransformToForegroundApplication);
@@ -58,7 +60,7 @@ SDL12_PRIVATE void error_dialog(const char *errorMsg)
     }
 
     [NSApp activateIgnoringOtherApps:YES];
-    NSAlert *alert = [[[NSAlert alloc] init] autorelease];
+    alert = [[[NSAlert alloc] init] autorelease];
     alert.alertStyle = NSAlertStyleCritical;
     alert.messageText = @"Fatal error! Cannot continue!";
     alert.informativeText = [NSString stringWithCString:errorMsg encoding:NSASCIIStringEncoding];
