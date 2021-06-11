@@ -2561,13 +2561,12 @@ Scancode20to12(SDL_Scancode sc)
     CASESCANCODE20TO12(X, 0x35, 0x07);
     CASESCANCODE20TO12(Y, 0x1D, 0x10);
     CASESCANCODE20TO12(Z, 0x34, 0x06);
-#undef CASESCANCODE20TO12    
+#undef CASESCANCODE20TO12
     default:
         /* If we don't know it, return 0, which is "unknown".
            It's also "a" on Mac OS X, but SDL 1.2 uses it as "unknown", too. */
         return 0;
     }
-    return 0;
 }
 
 DECLSPEC Uint8 * SDLCALL
