@@ -1710,6 +1710,10 @@ SDL_QuitSubSystem(Uint32 sdl12flags)
         QuitCDSubsystem();
     }
 
+    if (sdl12flags & SDL12_INIT_AUDIO) {
+        SDL_CloseAudio();
+    }
+
     if (sdl12flags & SDL12_INIT_VIDEO) {
         Quit12Video();
     }
@@ -6775,11 +6779,10 @@ SDL_CloseAudio(void)
     SDL20_LockAudio();
     if (audio_cbdata) {
         audio_cbdata->app_callback_opened = SDL_FALSE;
+        SDL20_FreeAudioStream(audio_cbdata->app_callback_stream);
+        audio_cbdata->app_callback_stream = NULL;
     }
     SDL20_UnlockAudio();
-
-    SDL20_FreeAudioStream(audio_cbdata->app_callback_stream);
-    audio_cbdata->app_callback_stream = NULL;
 
     CloseSDL2AudioDevice();
 }
