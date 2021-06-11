@@ -39,7 +39,7 @@ include("cmake/modules/FindSDL2.cmake")
 target_include_directories(SDL PRIVATE ${SDL2_INCLUDE_DIRS})
 
 if (CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
-  add_compile_options(-Wall -Werror=declaration-after-statement)  # force these universally.
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror=declaration-after-statement") # force these universally.
 endif()
 
 # avoid DLL having 'lib' prefix with Windows MinGW builds
