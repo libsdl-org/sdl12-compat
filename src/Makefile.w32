@@ -1,4 +1,4 @@
-#  OpenWatcom makefile to build SDL for Win32.
+#  OpenWatcom makefile to build SDL for Win32
 
 !ifndef %WATCOM
 !error Environment variable WATCOM is not specified!
@@ -28,19 +28,20 @@ CFLAGS+= -wcd=200
 # newer OpenWatcom versions enable W303 by default
 CFLAGS+= -wcd=303
 
-DESCRIPTION = Simple DirectMedia Layer 1.2
-
 object_files= SDL12_compat.obj
+resource_obj= version.res
 
 .extensions:
-.extensions: .lib .dll .obj .c .asm
+.extensions: .lib .dll .obj .c .asm .res .rc
 
 .c.obj:
 	wcc386 $(CFLAGS) -fo=$^@ $<
+.rc.res:
+	wrc -q -r -bt=nt -I"$(%WATCOM)/h/nt" -fo=$^@ $<
 
 all: $(DLLFILE) $(LIBFILE) .symbolic
 
-$(DLLFILE): compiling_info $(object_files) $(LNKFILE)
+$(DLLFILE): compiling_info $(object_files) $(resource_obj) $(LNKFILE)
 	@echo * Linking: $@
 	@wlink @$(LNKFILE)
 
@@ -58,18 +59,17 @@ $(LNKFILE):
 	@%append $@ NAME $(DLLFILE)
 	@for %i in ($(object_files)) do @%append $@ FILE %i
 	@%append $@ EXPORT=SDL12.lbc
+	@%append $@ OPTION RESOURCE=$(resource_obj)
 	@%append $@ OPTION QUIET
-	@%append $@ OPTION IMPF=$^&.exp
 	@%append $@ OPTION MAP=$^&.map
-	@%append $@ OPTION DESCRIPTION '@$#libsdl org:$(VERSION)$#@$(DESCRIPTION)'
 	@%append $@ OPTION ELIMINATE
 	@%append $@ OPTION SHOWDEAD
 
 clean: .SYMBOLIC
 	@echo * Clean: $(LIBNAME) $(VERSION)
 	@if exist *.obj rm *.obj
+	@if exist *.res rm *.res
 	@if exist *.map rm *.map
-	@if exist *.exp rm *.exp
 	@if exist $(LNKFILE) rm $(LNKFILE)
 
 distclean: clean .SYMBOLIC
