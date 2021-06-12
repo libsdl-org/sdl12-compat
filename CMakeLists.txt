@@ -75,6 +75,7 @@ endif()
 
 if(MINGW)
     set_target_properties(SDL PROPERTIES LINK_FLAGS "-nostdlib")
+    target_link_libraries(SDL PRIVATE "-static-libgcc -lgcc") # libgcc is needed for 32 bit (x86) builds
 endif()
 if(MSVC)
     # Don't try to link with the default set of libraries.
