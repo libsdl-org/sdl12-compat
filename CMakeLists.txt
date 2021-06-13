@@ -177,6 +177,8 @@ install(TARGETS SDL
 
 if(SDL12DEVEL)
   set(SDL_VERSION "${SDL12_COMPAT_VERSION_STR}")
+
+  # FIXME: Make the following target-specific!!
   set(SDL_CFLAGS "-D_GNU_SOURCE=1 -D_REENTRANT")
   set(SDL_RLD_FLAGS "")  # !!! FIXME: this forces rpath, which we might want?
   set(SDL_LIBS "-lSDL")
