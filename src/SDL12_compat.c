@@ -3940,6 +3940,9 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
         bpp = SDL_BITSPERPIXEL(dmode.format);
     }
 
+    #if !SDL_VERSION_ATLEAST(2,0,14)
+    #define SDL_PIXELFORMAT_XRGB8888 SDL_PIXELFORMAT_RGB888
+    #endif
     switch (bpp) {
         case  8: appfmt = SDL_PIXELFORMAT_INDEX8; break;
         case 16: appfmt = SDL_PIXELFORMAT_RGB565; FIXME("bgr instead of rgb?"); break;
