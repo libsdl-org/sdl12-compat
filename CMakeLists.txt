@@ -178,27 +178,43 @@ install(TARGETS SDL
 if(SDL12DEVEL)
   set(SDL_VERSION "${SDL12_COMPAT_VERSION_STR}")
 
-  # FIXME: Make the following target-specific!!
-  set(SDL_CFLAGS "-D_GNU_SOURCE=1 -D_REENTRANT")
-  set(SDL_RLD_FLAGS "")  # !!! FIXME: this forces rpath, which we might want?
-  set(SDL_LIBS "-lSDL")
-  set(SDL_STATIC_LIBS "-lm -ldl -lpthread")
-
   install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
   )
-  configure_file(sdl12_compat.pc.in sdl12_compat.pc @ONLY)
-  install(FILES ${CMAKE_BINARY_DIR}/sdl12_compat.pc
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
-  )
 
-  # !!! FIXME: do we _want_ static builds?
-  set(ENABLE_STATIC_TRUE "")
-  set(ENABLE_STATIC_FALSE "#")
-  set(ENABLE_SHARED_TRUE "")
-  set(ENABLE_SHARED_FALSE "#")
+  if(NOT MSVC)
+    if(WIN32)
+      # FIXME: no SDL_main for Windows!
+      set(SDL_CFLAGS "")                          # -Dmain=SDL_main
+      set(SDL_RLD_FLAGS "")
+      set(SDL_LIBS "-mwindows -lSDL")             # -mwindows -lmingw32 -lSDLmain -lSDL
+      set(SDL_STATIC_LIBS "-lkernel32 -luser32")  # -mwindows -lmingw32 -lSDLmain -lSDL -lkernel32 -luser32
+    elseif(APPLE)
+      # FIXME: no SDL_main for Mac!
+      set(SDL_CFLAGS "-D_THREAD_SAFE")            # -Dmain=SDL_main
+      set(SDL_LIBS "-lSDL")                       #       -lSDLmain
+      set(SDL_STATIC_LIBS "-Wl,-framework,AppKit -lobjc")
+      set(SDL_RLD_FLAGS "")  # !!! FIXME: this forces rpath, which we might want?
+    else() # unix
+      set(SDL_CFLAGS "-D_GNU_SOURCE=1 -D_REENTRANT")
+      set(SDL_RLD_FLAGS "")  # !!! FIXME: this forces rpath, which we might want?
+      set(SDL_LIBS "-lSDL")
+      set(SDL_STATIC_LIBS "-lm -ldl -lpthread")
+    endif()
 
-  configure_file("${CMAKE_SOURCE_DIR}/sdl-config.in" "${CMAKE_BINARY_DIR}/sdl-config" @ONLY)
-  install(PROGRAMS "${CMAKE_BINARY_DIR}/sdl-config" DESTINATION bin)
+    configure_file(sdl12_compat.pc.in sdl12_compat.pc @ONLY)
+    install(FILES ${CMAKE_BINARY_DIR}/sdl12_compat.pc
+      DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
+    )
+
+    # !!! FIXME: do we _want_ static builds?
+    set(ENABLE_STATIC_TRUE "")
+    set(ENABLE_STATIC_FALSE "#")
+    set(ENABLE_SHARED_TRUE "")
+    set(ENABLE_SHARED_FALSE "#")
+
+    configure_file("${CMAKE_SOURCE_DIR}/sdl-config.in" "${CMAKE_BINARY_DIR}/sdl-config" @ONLY)
+    install(PROGRAMS "${CMAKE_BINARY_DIR}/sdl-config" DESTINATION bin)
+  endif()
 
   set(SOEXT ${CMAKE_SHARED_LIBRARY_SUFFIX})
   get_target_property(SONAME SDL OUTPUT_NAME)
