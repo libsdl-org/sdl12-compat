@@ -207,11 +207,6 @@ if(SDL12DEVEL)
       endif()
     endif()
 
-    configure_file(sdl12_compat.pc.in sdl12_compat.pc @ONLY)
-    install(FILES ${CMAKE_BINARY_DIR}/sdl12_compat.pc
-      DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
-    )
-
     # !!! FIXME: do we _want_ static builds?
     if(STATICDEVEL)
       set(ENABLE_STATIC_TRUE "")
@@ -222,6 +217,11 @@ if(SDL12DEVEL)
     endif()
     set(ENABLE_SHARED_TRUE "")
     set(ENABLE_SHARED_FALSE "#")
+
+    configure_file(sdl12_compat.pc.in sdl12_compat.pc @ONLY)
+    install(FILES ${CMAKE_BINARY_DIR}/sdl12_compat.pc
+      DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
+    )
 
     configure_file("${CMAKE_SOURCE_DIR}/sdl-config.in" "${CMAKE_BINARY_DIR}/sdl-config" @ONLY)
     install(PROGRAMS "${CMAKE_BINARY_DIR}/sdl-config" DESTINATION bin)
