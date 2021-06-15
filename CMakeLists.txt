@@ -212,7 +212,7 @@ if(SDL12DEVEL)
       set(SDL_CFLAGS "-D_GNU_SOURCE=1 -D_REENTRANT")
       set(SDL_RLD_FLAGS "")  # !!! FIXME: this forces rpath, which we might want?
       set(SDL_LIBS "-lSDL")
-      set(SDL_STATIC_LIBS "-lm -ldl -lpthread")
+      set(SDL_STATIC_LIBS "-ldl")
       if(NOT STATICDEVEL)
         set(SDL_STATIC_LIBS "")
       endif()
