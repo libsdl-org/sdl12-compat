@@ -5809,7 +5809,7 @@ RWops12to20_size(struct SDL_RWops *rwops20)
     if (pos == -1) {
         return SDL20_Error(SDL_EFSEEK);
     }
-    size = (Sint64) rwops12->seek(rwops12, 0, RW_SEEK_END);
+    size = rwops12->seek(rwops12, 0, RW_SEEK_END);
     rwops12->seek(rwops12, pos, RW_SEEK_SET);
     rwops20->hidden.unknown.data2 = (void *) ((size_t) size);
     return size;
