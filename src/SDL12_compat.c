@@ -5940,6 +5940,10 @@ SDL_LoadWAV_RW(SDL12_RWops *rwops12, int freerwops12,
    an audio CD-ROM, and will decode these files and mix them into an audio
    stream as if they were playing from a disc. */
 
+#if defined(_MSC_VER) && defined(_M_IX86)
+#include "x86_msvc.h"
+#endif
+
 #define CDAUDIO_FPS 75  /* CD audio frames per second. */
 
 /* public domain, single-header MP3 decoder for fake CD-ROM audio support! */

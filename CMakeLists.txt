@@ -38,6 +38,8 @@ set(SDL12COMPAT_SRCS
 )
 add_library(SDL SHARED ${SDL12COMPAT_SRCS})
 
+include(CheckCSourceCompiles)
+
 include(GNUInstallDirs)
 include("cmake/modules/FindSDL2.cmake")
 target_include_directories(SDL PRIVATE ${SDL2_INCLUDE_DIRS})
@@ -83,7 +85,16 @@ if(MINGW)
 endif()
 if(MSVC)
     # Don't try to link with the default set of libraries.
-    set_target_properties(SDL PROPERTIES COMPILE_FLAGS "/GS-")
+    set(MSVC_FLAGS "/GS-")
+    check_c_source_compiles("int main(void) {
+#ifndef _M_IX86
+#error not x86
+#endif
+return 0; }" IS_X86)
+    if(IS_X86)  # don't emit SSE2 in x86 builds
+      set(MSVC_FLAGS "${MSVC_FLAGS} /arch:SSE")
+    endif()
+    set_target_properties(SDL PROPERTIES COMPILE_FLAGS ${MSVC_FLAGS})
     set_target_properties(SDL PROPERTIES LINK_FLAGS "/NODEFAULTLIB")
     # Make sure /RTC1 is disabled: (from SDL2 CMake)
     foreach(flag_var
