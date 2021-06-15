@@ -5953,6 +5953,8 @@ SDL_LoadWAV_RW(SDL12_RWops *rwops12, int freerwops12,
 #define DRMP3_API __attribute__((visibility("hidden")))
 #elif defined(__APPLE__)
 #define DRMP3_API __private_extern__
+#else
+#define DRMP3_API /* just in case */
 #endif
 #define DR_MP3_NO_STDIO 1
 #define DR_MP3_NO_S16 1
