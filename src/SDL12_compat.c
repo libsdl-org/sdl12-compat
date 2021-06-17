@@ -1517,10 +1517,11 @@ Init12VidModes(void)
         if (SDL20_GetDisplayMode(VideoDisplayIndex, i, &mode) < 0) {
             continue;
         }
-        if (!mode.w || !mode.h) {
-            SDL_assert(0 && "Can this actually happen?");
+
+        if ((mode.w <= 0) || (mode.h <= 0)) {
             continue;
         }
+
         if (mode.w > 65535 || mode.h > 65535) {
             continue;  /* can't fit to 16-bits for SDL12_Rect */
         }
