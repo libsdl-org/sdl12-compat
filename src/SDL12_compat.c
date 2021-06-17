@@ -57,17 +57,28 @@
 extern "C" {
 #endif
 
-#if 0
-#define FIXME(x) do {} while (0)
+#define ENABLE_FIXMES 1
+#if ENABLE_FIXMES == -1  /* don't even allow a build to finish if there's a FIXME */
+    /* the goal with this nonsense is to make the compiler print an error that
+       broadcasts the problem _and the string literal_ from the actual FIXME line */
+    extern void YouCannotBuildUntilYouResolveThisFixme(char *x);
+    #define FIXME(x) YouCannotBuildUntilYouResolveThisFixme(-->)
+#elif ENABLE_FIXMES == 0  /* compile out any FIXMEs entirely. */
+    #define FIXME(x) do {} while (0)
+#elif ENABLE_FIXMES == 1  /* Log a warning the first time a FIXME is executed. */
+    static SDL_bool PrintFixmes = SDL_TRUE;
+    #define FIXME(x) \
+        do { \
+            if (PrintFixmes) { \
+                static SDL_bool seen = SDL_FALSE; \
+                if (!seen) { \
+                    SDL20_Log("FIXME: %s (%s:%d)\n", x, __FUNCTION__, __LINE__); \
+                    seen = SDL_TRUE; \
+                } \
+            } \
+        } while (0)
 #else
-#define FIXME(x) \
-    do { \
-        static SDL_bool seen = SDL_FALSE; \
-        if (!seen) { \
-            SDL20_Log("FIXME: %s (%s:%d)\n", x, __FUNCTION__, __LINE__); \
-            seen = SDL_TRUE; \
-        } \
-    } while (0)
+    #error Please fix the ENABLE_FIXMES define.
 #endif
 
 #define SDL20_SYM(rc,fn,params,args,ret) \
@@ -1032,11 +1043,18 @@ LoadSDL20(void)
                 if (!okay) {
                     sprintf_fn(loaderror, "SDL2 %d.%d.%d library is too old.", v.major, v.minor, v.patch);
                 } else {
-                    #if defined(__DATE__) && defined(__TIME__)
-                    SDL20_Log("sdl12-compat, built on " __DATE__ " at " __TIME__ ", talking to SDL2 %d.%d.%d", v.major, v.minor, v.patch);
-                    #else
-                    SDL20_Log("sdl12-compat, talking to SDL2 %d.%d.%d", v.major, v.minor, v.patch);
+                    const char *envr = SDL20_getenv("SDL12_COMPAT_DEBUG_LOGGING");
+                    const SDL_bool debug_logging = (!envr || (SDL20_atoi(envr) == 0)) ? SDL_FALSE : SDL_TRUE;
+                    #if ENABLE_FIXMES == 1
+                    PrintFixmes = debug_logging;
                     #endif
+                    if (debug_logging) {
+                        #if defined(__DATE__) && defined(__TIME__)
+                        SDL20_Log("sdl12-compat, built on " __DATE__ " at " __TIME__ ", talking to SDL2 %d.%d.%d", v.major, v.minor, v.patch);
+                        #else
+                        SDL20_Log("sdl12-compat, talking to SDL2 %d.%d.%d", v.major, v.minor, v.patch);
+                        #endif
+                    }
                 }
             }
             if (!okay) {
