@@ -800,6 +800,23 @@ typedef struct
     SDL_Joystick *joystick;
 } JoystickOpenedItem;
 
+/* this is identical to SDL2, except SDL2 forced the structure packing in
+   some instances, so we can't passthrough without converting the struct. :( */
+typedef struct
+{
+    int needed;
+    Uint16 src_format;
+    Uint16 dst_format;
+    double rate_incr;
+    Uint8 *buf;
+    int len;
+    int len_cvt;
+    int len_mult;
+    double len_ratio;
+    void (SDLCALL *filters[10])(struct SDL_AudioCVT *cvt, Uint16 format);
+    int filter_index;
+} SDL12_AudioCVT;
+
 #include "SDL_opengl.h"
 #include "SDL_opengl_glext.h"
 
@@ -6901,6 +6918,61 @@ SDL_CloseAudio(void)
     CloseSDL2AudioDevice();
 }
 
+
+static SDL_AudioCVT *
+AudioCVT12to20(const SDL12_AudioCVT *cvt12, SDL_AudioCVT *cvt20)
+{
+    SDL_zerop(cvt20);
+    cvt20->needed = cvt12->needed;
+    cvt20->src_format = cvt12->src_format;
+    cvt20->dst_format = cvt12->dst_format;
+    cvt20->rate_incr = cvt12->rate_incr;
+    cvt20->buf = cvt12->buf;
+    cvt20->len = cvt12->len;
+    cvt20->len_cvt = cvt12->len_cvt;
+    cvt20->len_mult = cvt12->len_mult;
+    cvt20->len_ratio = cvt12->len_ratio;
+    SDL20_memcpy(cvt20->filters, cvt12->filters, sizeof (cvt12->filters));
+    cvt20->filter_index = cvt12->filter_index;
+    return cvt20;
+}
+
+static SDL12_AudioCVT *
+AudioCVT20to12(const SDL_AudioCVT *cvt20, SDL12_AudioCVT *cvt12)
+{
+    SDL_zerop(cvt12);
+    cvt12->needed = cvt20->needed;
+    cvt12->src_format = cvt20->src_format;
+    cvt12->dst_format = cvt20->dst_format;
+    cvt12->rate_incr = cvt20->rate_incr;
+    cvt12->buf = cvt20->buf;
+    cvt12->len = cvt20->len;
+    cvt12->len_cvt = cvt20->len_cvt;
+    cvt12->len_mult = cvt20->len_mult;
+    cvt12->len_ratio = cvt20->len_ratio;
+    SDL20_memcpy(cvt12->filters, cvt20->filters, sizeof (cvt20->filters));
+    cvt12->filter_index = cvt20->filter_index;
+    return cvt12;
+}
+
+DECLSPEC int SDLCALL
+SDL_BuildAudioCVT(SDL12_AudioCVT *cvt12, Uint16 src_format, Uint8 src_channels, int src_rate, Uint16 dst_format, Uint8 dst_channels, int dst_rate)
+{
+    SDL_AudioCVT cvt20;
+    const int retval = SDL20_BuildAudioCVT(&cvt20, src_format, src_channels, src_rate, dst_format, dst_channels, dst_rate);
+    AudioCVT20to12(&cvt20, cvt12);  /* SDL 1.2 derefences cvt12 without checking for NULL */
+    return retval;
+}
+
+DECLSPEC int SDLCALL
+SDL_ConvertAudio(SDL12_AudioCVT *cvt12)
+{
+    /* neither SDL 1.2 nor 2.0 makes sure cvt12 isn't NULL here.  :/  */
+    SDL_AudioCVT cvt20;
+    const int retval = SDL20_ConvertAudio(AudioCVT12to20(cvt12, &cvt20));
+    AudioCVT20to12(&cvt20, cvt12);
+    return retval;
+}
 
 
 /* SDL_GL_DisableContext and SDL_GL_EnableContext_Thread are not real SDL 1.2

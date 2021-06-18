@@ -96,6 +96,8 @@
 #define SDL_UnlockSurface IGNORE_THIS_VERSION_OF_SDL_UnlockSurface
 #define SDL_GetKeyName IGNORE_THIS_VERSION_OF_SDL_GetKeyName
 #define SDL_VideoInit IGNORE_THIS_VERSION_OF_SDL_VideoInit
+#define SDL_BuildAudioCVT IGNORE_THIS_VERSION_OF_SDL_BuildAudioCVT
+#define SDL_ConvertAudio IGNORE_THIS_VERSION_OF_SDL_ConvertAudio
 
 #define BUILD_SDL 1
 
@@ -201,6 +203,8 @@ typedef void (__cdecl *pfnSDL_CurrentEndThread) (unsigned);
 #undef SDL_UnlockSurface
 #undef SDL_GetKeyName
 #undef SDL_VideoInit
+#undef SDL_BuildAudioCVT
+#undef SDL_ConvertAudio
 
 #ifdef SDL_mutexP
 #undef SDL_mutexP
