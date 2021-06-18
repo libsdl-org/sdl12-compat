@@ -5488,12 +5488,14 @@ SDL_GetKeyRepeat(int *delay, int *interval)
 DECLSPEC int SDLCALL
 SDL_EnableUNICODE(int enable)
 {
-    int old = EnabledUnicode;
-    EnabledUnicode = enable;
-    if (enable) {
-        SDL20_StartTextInput();
-    } else {
-        SDL20_StopTextInput();
+    const int old = EnabledUnicode;
+    if (enable >= 0) {
+        EnabledUnicode = enable;
+        if (enable) {
+            SDL20_StartTextInput();
+        } else {
+            SDL20_StopTextInput();
+        }
     }
     return old;
 }
