@@ -776,7 +776,7 @@ typedef struct
     Uint32 offset;
 } SDL12_CDtrack;
 
-typedef struct SDL12_CD
+typedef struct
 {
     int id;
     SDL12_CDstatus status;
