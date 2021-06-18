@@ -1642,7 +1642,7 @@ Init12Video(void)
     SDL_DisplayMode mode;
     int i;
 
-    IsDummyVideo = driver && (SDL20_strcmp(driver, "dummy") == 0);
+    IsDummyVideo = ((driver != NULL) && (SDL20_strcmp(driver, "dummy") == 0)) ? SDL_TRUE : SDL_FALSE;
 
     for (i = 0; i < SDL12_MAXEVENTS-1; i++)
         EventQueuePool[i].next = &EventQueuePool[i+1];
