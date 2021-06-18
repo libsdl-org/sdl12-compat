@@ -1740,7 +1740,7 @@ SDL_Init(Uint32 sdl12flags)
 
 
 static void
-InitFlags12To20(const Uint32 flags12, Uint32 *_flags20, Uint32 *_extraflags)
+InitFlags12to20(const Uint32 flags12, Uint32 *_flags20, Uint32 *_extraflags)
 {
     Uint32 flags20 = 0;
     Uint32 extraflags = 0;
@@ -1782,7 +1782,7 @@ DECLSPEC Uint32 SDLCALL
 SDL_WasInit(Uint32 sdl12flags)
 {
     Uint32 sdl20flags, extraflags;
-    InitFlags12To20(sdl12flags, &sdl20flags, &extraflags);
+    InitFlags12to20(sdl12flags, &sdl20flags, &extraflags);
 
     return InitFlags20to12(SDL20_WasInit(sdl20flags)) | extraflags;
 }
@@ -1819,7 +1819,7 @@ DECLSPEC void SDLCALL
 SDL_QuitSubSystem(Uint32 sdl12flags)
 {
     Uint32 sdl20flags, extraflags;
-    InitFlags12To20(sdl12flags, &sdl20flags, &extraflags);
+    InitFlags12to20(sdl12flags, &sdl20flags, &extraflags);
 
     if (extraflags & SDL12_INIT_CDROM) {
         QuitCDSubsystem();
