@@ -3290,6 +3290,21 @@ SDL_CreateRGBSurface(Uint32 flags12, int width, int height, int depth, Uint32 Rm
         surface20 = SDL20_CreateRGBSurface(0, width, height, depth, Rmask, Gmask, Bmask, Amask);
     }
 
+    /* SDL 1.2 would make a surface from almost any masks, even if it doesn't
+       make sense; specifically, it will make a surface if a color mask is
+       bogus. Sometimes this even worked because it would eventually land in
+       a generic blitter that just copied data blindly. SDL2 wants more strict
+       pixel formats, so try to detect this case and try again with a standard
+       format. */
+    if ((surface20 == NULL) && (depth >= 24) && (SDL20_MasksToPixelFormatEnum(depth, Rmask, Gmask, Bmask, Amask) == SDL_PIXELFORMAT_UNKNOWN)) {
+        /* I have no illusions this is correct, it just works for the known problem cases so far. */
+        Rmask = SDL_SwapLE32(0x000000FF);
+        Gmask = SDL_SwapLE32(0x0000FF00);
+        Bmask = SDL_SwapLE32(0x00FF0000);
+        Amask = SDL_SwapLE32(Amask ? 0xFF000000 : 0x00000000);
+        surface20 = SDL20_CreateRGBSurface(0, width, height, depth, Rmask, Gmask, Bmask, Amask);
+    }
+
     surface12 = Surface20to12(surface20);
     if (!surface12) {
         SDL20_FreeSurface(surface20);
