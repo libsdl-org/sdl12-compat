@@ -1563,7 +1563,7 @@ Init12VidModes(void)
 
         /* Attempt to add all of the fake modes. */
         if (use_fake_modes) {
-            for (j = 0; j < sizeof(fake_modes) / sizeof(fake_modes[0]); ++j) {
+            for (j = 0; j < SDL_arraysize(fake_modes); ++j) {
                 if (VidModeSizeGreater(&prev_mode, &fake_modes[j]) && VidModeSizeGreater(&fake_modes[j], &current_mode)) {
                     if (AddVidModeToList(vmode, &fake_modes[j])) {
                         return SDL20_OutOfMemory();
@@ -1582,7 +1582,7 @@ Init12VidModes(void)
 
     /* we need to try to add fake modes to the end of the list once there are no more real modes */
     if (use_fake_modes) {
-        for (i = 0; i < sizeof(fake_modes) / sizeof(fake_modes[0]); ++i) {
+        for (i = 0; i < SDL_arraysize(fake_modes); ++i) {
             if (VidModeSizeGreater(&prev_mode, &fake_modes[i])) {
                 if (AddVidModeToList(vmode, &fake_modes[i])) {
                     return SDL20_OutOfMemory();
