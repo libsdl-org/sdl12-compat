@@ -820,6 +820,8 @@ typedef struct OpenGLEntryPoints
 
 /* !!! FIXME: grep for VideoWindow20 places that might care if it's NULL */
 /* !!! FIXME: go through all of these. */
+static Uint32 LinkedSDL2VersionInt = 0;
+static SDL_bool IsDummyVideo = SDL_FALSE;
 static VideoModeList *VideoModes = NULL;
 static int VideoModesCount = 0;  /* this counts items in VideoModeList, not total video modes. */
 static SDL12_VideoInfo VideoInfo12;
@@ -1039,7 +1041,8 @@ LoadSDL20(void)
             if (okay) {
                 SDL_version v;
                 SDL20_GetVersion(&v);
-                okay = (SDL_VERSIONNUM(v.major,v.minor,v.patch) >= SDL20_REQUIRED_VER);
+                LinkedSDL2VersionInt = SDL_VERSIONNUM(v.major, v.minor, v.patch);
+                okay = (LinkedSDL2VersionInt >= SDL20_REQUIRED_VER);
                 if (!okay) {
                     sprintf_fn(loaderror, "SDL2 %d.%d.%d library is too old.", v.major, v.minor, v.patch);
                 } else {
@@ -1536,8 +1539,17 @@ Init12VidModes(void)
             continue;
         }
 
+        if ((mode.w == 0) && (mode.h == 0)) {
+            /* SDL2 has a bug in its dummy driver before 2.0.16 that causes it to report a bogus video mode. */
+            if (IsDummyVideo && (LinkedSDL2VersionInt <= SDL_VERSIONNUM(2, 0, 15))) {
+                mode.w = 1024;
+                mode.h = 768;
+                mode.format = SDL_PIXELFORMAT_RGB888;
+            }
+        }
+
         if ((mode.w <= 0) || (mode.h <= 0)) {
-            continue;
+            continue;  /* bogus mode for whatever reason, ignore it. */
         }
 
         if (mode.w > 65535 || mode.h > 65535) {
@@ -1609,8 +1621,11 @@ Init12VidModes(void)
 static int
 Init12Video(void)
 {
+    const char *driver = SDL20_GetCurrentVideoDriver();
     SDL_DisplayMode mode;
     int i;
+
+    IsDummyVideo = driver && (SDL20_strcmp(driver, "dummy") == 0);
 
     for (i = 0; i < SDL12_MAXEVENTS-1; i++)
         EventQueuePool[i].next = &EventQueuePool[i+1];
@@ -3445,8 +3460,12 @@ SDL_ListModes(const SDL12_PixelFormat *format12, Uint32 flags)
         return NULL;
     }
 
+    if (IsDummyVideo) {
+        return (SDL12_Rect **) -1;  /* 1.2's dummy driver always returns -1, and it's useful to special-case that. */
+    }
+
     if (!(flags & SDL12_FULLSCREEN)) {
-        return (SDL12_Rect **) (-1);  /* any resolution is fine. */
+        return (SDL12_Rect **) -1;  /* any resolution is fine. */
     }
 
     if (format12 && (format12 != VideoInfo12.vfmt)) {
