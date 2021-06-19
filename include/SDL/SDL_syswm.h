@@ -32,41 +32,16 @@ real SDL-1.2 available to you. */
 
 #ifndef SDL_PROTOTYPES_ONLY
 
-#   if defined(__WIN32__)
-#       ifndef WIN32_LEAN_AND_MEAN
-#           define WIN32_LEAN_AND_MEAN
+#   if defined(unix) && !defined(__APPLE__) && defined(__has_include)
+#       if __has_include(<X11/Xlib.h>)
+#           define SDL12_COMPAT_SUPPORT_SYSWM_X11 1
 #       endif
-#       include <windows.h>
+#   endif
 
-#       include "begin_code.h"
-
-        typedef struct SDL_SysWMmsg
-        {
-            SDL_version version;
-            HWND hwnd;
-            UINT msg;
-            WPARAM wParam;
-            LPARAM lParam;
-        } SDL_SysWMmsg;
-
-        typedef struct SDL_SysWMinfo {
-            SDL_version version;
-            HWND window;
-            HGLRC hglrc;
-        } SDL_SysWMinfo;
-
-#       include "close_code.h"
-
-#   elif defined(unix)  /* shrug */
-
-#       ifdef __APPLE__
-#           define Cursor X11Cursor
-#       endif
+#   if defined(SDL12_COMPAT_SUPPORT_SYSWM_X11)
+#       undef SDL12_COMPAT_SUPPORT_SYSWM_X11
 #       include <X11/Xlib.h>
 #       include <X11/Xatom.h>
-#       ifdef __APPLE__
-#           undef Cursor
-#       endif
 
 #       include "begin_code.h"
 
@@ -102,6 +77,32 @@ real SDL-1.2 available to you. */
         } SDL_SysWMinfo;
 
 #       include "close_code.h"
+
+#   elif defined(__WIN32__)
+#       ifndef WIN32_LEAN_AND_MEAN
+#           define WIN32_LEAN_AND_MEAN
+#       endif
+#       include <windows.h>
+
+#       include "begin_code.h"
+
+        typedef struct SDL_SysWMmsg
+        {
+            SDL_version version;
+            HWND hwnd;
+            UINT msg;
+            WPARAM wParam;
+            LPARAM lParam;
+        } SDL_SysWMmsg;
+
+        typedef struct SDL_SysWMinfo {
+            SDL_version version;
+            HWND window;
+            HGLRC hglrc;
+        } SDL_SysWMinfo;
+
+#       include "close_code.h"
+
 #   else
 
 #       include "begin_code.h"
