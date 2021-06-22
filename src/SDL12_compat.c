@@ -3097,7 +3097,7 @@ Rect12to20(const SDL12_Rect *rect12, SDL_Rect *rect20)
 static SDL12_Surface *
 Surface20to12(SDL_Surface *surface20)
 {
-    SDL_BlendMode blendmode;
+    SDL_BlendMode blendmode = SDL_BLENDMODE_NONE;
     SDL12_Surface *surface12 = NULL;
     SDL12_Palette *palette12 = NULL;
     SDL12_PixelFormat *format12 = NULL;
@@ -3163,11 +3163,6 @@ Surface20to12(SDL_Surface *surface20)
         format12->alpha = 255;
     }
 
-    blendmode = SDL_BLENDMODE_NONE;
-    if ((SDL20_GetSurfaceBlendMode(surface20, &blendmode) == 0) && (blendmode == SDL_BLENDMODE_BLEND)) {
-        surface12->flags |= SDL12_SRCALPHA;
-    }
-
     SDL20_zerop(surface12);
     flags = surface20->flags;
     flags &= ~SDL_SIMD_ALIGNED;  /* we don't need to map this to 1.2 */
@@ -3177,6 +3172,10 @@ Surface20to12(SDL_Surface *surface20)
     /*MAPSURFACEFLAGS(DONTFREE);*/
     #undef MAPSURFACEFLAGS
     SDL_assert(flags == 0);  /* non-zero if there's a flag we didn't map. */
+
+    if ((SDL20_GetSurfaceBlendMode(surface20, &blendmode) == 0) && (blendmode == SDL_BLENDMODE_BLEND)) {
+        surface12->flags |= SDL12_SRCALPHA;
+    }
 
     surface12->format = format12;
     surface12->w = surface20->w;
