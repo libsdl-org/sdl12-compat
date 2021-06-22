@@ -105,6 +105,16 @@ return 0; }" IS_X86)
 endif()
 
 
+# SDLmain library...
+if(APPLE)
+    add_library(SDLmain STATIC src/SDLmain/macosx/SDLmain.m)
+elseif(WIN32)
+    add_library(SDLmain STATIC src/SDLmain/win32/SDL_win32_main.c src/SDLmain/win32/version.rc)
+else()
+    add_library(SDLmain STATIC src/SDLmain/dummy/SDL_dummy_main.c)
+endif()
+target_include_directories(SDLmain PRIVATE "include/SDL")
+
 if(SDL12TESTS)
     if(NOT (WIN32 OR APPLE OR CYGWIN OR HAIKU OR BEOS))
       find_library(MATH_LIBRARY m)
@@ -125,12 +135,13 @@ if(SDL12TESTS)
     macro(test_program _NAME _SRCS)
         add_executable(${_NAME} ${_SRCS})
         target_include_directories(${_NAME} PRIVATE "include/SDL")
-        target_link_libraries(${_NAME} SDL)
+        target_link_libraries(${_NAME} SDL SDLmain)
         # Turn off MSVC's aggressive C runtime warnings for the old test programs.
         if(MSVC)
           set_target_properties(${_NAME} PROPERTIES COMPILE_DEFINITIONS "${HAVE_OPENGL_DEFINE};_CRT_SECURE_NO_WARNINGS;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE")
         elseif(APPLE)
           set_target_properties(${_NAME} PROPERTIES COMPILE_DEFINITIONS "${HAVE_OPENGL_DEFINE};GL_SILENCE_DEPRECATION=1")
+          target_link_libraries(${_NAME} "-Wl,-framework,Cocoa")
         else()
           set_target_properties(${_NAME} PROPERTIES COMPILE_DEFINITIONS "${HAVE_OPENGL_DEFINE}")
         endif()
@@ -184,7 +195,7 @@ if(SDL12TESTS)
     endforeach(fname)
 endif()
 
-install(TARGETS SDL
+install(TARGETS SDL SDLmain
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
@@ -197,15 +208,13 @@ if(SDL12DEVEL)
 
   if(NOT MSVC)
     if(WIN32)
-      # FIXME: no SDL_main for Windows!
-      set(SDL_CFLAGS "")                          # -Dmain=SDL_main
+      set(SDL_CFLAGS "")
       set(SDL_RLD_FLAGS "")
-      set(SDL_LIBS "-lSDL -mwindows")             # -lmingw32 -lSDLmain -lSDL -mwindows
+      set(SDL_LIBS "-lSDLmain -lSDL -mwindows")             # -lmingw32 -lSDL -mwindows
       set(SDL_STATIC_LIBS "")
     elseif(APPLE)
-      # FIXME: no SDL_main for Mac!
-      set(SDL_CFLAGS "-D_THREAD_SAFE")            # -Dmain=SDL_main
-      set(SDL_LIBS "-lSDL")                       #       -lSDLmain
+      set(SDL_CFLAGS "-D_THREAD_SAFE")
+      set(SDL_LIBS "-lSDLmain -lSDL -Wl,-framework,Cocoa")
       set(SDL_STATIC_LIBS "")
       set(SDL_RLD_FLAGS "")  # !!! FIXME: this forces rpath, which we might want?
     else() # unix

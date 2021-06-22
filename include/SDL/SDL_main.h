@@ -31,6 +31,7 @@ real SDL-1.2 available to you. */
 #include "begin_code.h"
 
 #if defined(__WIN32__) || defined(__MACOSX__)
+#define main SDL_main
 extern int SDL_main(int argc, char *argv[]);
 #endif
 
