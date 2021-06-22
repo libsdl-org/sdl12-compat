@@ -6175,7 +6175,8 @@ SDL_CDNumDrives(void)
             warned_once = SDL_TRUE;
             SDL20_Log("This app is looking for CD-ROM drives, but no path was specified");
             SDL20_Log("Set the SDL12COMPAT_FAKE_CDROM_PATH environment variable to a directory");
-            SDL20_Log("of MP3 files named NUM.mp3, where NUM is a track number from 0 to 99");
+            SDL20_Log("of MP3 files named trackXX.mp3 where XX is a track number in two digits");
+            SDL20_Log("from 01 to 99");
         }
     }
 
@@ -6221,6 +6222,7 @@ SDL_CDOpen(int drive)
         SDL20_OutOfMemory();
         return NULL;
     }
+    retval->numtracks = 1; /* start from track #1. */
 
     alloclen = SDL20_strlen(CDRomPath) + 32;
     fullpath = (char *) SDL20_malloc(alloclen);
@@ -6249,10 +6251,13 @@ SDL_CDOpen(int drive)
         drmp3_uint64 pcmframes;
         drmp3_uint32 samplerate;
         SDL12_CDtrack *track;
+        char c0, c1;
 
         /* we only report audio tracks, starting at 0... */
         FIXME("Let there be fake data tracks (quake1's audio starts at track 2, etc).");
-        SDL20_snprintf(fullpath, alloclen, "%s%s%d.mp3", CDRomPath, DIRSEP, retval->numtracks);
+        c0 = retval->numtracks / 10 + '0';
+        c1 = retval->numtracks % 10 + '0';
+        SDL20_snprintf(fullpath, alloclen, "%s%strack%c%c.mp3", CDRomPath, DIRSEP, c0, c1);
         rw = SDL20_RWFromFile(fullpath, "rb");
         if (!rw) {
             break;  /* ok, we're done looking for more. */
