@@ -6080,7 +6080,6 @@ typedef struct
     SDL_AudioSpec device_format;
 
     SDL_bool app_callback_opened;
-    SDL_bool app_callback_paused;
     SDL_AudioSpec app_callback_format;
     SDL_AudioStream *app_callback_stream;
 
@@ -6101,7 +6100,7 @@ typedef struct
 } AudioCallbackWrapperData;
 
 static AudioCallbackWrapperData *audio_cbdata = NULL;
-
+static SDL_atomic_t audio_callback_paused;
 
 
 static void
@@ -6700,7 +6699,7 @@ AudioCallbackWrapper(void *userdata, Uint8 *stream, int len)
     AudioCallbackWrapperData *data = (AudioCallbackWrapperData *) userdata;
     SDL_bool must_mix = SDL_FALSE;
 
-    if (data->app_callback_opened && !data->app_callback_paused) {
+    if (data->app_callback_opened && !SDL20_AtomicGet(&audio_callback_paused)) {
         while (SDL20_AudioStreamAvailable(data->app_callback_stream) < len) {
             SDL20_memset(data->mix_buffer, data->app_callback_format.silence, data->app_callback_format.size);  /* SDL2 doesn't clear the stream before calling in here, but 1.2 expects it. */
             data->app_callback_format.callback(data->app_callback_format.userdata, data->mix_buffer, data->app_callback_format.size);
@@ -6882,7 +6881,7 @@ SDL_OpenAudio(SDL_AudioSpec *want, SDL_AudioSpec *obtained)
 
     SDL20_memcpy(&audio_cbdata->app_callback_format, want, sizeof (SDL_AudioSpec));
     audio_cbdata->app_callback_opened = SDL_TRUE;
-    audio_cbdata->app_callback_paused = SDL_TRUE;  /* app callback always starts paused after open. */
+    SDL20_AtomicSet(&audio_callback_paused, SDL_TRUE);  /* app callback always starts paused after open. */
 
     FIXME("Cleanup from failures in here");
     SDL_assert(audio_cbdata->app_callback_stream == NULL);
@@ -6900,11 +6899,7 @@ SDL_OpenAudio(SDL_AudioSpec *want, SDL_AudioSpec *obtained)
 DECLSPEC void SDLCALL
 SDL_PauseAudio(int pause_on)
 {
-    SDL20_LockAudio();
-    if (audio_cbdata && audio_cbdata->app_callback_opened) {
-        audio_cbdata->app_callback_paused = pause_on ? SDL_TRUE : SDL_FALSE;
-    }
-    SDL20_UnlockAudio();
+    SDL20_AtomicSet(&audio_callback_paused, pause_on ? SDL_TRUE : SDL_FALSE);
 }
 
 DECLSPEC SDL_AudioStatus SDLCALL
@@ -6913,7 +6908,7 @@ SDL_GetAudioStatus(void)
     SDL_AudioStatus retval = SDL_AUDIO_STOPPED;
     SDL20_LockAudio();
     if (audio_cbdata && audio_cbdata->app_callback_opened) {
-        retval = audio_cbdata->app_callback_paused ? SDL_AUDIO_PAUSED : SDL_AUDIO_PLAYING;
+        retval = SDL20_AtomicGet(&audio_callback_paused) ? SDL_AUDIO_PAUSED : SDL_AUDIO_PLAYING;
     }
     SDL20_UnlockAudio();
     return retval;
