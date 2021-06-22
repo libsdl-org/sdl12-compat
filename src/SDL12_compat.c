@@ -3456,24 +3456,25 @@ SDL_VideoModeOK(int width, int height, int bpp, Uint32 sdl12flags)
     if (!(sdl12flags & SDL12_FULLSCREEN)) {
         SDL_DisplayMode mode;
         SDL20_GetDesktopDisplayMode(VideoDisplayIndex, &mode);
-        return SDL_BITSPERPIXEL(mode.format);
-    }
-
-    for (i = 0; i < VideoModesCount; ++i) {
-        VideoModeList *vmode = &VideoModes[i];
-        for (j = 0; j < vmode->nummodes; ++j) {
-            if (vmode->modeslist12[j].w == width && vmode->modeslist12[j].h == height)
-            {
-                if (!vmode->format) {
-                    return bpp;
-                }
-                if (SDL_BITSPERPIXEL(vmode->format) >= (Uint32) bpp) {
-                    actual_bpp = SDL_BITSPERPIXEL(vmode->format);
+        actual_bpp = SDL_BITSPERPIXEL(mode.format);
+    } else {
+        for (i = 0; i < VideoModesCount; ++i) {
+            VideoModeList *vmode = &VideoModes[i];
+            for (j = 0; j < vmode->nummodes; ++j) {
+                if (vmode->modeslist12[j].w == width && vmode->modeslist12[j].h == height)
+                {
+                    if (!vmode->format) {
+                        return bpp;
+                    }
+                    if (SDL_BITSPERPIXEL(vmode->format) >= (Uint32) bpp) {
+                        actual_bpp = SDL_BITSPERPIXEL(vmode->format);
+                    }
                 }
             }
         }
     }
-    return actual_bpp;
+
+    return (actual_bpp == 24) ? 32 : actual_bpp;
 }
 
 DECLSPEC SDL12_Rect ** SDLCALL
