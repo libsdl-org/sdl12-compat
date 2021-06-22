@@ -72,7 +72,7 @@ stage, though. Send patches if your platform lacks something. */
 #define HAVE_MATH_H 1
 #endif
 
-#if defined(unix) || defined(__unix__) || defined(__APPLE__)
+#if defined(__unix__) || defined(__APPLE__)
 #define HAVE_ICONV_H 1
 #define HAVE_SIGNAL_H 1
 #endif
@@ -156,7 +156,7 @@ stage, though. Send patches if your platform lacks something. */
 #define HAVE_SEM_TIMEDWAIT 1
 #endif
 
-#if defined(unix) || defined(__unix__) || defined(__APPLE__)
+#if defined(__unix__) || defined(__APPLE__)
 #define HAVE_ICONV 1
 #define HAVE_SIGACTION 1
 #define HAVE_SA_SIGACTION 1

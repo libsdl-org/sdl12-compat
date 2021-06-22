@@ -32,7 +32,7 @@ real SDL-1.2 available to you. */
 
 #ifndef SDL_PROTOTYPES_ONLY
 
-#   if defined(unix) && !defined(__APPLE__) && defined(__has_include)
+#   if defined(__unix__) && !defined(__APPLE__) && defined(__has_include)
 #       if __has_include(<X11/Xlib.h>)
 #           define SDL12_COMPAT_SUPPORT_SYSWM_X11 1
 #       endif
