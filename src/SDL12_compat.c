@@ -1415,18 +1415,35 @@ PixelFormat12to20(SDL_PixelFormat *format20, SDL_Palette *palette20, const SDL12
     format20->format = SDL20_MasksToPixelFormatEnum(format12->BitsPerPixel, format12->Rmask, format12->Gmask, format12->Bmask, format12->Amask);
     format20->BitsPerPixel = format12->BitsPerPixel;
     format20->BytesPerPixel = format12->BytesPerPixel;
-    format20->Rmask = format12->Rmask;
-    format20->Gmask = format12->Gmask;
-    format20->Bmask = format12->Bmask;
-    format20->Amask = format12->Amask;
-    format20->Rloss = format12->Rloss;
-    format20->Gloss = format12->Gloss;
-    format20->Bloss = format12->Bloss;
-    format20->Aloss = format12->Aloss;
-    format20->Rshift = format12->Rshift;
-    format20->Gshift = format12->Gshift;
-    format20->Bshift = format12->Bshift;
-    format20->Ashift = format12->Ashift;
+
+    /* Paletted surfaces shouldn't have masks in SDL 2.0 */
+    if (format12->palette) {
+        format20->Rmask = 0;
+        format20->Gmask = 0;
+        format20->Bmask = 0;
+        format20->Amask = 0;
+        format20->Rloss = 8;
+        format20->Gloss = 8;
+        format20->Bloss = 8;
+        format20->Aloss = 8;
+        format20->Rshift = 0;
+        format20->Gshift = 0;
+        format20->Bshift = 0;
+        format20->Ashift = 0;
+    } else {
+        format20->Rmask = format12->Rmask;
+        format20->Gmask = format12->Gmask;
+        format20->Bmask = format12->Bmask;
+        format20->Amask = format12->Amask;
+        format20->Rloss = format12->Rloss;
+        format20->Gloss = format12->Gloss;
+        format20->Bloss = format12->Bloss;
+        format20->Aloss = format12->Aloss;
+        format20->Rshift = format12->Rshift;
+        format20->Gshift = format12->Gshift;
+        format20->Bshift = format12->Bshift;
+        format20->Ashift = format12->Ashift;
+    }
     format20->refcount = 1;
     format20->next = NULL;
     return format20;
@@ -3200,7 +3217,6 @@ static void
 SetPalette12ForMasks(SDL12_Surface *surface12, const Uint32 Rmask, const Uint32 Gmask, const Uint32 Bmask)
 {
     SDL12_PixelFormat *format12;
-    SDL_PixelFormat  * format20;
     SDL_Color *color;
     int i, ncolors;
 
@@ -3258,16 +3274,6 @@ SetPalette12ForMasks(SDL12_Surface *surface12, const Uint32 Rmask, const Uint32 
             color->a = 255;
         }
 
-        format20 = surface12->surface20->format;
-        #define UPDATEFMT20(t) \
-            format20->t##mask = format12->t##mask; \
-            format20->t##loss = format12->t##loss; \
-            format20->t##shift = format12->t##shift;
-        UPDATEFMT20(R);
-        UPDATEFMT20(G);
-        UPDATEFMT20(B);
-        UPDATEFMT20(A);
-        #undef UPDATEFMT20
     }
 }
 
