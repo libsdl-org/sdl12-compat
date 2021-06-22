@@ -7,52 +7,32 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#endif
 #include <windows.h>
 
-#ifdef _WIN32_WCE
-# define DIR_SEPERATOR TEXT("\\")
-# undef _getcwd
-# define _getcwd(str,len)	wcscpy(str,TEXT(""))
-# define setbuf(f,b)
-# define setvbuf(w,x,y,z)
-# define fopen		_wfopen
-# define freopen	_wfreopen
-# define remove(x)	DeleteFile(x)
-#else
-# define DIR_SEPERATOR TEXT("/")
-# include <direct.h>
-#endif
+#define DIR_SEPERATOR "/"
 
 /* Include the SDL main definition header */
 #include "SDL.h"
 #include "SDL_main.h"
 
 #ifdef main
-# ifndef _WIN32_WCE_EMULATION
 #  undef main
-# endif /* _WIN32_WCE_EMULATION */
 #endif /* main */
 
 /* The standard output files */
-#define STDOUT_FILE	TEXT("stdout.txt")
-#define STDERR_FILE	TEXT("stderr.txt")
+#define STDOUT_FILE	"stdout.txt"
+#define STDERR_FILE	"stderr.txt"
 
 /* Set a variable to tell if the stdio redirect has been enabled. */
 static int stdioRedirectEnabled = 0;
 
-#ifdef _WIN32_WCE
-  static wchar_t stdoutPath[MAX_PATH];
-  static wchar_t stderrPath[MAX_PATH];
-#else
-  static char stdoutPath[MAX_PATH];
-  static char stderrPath[MAX_PATH];
-#endif
+static char stdoutPath[MAX_PATH];
+static char stderrPath[MAX_PATH];
 
-#if defined(_WIN32_WCE) && _WIN32_WCE < 300
-/* seems to be undefined in Win CE although in online help */
 #define isspace(a) (((CHAR)a == ' ') || ((CHAR)a == '\t'))
-#endif /* _WIN32_WCE < 300 */
 
 static void UnEscapeQuotes( char *arg )
 {
@@ -174,7 +154,7 @@ static void cleanup_output(void) {
 
 	/* See if the files have any output in them */
 	if ( stdoutPath[0] ) {
-		file = fopen(stdoutPath, TEXT("rb"));
+		file = fopen(stdoutPath, "rb");
 		if ( file ) {
 			empty = (fgetc(file) == EOF) ? 1 : 0;
 			fclose(file);
@@ -184,7 +164,7 @@ static void cleanup_output(void) {
 		}
 	}
 	if ( stderrPath[0] ) {
-		file = fopen(stderrPath, TEXT("rb"));
+		file = fopen(stderrPath, "rb");
 		if ( file ) {
 			empty = (fgetc(file) == EOF) ? 1 : 0;
 			fclose(file);
@@ -199,11 +179,7 @@ static void cleanup_output(void) {
 static void redirect_output(void)
 {
 	DWORD pathlen;
-#ifdef _WIN32_WCE
-	wchar_t path[MAX_PATH];
-#else
 	char path[MAX_PATH];
-#endif
 	FILE *newfp;
 
 	pathlen = GetModuleFileName(NULL, path, SDL_arraysize(path));
@@ -212,58 +188,44 @@ static void redirect_output(void)
 	}
 	path[pathlen] = '\0';
 
-#ifdef _WIN32_WCE
-	wcsncpy( stdoutPath, path, SDL_arraysize(stdoutPath) );
-	wcsncat( stdoutPath, DIR_SEPERATOR STDOUT_FILE, SDL_arraysize(stdoutPath) );
-#else
 	SDL_strlcpy( stdoutPath, path, SDL_arraysize(stdoutPath) );
 	SDL_strlcat( stdoutPath, DIR_SEPERATOR STDOUT_FILE, SDL_arraysize(stdoutPath) );
-#endif
-    
-	/* Redirect standard input and standard output */
-	newfp = freopen(stdoutPath, TEXT("w"), stdout);
 
-#ifndef _WIN32_WCE
+	/* Redirect standard input and standard output */
+	newfp = freopen(stdoutPath, "w", stdout);
+
 	if ( newfp == NULL ) {	/* This happens on NT */
 #if !defined(stdout)
-		stdout = fopen(stdoutPath, TEXT("w"));
+		stdout = fopen(stdoutPath, "w");
 #else
-		newfp = fopen(stdoutPath, TEXT("w"));
+		newfp = fopen(stdoutPath, "w");
 		if ( newfp ) {
 			*stdout = *newfp;
 		}
 #endif
 	}
-#endif /* _WIN32_WCE */
 
-#ifdef _WIN32_WCE
-	wcsncpy( stderrPath, path, SDL_arraysize(stdoutPath) );
-	wcsncat( stderrPath, DIR_SEPERATOR STDOUT_FILE, SDL_arraysize(stdoutPath) );
-#else
 	SDL_strlcpy( stderrPath, path, SDL_arraysize(stderrPath) );
 	SDL_strlcat( stderrPath, DIR_SEPERATOR STDERR_FILE, SDL_arraysize(stderrPath) );
-#endif
 
-	newfp = freopen(stderrPath, TEXT("w"), stderr);
-#ifndef _WIN32_WCE
+	newfp = freopen(stderrPath, "w", stderr);
 	if ( newfp == NULL ) {	/* This happens on NT */
 #if !defined(stderr)
-		stderr = fopen(stderrPath, TEXT("w"));
+		stderr = fopen(stderrPath, "w");
 #else
-		newfp = fopen(stderrPath, TEXT("w"));
+		newfp = fopen(stderrPath, "w");
 		if ( newfp ) {
 			*stderr = *newfp;
 		}
 #endif
 	}
-#endif /* _WIN32_WCE */
 
 	setvbuf(stdout, NULL, _IOLBF, BUFSIZ);	/* Line buffered */
 	setbuf(stderr, NULL);			/* No buffering */
 	stdioRedirectEnabled = 1;
 }
 
-#if defined(_MSC_VER) && !defined(_WIN32_WCE)
+#if defined(_MSC_VER)
 /* The VC++ compiler needs main defined */
 #define console_main main
 #endif
@@ -322,24 +284,15 @@ int console_main(int argc, char *argv[])
 }
 
 /* This is where execution begins [windowed apps] */
-#ifdef _WIN32_WCE
-int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPWSTR szCmdLine, int sw)
-#else
 int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR szCmdLine, int sw)
-#endif
 {
 	HMODULE handle;
 	char **argv;
 	int argc;
 	char *cmdline;
 	char *env_str;
-#ifdef _WIN32_WCE
-	wchar_t *bufp;
-	int nLen;
-#else
 	char *bufp;
 	size_t nLen;
-#endif
 
 	/* Start up DDHELP.EXE before opening any files, so DDHELP doesn't
 	   keep them open.  This is a hack.. hopefully it will be fixed 
@@ -362,20 +315,6 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR szCmdLine, int sw)
 	}
 #endif
 
-#ifdef _WIN32_WCE
-	nLen = wcslen(szCmdLine)+128+1;
-	bufp = SDL_stack_alloc(wchar_t, nLen*2);
-	wcscpy (bufp, TEXT("\""));
-	GetModuleFileName(NULL, bufp+1, 128-3);
-	wcscpy (bufp+wcslen(bufp), TEXT("\" "));
-	wcsncpy(bufp+wcslen(bufp), szCmdLine,nLen-wcslen(bufp));
-	nLen = wcslen(bufp)+1;
-	cmdline = SDL_stack_alloc(char, nLen);
-	if ( cmdline == NULL ) {
-		return OutOfMemory();
-	}
-	WideCharToMultiByte(CP_ACP, 0, bufp, -1, cmdline, nLen, NULL, NULL);
-#else
 	/* Grab the command line */
 	bufp = GetCommandLine();
 	nLen = SDL_strlen(bufp)+1;
@@ -384,7 +323,6 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR szCmdLine, int sw)
 		return OutOfMemory();
 	}
 	SDL_strlcpy(cmdline, bufp, nLen);
-#endif
 
 	/* Parse it into argv and argc */
 	argc = ParseCommandLine(cmdline, NULL);
