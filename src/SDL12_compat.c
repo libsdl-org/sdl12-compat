@@ -6222,7 +6222,6 @@ SDL_CDOpen(int drive)
         SDL20_OutOfMemory();
         return NULL;
     }
-    retval->numtracks = 1; /* start from track #1. */
 
     alloclen = SDL20_strlen(CDRomPath) + 32;
     fullpath = (char *) SDL20_malloc(alloclen);
@@ -6251,39 +6250,46 @@ SDL_CDOpen(int drive)
         drmp3_uint64 pcmframes;
         drmp3_uint32 samplerate;
         SDL12_CDtrack *track;
-        char c0, c1;
+        int c;   char c0, c1;
 
-        /* we only report audio tracks, starting at 0... */
-        FIXME("Let there be fake data tracks (quake1's audio starts at track 2, etc).");
-        c0 = retval->numtracks / 10 + '0';
-        c1 = retval->numtracks % 10 + '0';
+        /* we only report audio tracks, starting at 1... */
+        FIXME("Let there be fake data tracks");
+        c = retval->numtracks + 1;
+        c0 = c / 10 + '0';
+        c1 = c % 10 + '0';
         SDL20_snprintf(fullpath, alloclen, "%s%strack%c%c.mp3", CDRomPath, DIRSEP, c0, c1);
         rw = SDL20_RWFromFile(fullpath, "rb");
-        if (!rw) {
+        if (!rw && c > 1) {
             break;  /* ok, we're done looking for more. */
         }
-
-        if (!drmp3_init(mp3, mp3_sdlrwops_read, mp3_sdlrwops_seek, rw, NULL)) {
-            SDL20_RWclose(rw);
-            break;  /* ok, we're done looking for more. */
-        }
-
-        pcmframes = drmp3_get_pcm_frame_count(mp3);
-        samplerate = mp3->sampleRate;
-        FreeMp3(mp3);
 
         track = &retval->track[retval->numtracks];
-        track->id = retval->numtracks;
-        track->type = 0;  /* audio track. Data tracks are 4. */
-        track->length = (Uint32) ((((double) pcmframes) / ((double) samplerate)) * CDAUDIO_FPS);
-        track->offset = total_track_offset;
-        total_track_offset += track->length;
+        if (!rw) {
+            track->type = 4; /* data track. E.g.: quake's audio starts at track 2. */
+        } else {
+            if (!drmp3_init(mp3, mp3_sdlrwops_read, mp3_sdlrwops_seek, rw, NULL)) {
+                SDL20_RWclose(rw);
+                break;  /* ok, we're done looking for more. */
+            }
+            pcmframes = drmp3_get_pcm_frame_count(mp3);
+            samplerate = mp3->sampleRate;
+            FreeMp3(mp3);
+
+            track->id = retval->numtracks;
+            track->type = 0;  /* audio track. Data tracks are 4. */
+            track->length = (Uint32) ((((double) pcmframes) / ((double) samplerate)) * CDAUDIO_FPS);
+            track->offset = total_track_offset;
+            total_track_offset += track->length;
+        }
 
         retval->numtracks++;
 
         if (retval->numtracks == 99) {
             break;  /* max tracks you can have on an audio CD. */
         }
+    }
+    if (retval->numtracks == 1 && retval->track[0].type != 0) {
+        retval->numtracks = 0; /* data-only */
     }
     SDL20_free(mp3);
     SDL20_free(fullpath);
@@ -6363,12 +6369,16 @@ LoadCDTrack(const int tracknum, drmp3 *mp3)
     SDL_RWops *rw = NULL;
     const size_t alloclen = SDL20_strlen(CDRomPath) + 32;
     char *fullpath = (char *) SDL_malloc(alloclen);
+    const int c = tracknum + 1;
+    char c0, c1;
 
     if (!fullpath) {
         return SDL_FALSE;
     }
 
-    SDL20_snprintf(fullpath, alloclen, "%s%s%d.mp3", CDRomPath, DIRSEP, tracknum);
+    c0 = c / 10 + '0';
+    c1 = c % 10 + '0';
+    SDL20_snprintf(fullpath, alloclen, "%s%strack%c%c.mp3", CDRomPath, DIRSEP, c0, c1);
     rw = SDL20_RWFromFile(fullpath, "rb");
     SDL20_free(fullpath);
 
