@@ -2429,6 +2429,96 @@ SDL_GetKeyName(SDL12Key key)
     return (char *) "unknown key";
 }
 
+#if 0 /* https://github.com/libsdl-org/sdl12-compat/pull/97 */
+# define KeysymFromSDL2(_ev20) Keysym20to12((_ev20)->key.keysym.sym)
+static SDL12Key
+Keysym20to12(const SDL_Keycode keysym20)
+{
+    if (((int) keysym20) < 127) {  /* (most of) low-ASCII maps directly */
+        if (keysym20 == SDLK_PAUSE) {
+            return SDLK12_PAUSE;
+        } else if (keysym20 == SDLK_CLEAR) {
+            return SDLK12_CLEAR;
+        }
+        return (SDL12Key) keysym20;
+    }
+
+    switch (keysym20) {
+    #define CASEKEYSYM20TO12(k20, k12) case SDLK_##k20: return SDLK12_##k12
+    CASEKEYSYM20TO12(KP_0, KP0);
+    CASEKEYSYM20TO12(KP_1, KP1);
+    CASEKEYSYM20TO12(KP_2, KP2);
+    CASEKEYSYM20TO12(KP_3, KP3);
+    CASEKEYSYM20TO12(KP_4, KP4);
+    CASEKEYSYM20TO12(KP_5, KP5);
+    CASEKEYSYM20TO12(KP_6, KP6);
+    CASEKEYSYM20TO12(KP_7, KP7);
+    CASEKEYSYM20TO12(KP_8, KP8);
+    CASEKEYSYM20TO12(KP_9, KP9);
+    CASEKEYSYM20TO12(NUMLOCKCLEAR, NUMLOCK);
+    CASEKEYSYM20TO12(SCROLLLOCK, SCROLLOCK);
+    CASEKEYSYM20TO12(RGUI, RMETA);
+    CASEKEYSYM20TO12(LGUI, LMETA);
+    CASEKEYSYM20TO12(PRINTSCREEN, PRINT);
+    #undef CASEKEYSYM20TO12
+
+    #define CASEKEYSYM20TO12(k) case SDLK_##k: return SDLK12_##k
+    CASEKEYSYM20TO12(CLEAR);
+    CASEKEYSYM20TO12(PAUSE);
+    CASEKEYSYM20TO12(KP_PERIOD);
+    CASEKEYSYM20TO12(KP_DIVIDE);
+    CASEKEYSYM20TO12(KP_MULTIPLY);
+    CASEKEYSYM20TO12(KP_MINUS);
+    CASEKEYSYM20TO12(KP_PLUS);
+    CASEKEYSYM20TO12(KP_ENTER);
+    CASEKEYSYM20TO12(KP_EQUALS);
+    CASEKEYSYM20TO12(UP);
+    CASEKEYSYM20TO12(DOWN);
+    CASEKEYSYM20TO12(RIGHT);
+    CASEKEYSYM20TO12(LEFT);
+    CASEKEYSYM20TO12(INSERT);
+    CASEKEYSYM20TO12(HOME);
+    CASEKEYSYM20TO12(END);
+    CASEKEYSYM20TO12(PAGEUP);
+    CASEKEYSYM20TO12(PAGEDOWN);
+    CASEKEYSYM20TO12(F1);
+    CASEKEYSYM20TO12(F2);
+    CASEKEYSYM20TO12(F3);
+    CASEKEYSYM20TO12(F4);
+    CASEKEYSYM20TO12(F5);
+    CASEKEYSYM20TO12(F6);
+    CASEKEYSYM20TO12(F7);
+    CASEKEYSYM20TO12(F8);
+    CASEKEYSYM20TO12(F9);
+    CASEKEYSYM20TO12(F10);
+    CASEKEYSYM20TO12(F11);
+    CASEKEYSYM20TO12(F12);
+    CASEKEYSYM20TO12(F13);
+    CASEKEYSYM20TO12(F14);
+    CASEKEYSYM20TO12(F15);
+    CASEKEYSYM20TO12(CAPSLOCK);
+    CASEKEYSYM20TO12(RSHIFT);
+    CASEKEYSYM20TO12(LSHIFT);
+    CASEKEYSYM20TO12(RCTRL);
+    CASEKEYSYM20TO12(LCTRL);
+    CASEKEYSYM20TO12(RALT);
+    CASEKEYSYM20TO12(LALT);
+    CASEKEYSYM20TO12(MODE);
+    CASEKEYSYM20TO12(HELP);
+    CASEKEYSYM20TO12(SYSREQ);;
+    CASEKEYSYM20TO12(MENU);
+    CASEKEYSYM20TO12(POWER);
+    CASEKEYSYM20TO12(UNDO);
+    #undef CASEKEYSYM20TO12
+    default: break;
+    }
+
+    FIXME("nothing maps to SDLK12_COMPOSE, SDLK12_BREAK, or SDLK12_EURO ...?");
+    FIXME("map some of the SDLK12_WORLD keys");
+    return SDLK12_UNKNOWN;
+}
+#else
+# define KeysymFromSDL2(_ev20) Scancode20toKeysym12((_ev20)->key.keysym.scancode)
 static SDL12Key
 Scancode20toKeysym12(const SDL_Scancode scancode20)
 {
@@ -2573,6 +2663,7 @@ Scancode20toKeysym12(const SDL_Scancode scancode20)
     FIXME("map some of the SDLK12_WORLD keys");
     return SDLK12_UNKNOWN;
 }
+#endif
 
 static Uint8
 Scancode20to12(SDL_Scancode sc)
@@ -2837,7 +2928,7 @@ EventFilter20to12(void *data, SDL_Event *event20)
             if (event20->key.repeat) {
                 return 1;  /* ignore 2.0-style key repeat events */
             }
-            event12.key.keysym.sym = Scancode20toKeysym12(event20->key.keysym.scancode);
+            event12.key.keysym.sym = KeysymFromSDL2(event20);
 
             KeyState[event12.key.keysym.sym] = event20->key.state;
 
@@ -2859,7 +2950,7 @@ EventFilter20to12(void *data, SDL_Event *event20)
                 return 1;  /* ignore 2.0-style key repeat events */
             }
 
-            PendingKeydownEvent.key.keysym.sym = Scancode20toKeysym12(event20->key.keysym.scancode);
+            PendingKeydownEvent.key.keysym.sym = KeysymFromSDL2(event20);
 
             KeyState[PendingKeydownEvent.key.keysym.sym] = event20->key.state;
 
