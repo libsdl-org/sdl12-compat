@@ -3471,7 +3471,9 @@ SDL_VideoModeOK(int width, int height, int bpp, Uint32 sdl12flags)
                     if (!vmode->format) {
                         return bpp;
                     }
-                    if (SDL_BITSPERPIXEL(vmode->format) >= (Uint32) bpp) {
+                    if (SDL_BITSPERPIXEL(vmode->format) == 24 && bpp == 32) {
+                        actual_bpp = 32;
+                    } else if (SDL_BITSPERPIXEL(vmode->format) >= (Uint32) bpp) {
                         actual_bpp = SDL_BITSPERPIXEL(vmode->format);
                     }
                 }
@@ -3485,6 +3487,7 @@ SDL_VideoModeOK(int width, int height, int bpp, Uint32 sdl12flags)
 DECLSPEC SDL12_Rect ** SDLCALL
 SDL_ListModes(const SDL12_PixelFormat *format12, Uint32 flags)
 {
+    VideoModeList *best_modes = NULL;
     Uint32 bpp;
     int i;
 
@@ -3516,11 +3519,20 @@ SDL_ListModes(const SDL12_PixelFormat *format12, Uint32 flags)
         VideoModeList *modes = &VideoModes[i];
         if (SDL_BITSPERPIXEL(modes->format) == bpp) {
             return modes->modes12;
+        } else if (SDL_BITSPERPIXEL(modes->format) == 24 && bpp == 32) {
+            best_modes = modes;
+        } else if (SDL_BITSPERPIXEL(modes->format) > bpp) {
+            if (!best_modes || SDL_BITSPERPIXEL(modes->format) > SDL_BITSPERPIXEL(best_modes->format)) {
+                best_modes = modes;
+            }
         }
     }
 
-    SDL20_SetError("No modes support requested pixel format");
-    return NULL;
+    if (!best_modes) {
+        SDL20_SetError("No modes support requested pixel format");
+        return NULL;
+    }
+    return best_modes->modes12;
 }
 
 DECLSPEC void SDLCALL
