@@ -2999,10 +2999,10 @@ EventFilter20to12(void *data, SDL_Event *event20)
 
             #if defined(SDL_VIDEO_DRIVER_WINDOWS)
                 SDL_assert(event20->syswm.msg->subsystem == SDL_SYSWM_WINDOWS);
-                msg.hwnd = event20->syswm.msg->win.hwnd;
-                msg.msg = event20->syswm.msg->win.msg;
-                msg.wParam = event20->syswm.msg->win.wParam;
-                msg.lParam = event20->syswm.msg->win.lParam;
+                msg.hwnd = event20->syswm.msg->msg.win.hwnd;
+                msg.msg = event20->syswm.msg->msg.win.msg;
+                msg.wParam = event20->syswm.msg->msg.win.wParam;
+                msg.lParam = event20->syswm.msg->msg.win.lParam;
             #elif defined(SDL_VIDEO_DRIVER_X11)
                 SDL_assert(event20->syswm.msg->subsystem == SDL_SYSWM_X11);
                 msg.subsystem = SDL12_SYSWM_X11;
