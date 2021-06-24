@@ -36,7 +36,13 @@
 
 #include <stdarg.h>
 #include <limits.h>
-#ifndef _WIN32
+
+#ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN 1
+#endif
+#include <windows.h>
+#else
 #include <stdio.h> /* fprintf(), etc. */
 #include <stdlib.h>    /* for abort() */
 #include <string.h>
@@ -566,6 +572,54 @@ typedef struct SDL12_keysym
 #define SDL12_RELEASED 0
 #define SDL12_PRESSED  1
 
+#if defined(SDL_VIDEO_DRIVER_X11)  /* SDL_VIDEO_DRIVER_X11 refers to the SDL2 headers. */
+typedef enum SDL_SYSWM_TYPE  /* this is only used for 1.2 X11 syswm */
+{
+    SDL12_SYSWM_X11
+} SDL12_SYSWM_TYPE;
+#endif
+
+typedef struct SDL12_SysWMmsg
+{
+    SDL_version version;
+#if defined(_WIN32)
+    HWND hwnd;
+    UINT msg;
+    WPARAM wParam;
+    LPARAM lParam;
+#elif defined(SDL_VIDEO_DRIVER_X11)
+    SDL12_SYSWM_TYPE subsystem;
+    union { XEvent xevent; } event;
+#else
+    int data;  /* unused at the moment. */
+#endif
+} SDL12_SysWMmsg;
+
+typedef struct SDL12_SysWMinfo
+{
+    SDL_version version;
+#if defined(_WIN32)
+    HWND window;
+    HGLRC hglrc;
+#elif defined(SDL_VIDEO_DRIVER_X11)
+    SDL12_SYSWM_TYPE subsystem;
+    union {
+        struct {
+            Display *display;
+            Window window;
+            void (*lock_func)(void);
+            void (*unlock_func)(void);
+            Window fswindow;
+            Window wmwindow;
+            Display *gfxdisplay;
+        } x11;
+    } info;
+#else
+    int data;  /* unused at the moment. */
+#endif
+} SDL12_SysWMinfo;
+
+
 typedef enum
 {
     SDL12_NOEVENT = 0,
@@ -690,7 +744,7 @@ typedef struct
 typedef struct
 {
     Uint8 type;
-    void *msg;
+    SDL12_SysWMmsg *msg;
 } SDL12_SysWMEvent;
 
 typedef union
@@ -863,6 +917,7 @@ static char *WindowIconTitle = NULL;
 static SDL_Surface *VideoIcon20 = NULL;
 static int EnabledUnicode = 0;
 static int VideoDisplayIndex = 0;
+static SDL_bool SupportSysWM = SDL_FALSE;
 static SDL_bool CDRomInit = SDL_FALSE;
 static char *CDRomPath = NULL;
 static SDL12_CD *CDRomDevice = NULL;
@@ -889,11 +944,11 @@ static GLuint OpenGLLogicalScalingMultisampleDepth = 0;
 static GLuint OpenGLCurrentReadFBO = 0;
 static GLuint OpenGLCurrentDrawFBO = 0;
 
-
 /* !!! FIXME: need a mutex for the event queue. */
 #define SDL12_MAXEVENTS 128
 typedef struct EventQueueType
 {
+    SDL12_SysWMmsg syswm_msg;  /* save space for a copy of this in case we use it. */
     SDL12_Event event12;
     struct EventQueueType *next;
 } EventQueueType;
@@ -909,10 +964,6 @@ static SDL12_Event PendingKeydownEvent;
 /* Obviously we can't use SDL_LoadObject() to load SDL2.  :)  */
 static char loaderror[256];
 #if defined(_WIN32)
-    #ifndef WIN32_LEAN_AND_MEAN
-    #define WIN32_LEAN_AND_MEAN 1
-    #endif
-    #include <windows.h>
     #define DIRSEP "\\"
     #define SDL20_LIBNAME "SDL2.dll"
     /* require SDL2 >= 2.0.12 for SDL_CreateThread binary compatibility */
@@ -1020,7 +1071,6 @@ static char loaderror[256];
 #ifndef DIRSEP
 #define DIRSEP "/"
 #endif
-
 
 static void *
 LoadSDL20Symbol(const char *fn, int *okay)
@@ -1192,6 +1242,7 @@ SDL_UnregisterApp(void)
 {
 }
 #endif
+
 
 DECLSPEC const SDL_version * SDLCALL
 SDL_Linked_Version(void)
@@ -1671,7 +1722,17 @@ Init12Video(void)
     SDL20_memset(&PendingKeydownEvent, 0, sizeof(SDL12_Event));
 
     SDL20_memset(EventStates, SDL_ENABLE, sizeof (EventStates)); /* on by default */
+
     EventStates[SDL12_SYSWMEVENT] = SDL_IGNORE;  /* off by default. */
+    SDL20_EventState(SDL_SYSWMEVENT, SDL_IGNORE);
+
+#if defined(SDL_VIDEO_DRIVER_WINDOWS)
+    SupportSysWM = (SDL20_strcmp(driver, "windows") == 0) ? SDL_TRUE : SDL_FALSE;
+#elif defined(SDL_VIDEO_DRIVER_X11)
+    SupportSysWM = (SDL20_strcmp(driver, "x11") == 0) ? SDL_TRUE : SDL_FALSE;
+#else
+    SupportSysWM = SDL_FALSE;
+#endif
 
     SDL20_AddEventWatch(EventFilter20to12, NULL);
 
@@ -1975,6 +2036,11 @@ SDL_PushEvent(SDL12_Event *event12)
 
     SDL20_memcpy(&item->event12, event12, sizeof (SDL12_Event));
 
+    if (event12->type == SDL12_SYSWMEVENT) {  /* make a copy of the data here */
+        SDL20_memcpy(&item->syswm_msg, event12->syswm.msg, sizeof (SDL12_SysWMmsg));
+        item->event12.syswm.msg = &item->syswm_msg;
+    }
+
     return 0;
 }
 
@@ -2074,6 +2140,9 @@ SDL_EventState(Uint8 type, int state)
 
     if (state != SDL_QUERY) {
         EventStates[type] = state;
+        if ((type == SDL12_SYSWMEVENT) && SupportSysWM) {  /* we only enable syswm in SDL2 if it makes sense. */
+            SDL20_EventState(SDL_SYSWMEVENT, state);
+        }
     }
     if (state == SDL_IGNORE) {  /* drop existing events of this type. */
         while (SDL_PeepEvents(&e, 1, SDL_GETEVENT, (1<<type))) {
@@ -2840,6 +2909,7 @@ static int SDLCALL
 EventFilter20to12(void *data, SDL_Event *event20)
 {
     SDL12_Event event12;
+    SDL12_SysWMmsg msg;
 
     SDL_assert(data == NULL);  /* currently unused. */
 
@@ -2921,8 +2991,29 @@ EventFilter20to12(void *data, SDL_Event *event20)
             }
             break;
 
-        /* !!! FIXME: this is sort of a mess to convert. */
-        case SDL_SYSWMEVENT: FIXME("write me"); return 1;
+        case SDL_SYSWMEVENT:
+            if (!SupportSysWM) {
+                return 1;
+            }
+
+            #if defined(SDL_VIDEO_DRIVER_WINDOWS)
+                SDL_assert(event20->syswm.msg->subsystem == SDL_SYSWM_WINDOWS);
+                msg.hwnd = event20->syswm.msg->hwnd;
+                msg.msg = event20->syswm.msg->msg;
+                msg.wParam = event20->syswm.msg->wParam;
+                msg.lParam = event20->syswm.msg->lParam;
+            #elif defined(SDL_VIDEO_DRIVER_X11)
+                SDL_assert(event20->syswm.msg->subsystem == SDL_SYSWM_X11);
+                msg.subsystem = SDL12_SYSWM_X11;
+                SDL20_memcpy(&msg.event.xevent, &event20->syswm.msg->msg.x11.event, sizeof (XEvent));
+            #else
+                SDL_assert(!"should have been caught by !SupportsSysWM test");
+            #endif
+
+            SDL20_memcpy(&msg.version, SDL_Linked_Version(), sizeof (msg.version));
+            event12.type = SDL12_SYSWMEVENT;
+            event12.syswm.msg = &msg;  /* this is stack-allocated, but we copy and update the pointer later. */
+            break;
 
         case SDL_KEYUP:
             if (event20->key.repeat) {
@@ -5243,14 +5334,57 @@ SDL_SetColors(SDL12_Surface *surface12, const SDL_Color * colors, int firstcolor
     return SDL_SetPalette(surface12, SDL12_LOGPAL | SDL12_PHYSPAL, colors, firstcolor, ncolors);
 }
 
+
+#if defined(SDL_VIDEO_DRIVER_X11)
+/* In 1.2, these would lock the event thread (if you _used_ the event thread), and call XSync(SDL_Display, False) before unlocking */
+static void x11_lock_display(void) {}
+static void x11_unlock_display(void) {}
+#endif
+
 DECLSPEC int SDLCALL
-SDL_GetWMInfo(SDL_SysWMinfo * info)
+SDL_GetWMInfo(SDL12_SysWMinfo *info12)
 {
-    /*return SDL20_GetWindowWMInfo(VideoWindow20, info);*/
-    FIXME("write me");
-    (void)info;
-    SDL20_Unsupported();
-    return 0; /* some programs only test against 0, not -1 */
+    SDL_SysWMinfo info20;
+
+    if (info12->version.major > 1) {
+        SDL20_SetError("Requested version is unsupported");
+        return 0;  /* some programs only test against 0, not -1 */
+    } else if (!SupportSysWM) {
+        SDL20_SetError("No SysWM support available");
+        return 0;  /* some programs only test against 0, not -1 */
+    }
+
+    SDL_zero(info20);
+    SDL_VERSION(&info20.version);
+    if (!SDL20_GetWindowWMInfo(VideoWindow20, &info20)) {
+        return 0;  /* some programs only test against 0, not -1 */
+    }
+
+#if defined(SDL_VIDEO_DRIVER_WINDOWS)
+    SDL_assert(info20.subsystem == SDL_SYSWM_WINDOWS);
+    info12->window = info20.win.window;
+    if (SDL_VERSIONNUM(info12->version.major, info12->version.minor, info12->version.patch) >= SDL_VERSIONNUM(1, 2, 5)) {
+        info12->hglrc = (HGLRC) VideoGLContext20;
+    }
+#elif defined(SDL_VIDEO_DRIVER_X11)
+    SDL_assert(info20.subsystem == SDL_SYSWM_X11);
+    info12->subsystem = SDL12_SYSWM_X11;
+    info12->info.x11.display = info20.info.x11.display;
+    info12->info.x11.window = info20.info.x11.window;
+    if (SDL_VERSIONNUM(info12->version.major, info12->version.minor, info12->version.patch) >= SDL_VERSIONNUM(1, 0, 2)) {
+        info12->info.x11.fswindow = 0;  /* these don't exist in SDL2. */
+        info12->info.x11.wmwindow = 0;
+    }
+    if (SDL_VERSIONNUM(info12->version.major, info12->version.minor, info12->version.patch) >= SDL_VERSIONNUM(1, 2, 12)) {
+        info12->info.x11.gfxdisplay = info20.info.x11.display;  /* shrug */
+    }
+    info12->info.x11.lock_func = x11_lock_display;  /* just no-ops for now */
+    info12->info.x11.unlock_func = x11_unlock_display;
+#else
+    info12->data = 0;  /* shrug */
+#endif
+
+    return 1;
 }
 
 DECLSPEC SDL12_Overlay * SDLCALL

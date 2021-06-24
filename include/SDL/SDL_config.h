@@ -163,6 +163,13 @@ stage, though. Send patches if your platform lacks something. */
 #define HAVE_SETJMP 1
 #endif
 
-/* Don't define any of the SDL backend, under the assumption checking for these against the headers won't work anyhow. */
+/* Don't define most of the SDL backends, under the assumption checking for these against the headers won't work anyhow.
+   The exception is the X11 backend; you need its define to know if you can use its syswm interface. */
+
+#   if defined(__unix__) && !defined(__APPLE__) && defined(__has_include)
+#       if __has_include(<X11/Xlib.h>)
+#           define SDL_VIDEO_DRIVER_X11 1
+#       endif
+#   endif
 
 #endif /* _SDL_config_h */

@@ -70,6 +70,9 @@ SDL20_SYM(void,PumpEvents,(void),(),)
 SDL20_SYM(void,SetEventFilter,(SDL_EventFilter a, void *b),(a,b),)
 SDL20_SYM(void,AddEventWatch,(SDL_EventFilter a, void *b),(a,b),)
 SDL20_SYM(void,DelEventWatch,(SDL_EventFilter a, void *b),(a,b),)
+SDL20_SYM(Uint8,EventState,(Uint32 a, int b),(a,b),return)
+
+SDL20_SYM(SDL_bool,GetWindowWMInfo,(SDL_Window *a, SDL_SysWMinfo *b),(a,b),)
 
 SDL20_SYM(int,GetNumDisplayModes,(int a),(a),return)
 SDL20_SYM(int,GetDisplayMode,(int a, int b, SDL_DisplayMode *c),(a,b,c),return)
