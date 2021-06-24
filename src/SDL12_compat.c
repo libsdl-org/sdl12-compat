@@ -6428,7 +6428,7 @@ ValidCDDriveIndex(const int drive)
     }
 
     if (!CDRomPath || (drive != 0)) {
-        SDL_SetError("Invalid CD-ROM drive index");
+        SDL20_SetError("Invalid CD-ROM drive index");
         return SDL_FALSE;
     }
 
