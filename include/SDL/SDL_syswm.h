@@ -32,7 +32,32 @@ real SDL-1.2 available to you. */
 
 #ifndef SDL_PROTOTYPES_ONLY
 
-#   if defined(SDL_VIDEO_DRIVER_X11)
+#   if defined(__WIN32__)
+#       ifndef WIN32_LEAN_AND_MEAN
+#           define WIN32_LEAN_AND_MEAN
+#       endif
+#       include <windows.h>
+
+#       include "begin_code.h"
+
+        typedef struct SDL_SysWMmsg
+        {
+            SDL_version version;
+            HWND hwnd;
+            UINT msg;
+            WPARAM wParam;
+            LPARAM lParam;
+        } SDL_SysWMmsg;
+
+        typedef struct SDL_SysWMinfo {
+            SDL_version version;
+            HWND window;
+            HGLRC hglrc;
+        } SDL_SysWMinfo;
+
+#       include "close_code.h"
+
+#   elif defined(SDL_VIDEO_DRIVER_X11)
 #       include <X11/Xlib.h>
 #       include <X11/Xatom.h>
 
@@ -67,31 +92,6 @@ real SDL-1.2 available to you. */
                     Display *gfxdisplay;
                 } x11;
             } info;
-        } SDL_SysWMinfo;
-
-#       include "close_code.h"
-
-#   elif defined(__WIN32__)
-#       ifndef WIN32_LEAN_AND_MEAN
-#           define WIN32_LEAN_AND_MEAN
-#       endif
-#       include <windows.h>
-
-#       include "begin_code.h"
-
-        typedef struct SDL_SysWMmsg
-        {
-            SDL_version version;
-            HWND hwnd;
-            UINT msg;
-            WPARAM wParam;
-            LPARAM lParam;
-        } SDL_SysWMmsg;
-
-        typedef struct SDL_SysWMinfo {
-            SDL_version version;
-            HWND window;
-            HGLRC hglrc;
         } SDL_SysWMinfo;
 
 #       include "close_code.h"
