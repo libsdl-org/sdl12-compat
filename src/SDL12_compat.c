@@ -5363,7 +5363,7 @@ SDL_GetWMInfo(SDL12_SysWMinfo *info12)
 
 #if defined(SDL_VIDEO_DRIVER_WINDOWS)
     SDL_assert(info20.subsystem == SDL_SYSWM_WINDOWS);
-    info12->window = info20.win.window;
+    info12->window = info20.info.win.window;
     if (SDL_VERSIONNUM(info12->version.major, info12->version.minor, info12->version.patch) >= SDL_VERSIONNUM(1, 2, 5)) {
         info12->hglrc = (HGLRC) VideoGLContext20;
     }
