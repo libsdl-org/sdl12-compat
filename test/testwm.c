@@ -327,7 +327,7 @@ int SDLCALL FilterEvents(const SDL_Event *event)
 		case SDL_SYSWMEVENT:
 			#ifdef TEST_SYSWM
 			#ifdef _WIN32
-			printf("Windows syswm event: hwnd=%X msg=%X wparam=%X lparam=%X\n", (unsigned int) (size_t) event->syswm.msg->hwnd, (unsigned int) (size_t) event->syswm.msg->msg, (unsigned int) (size_t) event->syswm.msg->wparam, (unsigned int) (size_t) event->syswm.msg->lparam);
+			printf("Windows syswm event: hwnd=%X msg=%X wparam=%X lparam=%X\n", (unsigned int) (size_t) event->syswm.msg->hwnd, (unsigned int) (size_t) event->syswm.msg->msg, (unsigned int) (size_t) event->syswm.msg->wParam, (unsigned int) (size_t) event->syswm.msg->lParam);
 			#elif defined(SDL_VIDEO_DRIVER_X11)
 			printf("X11 syswm event: %d\n", event->syswm.msg->event.xevent.type);
 			#else
@@ -440,7 +440,7 @@ int main(int argc, char *argv[])
 		} else {
 			#ifdef _WIN32
 			printf("Windows syswm info: hwnd=%X hglrc=%X\n",
-			        (unsigned int) (size_t) syswm_info.hwnd,
+			        (unsigned int) (size_t) syswm_info.window,
 			        (unsigned int) (size_t) syswm_info.hglrc);
 			#elif defined(SDL_VIDEO_DRIVER_X11)
 			printf("X11 syswm info: display=%p window=%X lock_func=%p unlock_func=%p fswindow=%X wmwindow=%X gfxdisplay=%p\n",
