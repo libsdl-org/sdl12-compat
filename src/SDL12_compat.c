@@ -3138,6 +3138,7 @@ EventFilter20to12(void *data, SDL_Event *event20)
                     } else if (MousePosition.axis >= VideoSurface12->dim) { \
                         MousePosition.axis = (VideoSurface12->dim - 1); \
                     } \
+                    event12.motion.axis = MousePosition.axis; \
                 }
                 ADJUST_RELATIVE(x, xrel, w);
                 ADJUST_RELATIVE(y, yrel, h);
@@ -3156,9 +3157,15 @@ EventFilter20to12(void *data, SDL_Event *event20)
                 event12.button.button += 2; /* SDL_BUTTON_X1/2 */
             }
             event12.button.state = event20->button.state;
-            AdjustOpenGLLogicalScalingPoint(&event20->button.x, &event20->button.y);
-            event12.button.x = (Uint16) event20->button.x;
-            event12.button.y = (Uint16) event20->button.y;
+            if (MouseInputIsRelative) {
+                /* If we're using relative mouse input, we need to use our "fake" position. */
+                event12.button.x = MousePosition.x;
+                event12.button.y = MousePosition.y;
+            } else {
+                AdjustOpenGLLogicalScalingPoint(&event20->button.x, &event20->button.y);
+                event12.button.x = (Uint16) event20->button.x;
+                event12.button.y = (Uint16) event20->button.y;
+            }
             break;
 
         case SDL_MOUSEBUTTONUP:
@@ -3169,9 +3176,15 @@ EventFilter20to12(void *data, SDL_Event *event20)
                 event12.button.button += 2; /* SDL_BUTTON_X1/2 */
             }
             event12.button.state = event20->button.state;
-            AdjustOpenGLLogicalScalingPoint(&event20->button.x, &event20->button.y);
-            event12.button.x = (Uint16) event20->button.x;
-            event12.button.y = (Uint16) event20->button.y;
+            if (MouseInputIsRelative) {
+                /* If we're using relative mouse input, we need to use our "fake" position. */
+                event12.button.x = MousePosition.x;
+                event12.button.y = MousePosition.y;
+            } else {
+                AdjustOpenGLLogicalScalingPoint(&event20->button.x, &event20->button.y);
+                event12.button.x = (Uint16) event20->button.x;
+                event12.button.y = (Uint16) event20->button.y;
+            }
             break;
 
         case SDL_MOUSEWHEEL:
