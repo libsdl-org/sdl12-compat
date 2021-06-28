@@ -110,7 +110,7 @@ if(APPLE)
     add_library(SDLmain STATIC src/SDLmain/macosx/SDLmain.m)
 elseif(WIN32)
     add_library(SDLmain STATIC src/SDLmain/win32/SDL_win32_main.c)
-    set_target_properties(SDLmain PROPERTIES COMPILE_DEFINITIONS "$_CRT_SECURE_NO_WARNINGS;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE")  # !!! FIXME: don't use C runtime? We fixed this in SDL2.
+    set_target_properties(SDLmain PROPERTIES COMPILE_DEFINITIONS "_CRT_SECURE_NO_WARNINGS;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE")  # !!! FIXME: don't use C runtime? We fixed this in SDL2.
 else()
     add_library(SDLmain STATIC src/SDLmain/dummy/SDL_dummy_main.c)
 endif()
