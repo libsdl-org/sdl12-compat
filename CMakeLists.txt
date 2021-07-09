@@ -126,6 +126,7 @@ endif()
 # SDLmain library...
 if(APPLE)
     add_library(SDLmain STATIC src/SDLmain/macosx/SDLMain.m)
+    set_source_files_properties(src/SDLmain/macosx/SDLMain.m PROPERTIES LANGUAGE C)
 elseif(WIN32)
     add_library(SDLmain STATIC src/SDLmain/win32/SDL_win32_main.c)
     set_target_properties(SDLmain PROPERTIES COMPILE_DEFINITIONS "_CRT_SECURE_NO_WARNINGS;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE")  # !!! FIXME: don't use C runtime? We fixed this in SDL2.
