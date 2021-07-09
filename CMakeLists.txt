@@ -39,14 +39,26 @@ set(SDL12COMPAT_SRCS
 add_library(SDL SHARED ${SDL12COMPAT_SRCS})
 
 include(CheckCSourceCompiles)
+include(CheckCCompilerFlag)
 
 include(GNUInstallDirs)
 include("cmake/modules/FindSDL2.cmake")
 target_include_directories(SDL PRIVATE ${SDL2_INCLUDE_DIRS})
 
+set(EXTRA_CFLAGS )
 if (CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror=declaration-after-statement") # force these universally.
+  set(EXTRA_CFLAGS "${EXTRA_CFLAGS} -Wall")
+  check_c_compiler_flag(-Wdeclaration-after-statement HAVE_WDECLARATION_AFTER_STATEMENT)
+  if(HAVE_WDECLARATION_AFTER_STATEMENT)
+    set(EXTRA_CFLAGS "${EXTRA_CFLAGS} -Wdeclaration-after-statement")
+  endif()
+  check_c_compiler_flag(-Werror=declaration-after-statement HAVE_WERROR_DECLARATION_AFTER_STATEMENT)
+  if(HAVE_WERROR_DECLARATION_AFTER_STATEMENT)
+    set(EXTRA_CFLAGS "${EXTRA_CFLAGS} -Werror=declaration-after-statement")
+  endif()
 endif()
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${EXTRA_CFLAGS}")
+string(STRIP "${CMAKE_C_FLAGS}" CMAKE_C_FLAGS)
 
 # avoid DLL having 'lib' prefix with Windows MinGW builds
 if(WIN32)
