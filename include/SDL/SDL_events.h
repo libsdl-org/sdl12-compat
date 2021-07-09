@@ -186,6 +186,7 @@ typedef struct SDL_UserEvent
 } SDL_UserEvent;
 
 struct SDL_SysWMmsg;
+typedef struct SDL_SysWMmsg SDL_SysWMmsg;
 typedef struct SDL_SysWMEvent
 {
     Uint8 type;

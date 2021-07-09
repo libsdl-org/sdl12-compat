@@ -40,14 +40,14 @@ real SDL-1.2 available to you. */
 
 #       include "begin_code.h"
 
-        typedef struct SDL_SysWMmsg
+        struct SDL_SysWMmsg
         {
             SDL_version version;
             HWND hwnd;
             UINT msg;
             WPARAM wParam;
             LPARAM lParam;
-        } SDL_SysWMmsg;
+        };
 
         typedef struct SDL_SysWMinfo {
             SDL_version version;
@@ -68,14 +68,14 @@ real SDL-1.2 available to you. */
             SDL_SYSWM_X11
         } SDL_SYSWM_TYPE;
 
-        typedef struct SDL_SysWMmsg
+        struct SDL_SysWMmsg
         {
             SDL_version version;
             SDL_SYSWM_TYPE subsystem;
             union {
                 XEvent xevent;
             } event;
-        } SDL_SysWMmsg;
+        };
 
         typedef struct SDL_SysWMinfo
         {
@@ -100,11 +100,11 @@ real SDL-1.2 available to you. */
 
 #       include "begin_code.h"
 
-        typedef struct SDL_SysWMmsg
+        struct SDL_SysWMmsg
         {
             SDL_version version;
             int data;
-        } SDL_SysWMmsg;
+        };
 
         typedef struct SDL_SysWMinfo
         {
