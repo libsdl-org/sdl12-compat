@@ -452,7 +452,7 @@ int main(int argc, char *argv[])
 			        (unsigned int) (size_t) syswm_info.info.x11.wmwindow,
 			        syswm_info.info.x11.gfxdisplay);
 			#else
-			printf("Generic syswm info: data=%X hglrc=%X\n", syswm_info.data);
+			printf("Generic syswm info: data=%X\n", syswm_info.data);
 			#endif
 		}
 	}
