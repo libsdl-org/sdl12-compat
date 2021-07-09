@@ -39,6 +39,7 @@ set(SDL12COMPAT_SRCS
 add_library(SDL SHARED ${SDL12COMPAT_SRCS})
 
 include(CheckCSourceCompiles)
+include(CheckIncludeFile)
 include(CheckCCompilerFlag)
 
 include(GNUInstallDirs)
@@ -56,6 +57,11 @@ if (CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
   if(HAVE_WERROR_DECLARATION_AFTER_STATEMENT)
     set(EXTRA_CFLAGS "${EXTRA_CFLAGS} -Werror=declaration-after-statement")
   endif()
+endif()
+# just in case:
+check_include_file("immintrin.h" HAVE_IMMINTRIN_H)
+if(NOT HAVE_IMMINTRIN_H)
+  set(EXTRA_CFLAGS "${EXTRA_CFLAGS} -DSDL_DISABLE_IMMINTRIN_H")
 endif()
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${EXTRA_CFLAGS}")
 string(STRIP "${CMAKE_C_FLAGS}" CMAKE_C_FLAGS)
