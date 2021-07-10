@@ -32,8 +32,6 @@ static int stdioRedirectEnabled = 0;
 static char stdoutPath[MAX_PATH];
 static char stderrPath[MAX_PATH];
 
-#define isspace(a) (((CHAR)a == ' ') || ((CHAR)a == '\t'))
-
 static void UnEscapeQuotes( char *arg )
 {
 	char *last = NULL;
