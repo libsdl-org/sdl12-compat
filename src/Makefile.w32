@@ -47,7 +47,7 @@ $(DLLFILE): compiling_info $(object_files) $(resource_obj) $(LNKFILE)
 
 $(LIBFILE): $(DLLFILE)
 	@echo * Creating LIB file: $@
-	wlib -q -b -n -c -pa -s -t -zld -ii -io $* $(DLLFILE)
+	wlib -q -b -n -c -pa -s -t -zld -ii -io $* @SDL12.lbc
 
 compiling_info : .symbolic
 	@echo * Compiling...
@@ -58,7 +58,8 @@ $(LNKFILE):
 	@%append $@ SYSTEM nt_dll INITINSTANCE TERMINSTANCE
 	@%append $@ NAME $(DLLFILE)
 	@for %i in ($(object_files)) do @%append $@ FILE %i
-	@%append $@ EXPORT=SDL12.lbc
+	@%append $@ EXPORT=SDL12.exports
+	@%append $@ OPTION IMPF=SDL12.lbc
 	@%append $@ OPTION RESOURCE=$(resource_obj)
 	@%append $@ OPTION QUIET
 	@%append $@ OPTION MAP=$^&.map
@@ -69,6 +70,7 @@ clean: .SYMBOLIC
 	@echo * Clean: $(LIBNAME) $(VERSION)
 	@if exist *.obj rm *.obj
 	@if exist *.res rm *.res
+	@if exist *.map rm *.lbc
 	@if exist *.map rm *.map
 	@if exist $(LNKFILE) rm $(LNKFILE)
 
