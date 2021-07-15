@@ -109,7 +109,7 @@ int TestEndian(SDL_bool verbose)
 	}
 #ifdef SDL_HAS_64BIT_TYPE
 	if ( verbose ) {
-#ifdef _MSC_VER
+#ifdef _WIN32
 		printf("Value 64 = 0x%I64X, swapped = 0x%I64X\n", value64, SDL_Swap64(value64));
 #else
 		printf("Value 64 = 0x%llX, swapped = 0x%llX\n", (unsigned long long) value64, (unsigned long long) SDL_Swap64(value64));
