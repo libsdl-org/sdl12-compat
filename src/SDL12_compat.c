@@ -1734,6 +1734,7 @@ Init12Video(void)
     SupportSysWM = SDL_FALSE;
 #endif
 
+    SDL20_DelEventWatch(EventFilter20to12, NULL);
     SDL20_AddEventWatch(EventFilter20to12, NULL);
 
     VideoDisplayIndex = GetVideoDisplay();
