@@ -234,7 +234,7 @@ if(SDL12DEVEL)
     if(WIN32)
       set(SDL_CFLAGS "")
       set(SDL_RLD_FLAGS "")
-      set(SDL_LIBS "-lSDLmain -lSDL -mwindows")             # -lmingw32 -lSDL -mwindows
+      set(SDL_LIBS "-lmingw32 -lSDLmain -lSDL -mwindows")
       set(SDL_STATIC_LIBS "")
     elseif(APPLE)
       set(SDL_CFLAGS "-D_THREAD_SAFE")
