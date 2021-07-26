@@ -1,5 +1,5 @@
 #  OpenWatcom makefile to build SDL for OS/2
-
+#
 !ifndef %WATCOM
 !error Environment variable WATCOM is not specified!
 !endif
@@ -8,7 +8,7 @@ DLLNAME = SDL12
 VERSION = 1.2.50
 
 # change SDL2INC to point to the SDL2 headers
-SDL2INC = C:\SDL2DEV\h\SDL2
+SDL2INC = include
 INCPATH = -I"$(%WATCOM)/h/os2" -I"$(%WATCOM)/h" -I"$(SDL2INC)"
 LIBNAME = $(DLLNAME)
 
@@ -17,6 +17,7 @@ LIBFILE = $(LIBNAME).lib
 LNKFILE = $(LIBNAME).lnk
 
 CFLAGS_DEF=-bt=os2 -d0 -zq -bm -5s -fp5 -fpi87 -sg -oteanbmier $(INCPATH)
+CFLAGS_DEF+= -DSDL_DISABLE_IMMINTRIN_H
 CFLAGS_DLL=$(CFLAGS_DEF) -bd
 
 # Special flags for building SDL

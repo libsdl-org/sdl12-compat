@@ -166,7 +166,7 @@ SDL20_MostSignificantBitIndex32(Uint32 x)
 #endif
 }
 
-/* SDL_truncf needs SDL >=2.0.14 (and breaks Watcom), so copy it here */
+/* SDL_truncf needs SDL >=2.0.14, so copy it here. */
 static float SDL20_truncf(float x)
 {
     return (x < 0.0f) ? SDL20_ceilf(x) : SDL20_floorf(x);
@@ -2227,7 +2227,7 @@ AdjustOpenGLLogicalScalingPoint(int *x, int *y)
     *x = SDL_max(SDL_min(adjusted_x, OpenGLLogicalScalingWidth), 0);
     *y = SDL_max(SDL_min(adjusted_y, OpenGLLogicalScalingHeight), 0);
 }
-    
+
 /* Scale a vector (e.g. relative mouse movement) to the logical scaling size */
 static void
 AdjustOpenGLLogicalScalingVector(int *x, int *y, float *rx, float *ry)
@@ -2266,7 +2266,6 @@ AdjustOpenGLLogicalScalingVector(int *x, int *y, float *rx, float *ry)
         *ry = float_y - trunc_y;
     }
 }
-    
 
 static Uint8 MouseButtonState20to12(const Uint32 state20)
 {
@@ -2635,7 +2634,7 @@ Keysym20to12(const SDL_Keycode keysym20)
     FIXME("map some of the SDLK12_WORLD keys");
     return SDLK12_UNKNOWN;
 }
-#else
+#else /* https://github.com/libsdl-org/sdl12-compat/pull/97 */
 # define KeysymFromSDL2(_ev20) Scancode20toKeysym12((_ev20)->key.keysym.scancode)
 static SDL12Key
 Scancode20toKeysym12(const SDL_Scancode scancode20)

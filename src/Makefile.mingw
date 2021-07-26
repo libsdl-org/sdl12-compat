@@ -14,6 +14,7 @@ endif
 LD = $(CC)
 
 CPPFLAGS = -DDLL_EXPORT -DNDEBUG
+CPPFLAGS+= -DSDL_DISABLE_IMMINTRIN_H
 
 CFLAGS  = -O3 -Wall
 LDFLAGS = -nostdlib -shared -Wl,--no-undefined -Wl,--enable-auto-image-base -Wl,--out-implib,$(LIB)

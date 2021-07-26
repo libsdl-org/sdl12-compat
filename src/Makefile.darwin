@@ -12,6 +12,7 @@ endif
 LD = $(CC)
 
 CPPFLAGS = -DNDEBUG -D_THREAD_SAFE
+CPPFLAGS+= -DSDL_DISABLE_IMMINTRIN_H
 
 CFLAGS  = -mmacosx-version-min=10.6 -fPIC -O3 -Wall
 LDFLAGS = -mmacosx-version-min=10.6 -dynamiclib -Wl,-undefined,error -Wl,-single_module

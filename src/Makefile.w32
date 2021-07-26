@@ -1,5 +1,5 @@
 #  OpenWatcom makefile to build SDL for Win32
-
+#
 !ifndef %WATCOM
 !error Environment variable WATCOM is not specified!
 !endif
@@ -17,6 +17,7 @@ LIBFILE = $(LIBNAME).lib
 LNKFILE = $(LIBNAME).lnk
 
 CFLAGS_DEF=-bt=nt -d0 -zq -bm -5s -fp5 -fpi87 -sg -oteanbmier $(INCPATH)
+CFLAGS_DEF+= -DSDL_DISABLE_IMMINTRIN_H
 # we override the DECLSPEC define in begin_code.h, because we are using
 # an exports file to remove the _cdecl '_' prefix from the symbol names
 CFLAGS_DLL=$(CFLAGS_DEF) -bd -DDLL_EXPORT -DDECLSPEC=
