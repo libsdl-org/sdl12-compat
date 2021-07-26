@@ -308,11 +308,13 @@ SDL20_SYM(int,atoi,(const char *a),(a),return)
 #ifndef SDL12_MATH
 #include <math.h>
 #define SDL20_fabsf fabs
+#define SDL20_ceilf ceil
 #define SDL20_floorf floor
 #define SDL12_MATH
 #endif
 #else
 SDL20_SYM(float,fabsf,(float a),(a),return)
+SDL20_SYM(float,ceilf,(float a),(a),return)
 SDL20_SYM(float,floorf,(float a),(a),return)
 #endif
 
