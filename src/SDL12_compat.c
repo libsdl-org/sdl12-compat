@@ -166,6 +166,11 @@ SDL20_MostSignificantBitIndex32(Uint32 x)
 #endif
 }
 
+/* SDL_truncf needs SDL >=2.0.14 (and breaks Watcom), so copy it here */
+static float SDL20_truncf(float x)
+{
+    return (x < 0.0f) ? SDL20_ceilf(x) : SDL20_floorf(x);
+}
 
 #define SDL12_DEFAULT_REPEAT_DELAY 500
 #define SDL12_DEFAULT_REPEAT_INTERVAL 30
@@ -929,6 +934,7 @@ static JoystickOpenedItem JoystickOpenList[16];
 static Uint8 KeyState[SDLK12_LAST];
 static SDL_bool MouseInputIsRelative = SDL_FALSE;
 static SDL_Point MousePosition = { 0, 0 };
+static SDL_FPoint MouseRelativeRemainder = { 0.f, 0.f };
 static SDL_bool UseMouseRelativeScaling = SDL_FALSE;
 static OpenGLEntryPoints OpenGLFuncs;
 static int OpenGLBlitLockCount = 0;
@@ -2224,11 +2230,13 @@ AdjustOpenGLLogicalScalingPoint(int *x, int *y)
     
 /* Scale a vector (e.g. relative mouse movement) to the logical scaling size */
 static void
-AdjustOpenGLLogicalScalingVector(int *x, int *y)
+AdjustOpenGLLogicalScalingVector(int *x, int *y, float *rx, float *ry)
 {
     SDL_Rect viewport;
     int physical_w, physical_h;
     float scale_x, scale_y;
+    float float_x, float_y;
+    float trunc_x, trunc_y;
 
     /* Don't adjust anything if we're not using Logical Scaling */
     if (!OpenGLLogicalScalingFBO) {
@@ -2242,8 +2250,21 @@ AdjustOpenGLLogicalScalingVector(int *x, int *y)
     scale_x = (float)OpenGLLogicalScalingWidth / viewport.w;
     scale_y = (float)OpenGLLogicalScalingHeight / viewport.h;
 
-    *x = (int) (*x * scale_x);
-    *y = (int) (*y * scale_y);
+    float_x = *x * scale_x + (rx ? *rx : 0.f);
+    float_y = *y * scale_y + (ry ? *ry : 0.f);
+
+    trunc_x = SDL20_truncf(float_x);
+    trunc_y = SDL20_truncf(float_y);
+
+    *x = (int)trunc_x;
+    *y = (int)trunc_y;
+
+    if (rx) {
+        *rx = float_x - trunc_x;
+    }
+    if (ry) {
+        *ry = float_y - trunc_y;
+    }
 }
     
 
@@ -3156,7 +3177,10 @@ EventFilter20to12(void *data, SDL_Event *event20)
             event12.motion.x = (Uint16) event20->motion.x;
             event12.motion.y = (Uint16) event20->motion.y;
             if (UseMouseRelativeScaling) {
-                AdjustOpenGLLogicalScalingVector(&event20->motion.xrel, &event20->motion.yrel);
+                AdjustOpenGLLogicalScalingVector(&event20->motion.xrel,
+                                                 &event20->motion.yrel,
+                                                 &MouseRelativeRemainder.x,
+                                                 &MouseRelativeRemainder.y);
             }
             event12.motion.xrel = (Sint16) event20->motion.xrel;
             event12.motion.yrel = (Sint16) event20->motion.yrel;
