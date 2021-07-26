@@ -929,6 +929,7 @@ static JoystickOpenedItem JoystickOpenList[16];
 static Uint8 KeyState[SDLK12_LAST];
 static SDL_bool MouseInputIsRelative = SDL_FALSE;
 static SDL_Point MousePosition = { 0, 0 };
+static SDL_bool UseMouseRelativeScaling = SDL_FALSE;
 static OpenGLEntryPoints OpenGLFuncs;
 static int OpenGLBlitLockCount = 0;
 static GLuint OpenGLBlitTexture = 0;
@@ -2192,6 +2193,7 @@ GetOpenGLLogicalScalingViewport(int physical_width, int physical_height)
     return dstrect;
 }
 
+/* Scale a point (e.g. absolute mouse position) to the logical scaling size */
 static void
 AdjustOpenGLLogicalScalingPoint(int *x, int *y)
 {
@@ -2218,6 +2220,30 @@ AdjustOpenGLLogicalScalingPoint(int *x, int *y)
     /* Clamp the result to the visible window */
     *x = SDL_max(SDL_min(adjusted_x, OpenGLLogicalScalingWidth), 0);
     *y = SDL_max(SDL_min(adjusted_y, OpenGLLogicalScalingHeight), 0);
+}
+    
+/* Scale a vector (e.g. relative mouse movement) to the logical scaling size */
+static void
+AdjustOpenGLLogicalScalingVector(int *x, int *y)
+{
+    SDL_Rect viewport;
+    int physical_w, physical_h;
+    float scale_x, scale_y;
+
+    /* Don't adjust anything if we're not using Logical Scaling */
+    if (!OpenGLLogicalScalingFBO) {
+        return;
+    }
+
+    /* we want to scale based on the window size, which is dpi-scaled */
+    SDL20_GetWindowSize(VideoWindow20, &physical_w, &physical_h);
+    viewport = GetOpenGLLogicalScalingViewport(physical_w, physical_h);
+
+    scale_x = (float)OpenGLLogicalScalingWidth / viewport.w;
+    scale_y = (float)OpenGLLogicalScalingHeight / viewport.h;
+
+    *x = (int) (*x * scale_x);
+    *y = (int) (*y * scale_y);
 }
     
 
@@ -3129,6 +3155,9 @@ EventFilter20to12(void *data, SDL_Event *event20)
             AdjustOpenGLLogicalScalingPoint(&event20->motion.x, &event20->motion.y);
             event12.motion.x = (Uint16) event20->motion.x;
             event12.motion.y = (Uint16) event20->motion.y;
+            if (UseMouseRelativeScaling) {
+                AdjustOpenGLLogicalScalingVector(&event20->motion.xrel, &event20->motion.yrel);
+            }
             event12.motion.xrel = (Sint16) event20->motion.xrel;
             event12.motion.yrel = (Sint16) event20->motion.yrel;
             if (MouseInputIsRelative) {
@@ -4088,6 +4117,12 @@ glCopyTexSubImage3D_shim_for_scaling(GLenum target, GLint level, GLint xoffset, 
 static SDL_bool
 InitializeOpenGLScaling(const int w, const int h)
 {
+    const char *env;
+
+    /* Support the MOUSE_RELATIVE_SCALING hint from SDL 2.0 for OpenGL scaling. */
+    env = SDL20_getenv("SDL_MOUSE_RELATIVE_SCALING");
+    UseMouseRelativeScaling = (!env || SDL20_atoi(env)) ? SDL_TRUE : SDL_FALSE;
+
     if (!OpenGLFuncs.SUPPORTS_GL_ARB_framebuffer_object) {
         return SDL_FALSE;  /* no FBOs, no scaling. */
     }
