@@ -1710,6 +1710,10 @@ Init12VidModes(void)
     return 0;
 }
 
+/* we should have a default cursor */
+#include "default_cursor.h"
+DECLSPEC void SDLCALL SDL_FreeCursor(SDL12_Cursor *);
+
 static int
 Init12Video(void)
 {
@@ -1897,7 +1901,7 @@ Quit12Video(void)
     VideoInfoVfmt20 = NULL;
     EventFilter12 = NULL;
     EventQueueAvailable = EventQueueHead = EventQueueTail = NULL;
-    CurrentCursor12 = NULL;
+    SDL_FreeCursor(CurrentCursor12);
     VideoModes = NULL;
     VideoModesCount = 0;
 }
@@ -3788,6 +3792,9 @@ SDL_ListModes(const SDL12_PixelFormat *format12, Uint32 flags)
 DECLSPEC void SDLCALL
 SDL_FreeCursor(SDL12_Cursor *cursor12)
 {
+    if (cursor12 == CurrentCursor12) {
+        CurrentCursor12 = NULL;
+    }
     if (cursor12) {
         if (cursor12->wm_cursor) {
             SDL20_FreeCursor(cursor12->wm_cursor);
@@ -3857,6 +3864,10 @@ SDL_SetCursor(SDL12_Cursor *cursor)
 DECLSPEC SDL12_Cursor * SDLCALL
 SDL_GetCursor(void)
 {
+    if (!CurrentCursor12) {
+        CurrentCursor12 = SDL_CreateCursor(default_cdata, default_cmask,
+                            DEFAULT_CWIDTH, DEFAULT_CHEIGHT, DEFAULT_CHOTX, DEFAULT_CHOTY);
+    }
     return CurrentCursor12;
 }
 
