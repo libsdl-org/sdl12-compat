@@ -36,6 +36,12 @@
 
 #include <stdarg.h>
 #include <limits.h>
+#include <stddef.h>
+#if defined(_MSC_VER) && (_MSC_VER < 1600)
+/* intptr_t already handled by stddef.h. */
+#else
+#include <stdint.h>
+#endif
 
 #ifdef _WIN32
 #ifndef WIN32_LEAN_AND_MEAN
@@ -6198,7 +6204,7 @@ static Sint64 SDLCALL
 RWops12to20_size(struct SDL_RWops *rwops20)
 {
     SDL12_RWops *rwops12 = (SDL12_RWops *) rwops20->hidden.unknown.data1;
-    int size = (int) ((size_t) rwops20->hidden.unknown.data2);
+    int size = (int) ((intptr_t) rwops20->hidden.unknown.data2);
     int pos;
 
     if (size != -1) {
@@ -6211,7 +6217,7 @@ RWops12to20_size(struct SDL_RWops *rwops20)
     }
     size = rwops12->seek(rwops12, 0, RW_SEEK_END);
     rwops12->seek(rwops12, pos, RW_SEEK_SET);
-    rwops20->hidden.unknown.data2 = (void *) ((size_t) size);
+    rwops20->hidden.unknown.data2 = (void *) ((intptr_t) size);
     return size;
 }
 
@@ -6276,7 +6282,7 @@ RWops12to20(SDL12_RWops *rwops12)
     SDL20_zerop(rwops20);
     rwops20->type = rwops12->type;
     rwops20->hidden.unknown.data1 = rwops12;
-    rwops20->hidden.unknown.data2 = (void *) ((size_t) -1);  /* cached size of stream */
+    rwops20->hidden.unknown.data2 = (void *) ((intptr_t) -1);   /* cached size of stream */
     rwops20->size = RWops12to20_size;
     rwops20->seek = RWops12to20_seek;
     rwops20->read = RWops12to20_read;
