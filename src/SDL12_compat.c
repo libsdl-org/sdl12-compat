@@ -2991,8 +2991,11 @@ EventFilter20to12(void *data, SDL_Event *event20)
                     break;
 
                 case SDL_WINDOWEVENT_RESIZED:
-                case SDL_WINDOWEVENT_SIZE_CHANGED:
-                    FIXME("what's the difference between RESIZED and SIZE_CHANGED?");
+                    /* don't generate a VIDEORESIZE event based on SIZE_CHANGED
+                       events: the recommended way to handle VIDEORESIZE is
+                       with a new SDL_SetVideoMode() call, and creating a new
+                       window generates a SIZE_CHANGED event, which leads to an
+                       infinite loop. */
 
                     /* don't report VIDEORESIZE if we're fullscreen-desktop;
                        we're doing logical scaling and as far as the app is
