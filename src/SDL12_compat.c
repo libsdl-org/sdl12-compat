@@ -6374,22 +6374,8 @@ SDL_LoadWAV_RW(SDL12_RWops *rwops12, int freerwops12,
 #define DRMP3_REALLOC(p, sz) SDL20_realloc((p), (sz))
 #define DRMP3_FREE(p) SDL20_free((p))
 #define DRMP3_COPY_MEMORY(dst, src, sz) SDL20_memcpy((dst), (src), (sz))
+#define DRMP3_MOVE_MEMORY(dst, src, sz) SDL20_memmove((dst), (src), (sz))
 #define DRMP3_ZERO_MEMORY(p, sz) SDL20_memset((p), 0, (sz))
-
-#if !defined(__clang_analyzer__)
-#ifdef memset
-#undef memset
-#endif
-#ifdef memcpy
-#undef memcpy
-#endif
-#ifdef memmove
-#undef memmove
-#endif
-#define memset SDL20_memset
-#define memcpy SDL20_memcpy
-#define memmove SDL20_memmove
-#endif
 
 #include "dr_mp3.h"
 
