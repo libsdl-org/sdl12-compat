@@ -1,6 +1,6 @@
 /*
 MP3 audio decoder. Choice of public domain or MIT-0. See license statements at the end of this file.
-dr_mp3 - v0.6.29 - 2021-08-08
+dr_mp3 - v0.6.31 - 2021-08-22
 
 David Reid - mackron@gmail.com
 
@@ -101,7 +101,7 @@ extern "C" {
 
 #define DRMP3_VERSION_MAJOR     0
 #define DRMP3_VERSION_MINOR     6
-#define DRMP3_VERSION_REVISION  29
+#define DRMP3_VERSION_REVISION  31
 #define DRMP3_VERSION_STRING    DRMP3_XSTRINGIFY(DRMP3_VERSION_MAJOR) "." DRMP3_XSTRINGIFY(DRMP3_VERSION_MINOR) "." DRMP3_XSTRINGIFY(DRMP3_VERSION_REVISION)
 
 #include <stddef.h> /* For size_t. */
@@ -2787,12 +2787,22 @@ static drmp3_uint32 drmp3_decode_next_frame_ex__memory(drmp3* pMP3, drmp3d_sampl
         return 0;
     }
 
-    pcmFramesRead = drmp3dec_decode_frame(&pMP3->decoder, pMP3->memory.pData + pMP3->memory.currentReadPos, (int)(pMP3->memory.dataSize - pMP3->memory.currentReadPos), pPCMFrames, &info);
-    if (pcmFramesRead > 0) {
-        pMP3->pcmFramesConsumedInMP3Frame  = 0;
-        pMP3->pcmFramesRemainingInMP3Frame = pcmFramesRead;
-        pMP3->mp3FrameChannels             = info.channels;
-        pMP3->mp3FrameSampleRate           = info.hz;
+    for (;;) {
+        pcmFramesRead = drmp3dec_decode_frame(&pMP3->decoder, pMP3->memory.pData + pMP3->memory.currentReadPos, (int)(pMP3->memory.dataSize - pMP3->memory.currentReadPos), pPCMFrames, &info);
+        if (pcmFramesRead > 0) {
+            pcmFramesRead = drmp3_hdr_frame_samples(pMP3->decoder.header);
+            pMP3->pcmFramesConsumedInMP3Frame  = 0;
+            pMP3->pcmFramesRemainingInMP3Frame = pcmFramesRead;
+            pMP3->mp3FrameChannels             = info.channels;
+            pMP3->mp3FrameSampleRate           = info.hz;
+            break;
+        } else if (info.frame_bytes > 0) {
+            /* No frames were read, but it looks like we skipped past one. Read the next MP3 frame. */
+            pMP3->memory.currentReadPos += (size_t)info.frame_bytes;
+        } else {
+            /* Nothing at all was read. Abort. */
+            break;
+        }
     }
 
     /* Consume the data. */
@@ -2855,7 +2865,7 @@ static drmp3_bool32 drmp3_init_internal(drmp3* pMP3, drmp3_read_proc onRead, drm
     }
 
     /* Decode the first frame to confirm that it is indeed a valid MP3 stream. */
-    if (!drmp3_decode_next_frame(pMP3)) {
+    if (drmp3_decode_next_frame(pMP3) == 0) {
         drmp3__free_from_callbacks(pMP3->pData, &pMP3->allocationCallbacks);    /* The call above may have allocated memory. Need to make sure it's freed before aborting. */
         return DRMP3_FALSE; /* Not a valid MP3 stream. */
     }
@@ -4492,6 +4502,13 @@ counts rather than sample counts.
 /*
 REVISION HISTORY
 ================
+v0.6.31 - 2021-08-22
+  - Fix a bug when loading from memory.
+
+v0.6.30 - 2021-08-16
+  - Silence some warnings.
+  - Replace memory operations with DRMP3_* macros.
+
 v0.6.29 - 2021-08-08
   - Bring up to date with minimp3.
 
