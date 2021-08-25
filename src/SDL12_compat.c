@@ -5051,7 +5051,7 @@ SDL_UpdateRects(SDL12_Surface *surface12, int numrects, SDL12_Rect *rects12)
                 SDL20_UpperBlit(VideoSurface12->surface20, &rect20, VideoConvertSurface20, &dstrect20);
             } else {
                 const int cpy = rect20.w * pixsize;
-                char *dst = pixels;
+                char *dst = (char *) pixels;
                 const Uint8 *src = (((Uint8 *) surface12->pixels) + (rect20.y * srcpitch)) + (rect20.x * pixsize);
                 for (j = 0; j < rect20.h; j++) {
                     SDL20_memcpy(dst, src, cpy);
