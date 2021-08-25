@@ -5021,51 +5021,55 @@ SDL_UpdateRects(SDL12_Surface *surface12, int numrects, SDL12_Rect *rects12)
      *  but in practice most apps never got a double-buffered surface and
      *  don't handle it correctly, so we have to work around it. */
     if (surface12 == VideoSurface12) {
+        SDL_Palette *logicalPal = surface12->surface20->format->palette;
+        const int pixsize = surface12->format->BytesPerPixel;
+        const int srcpitch = surface12->pitch;
         SDL_bool whole_screen = SDL_FALSE;
-        SDL_Rect rect20;
         void *pixels = NULL;
+        SDL_Rect rect20;
         int pitch = 0;
-        int i;
+        int i, j;
 
-        if (SDL20_LockTexture(VideoTexture20, NULL, &pixels, &pitch) < 0) {
-            return;  /* oh well */
-        }
+        for (i = 0; i < numrects; i++) {
+            UpdateRect12to20(surface12, &rects12[i], &rect20, &whole_screen);
+            if (!rect20.w || !rect20.h) {
+                continue;
+            } else if (SDL20_LockTexture(VideoTexture20, &rect20, &pixels, &pitch) < 0) {
+                continue;  /* oh well */
+            }
 
-        if (VideoConvertSurface20) {
-            SDL_Palette *logicalPal = surface12->surface20->format->palette;
-            surface12->surface20->format->palette = VideoPhysicalPalette20;
-            VideoConvertSurface20->pixels = pixels;
-            VideoConvertSurface20->pitch = pitch;
-            for (i = 0; i < numrects; i++) {
-                UpdateRect12to20(surface12, &rects12[i], &rect20, &whole_screen);
-                if (rect20.w && rect20.h) {
-                    SDL20_UpperBlit(VideoSurface12->surface20, &rect20, VideoConvertSurface20, &rect20);
+            if (VideoConvertSurface20) {
+                SDL_Rect dstrect20;  /* pretend that the subregion is just the top left of the convert surface. */
+                dstrect20.x = dstrect20.y = 0;
+                dstrect20.w = rect20.w;
+                dstrect20.h = rect20.h;
+                surface12->surface20->format->palette = VideoPhysicalPalette20;
+                VideoConvertSurface20->pixels = pixels;
+                VideoConvertSurface20->pitch = pitch;
+                VideoConvertSurface20->w = rect20.w;
+                VideoConvertSurface20->h = rect20.h;
+                SDL20_UpperBlit(VideoSurface12->surface20, &rect20, VideoConvertSurface20, &dstrect20);
+            } else {
+                const int cpy = rect20.w * pixsize;
+                char *dst = pixels;
+                const Uint8 *src = (((Uint8 *) surface12->pixels) + (rect20.y * srcpitch)) + (rect20.x * pixsize);
+                for (j = 0; j < rect20.h; j++) {
+                    SDL20_memcpy(dst, src, cpy);
+                    src += srcpitch;
+                    dst += pitch;
                 }
             }
+
+            SDL20_UnlockTexture(VideoTexture20);
+        }
+
+        if (VideoConvertSurface20) {  /* reset some state we messed with */
+            surface12->surface20->format->palette = logicalPal;
             VideoConvertSurface20->pixels = NULL;
             VideoConvertSurface20->pitch = 0;
-            surface12->surface20->format->palette = logicalPal;
-        } else {
-            const int srcpitch = surface12->pitch;
-            const int pixsize = surface12->format->BytesPerPixel;
-            for (i = 0; i < numrects; i++) {
-                UpdateRect12to20(surface12, &rects12[i], &rect20, &whole_screen);
-                if (rect20.w && rect20.h) {
-                    const int cpy = rect20.w * pixsize;
-                    const int h = surface12->h;
-                    char *dst = (((char *) pixels) + (rect20.y * pitch)) + (rect20.x * pixsize);
-                    char *src = (((char *) surface12->pixels) + (rect20.y * srcpitch)) + (rect20.x * pixsize);
-                    int j = 0;
-                    for (; j < h; j++) {
-                        SDL20_memcpy(dst, src, cpy);
-                        src += srcpitch;
-                        dst += pitch;
-                    }
-                }
-            }
+            VideoConvertSurface20->w = VideoSurface12->w;
+            VideoConvertSurface20->h = VideoSurface12->h;
         }
-
-        SDL20_UnlockTexture(VideoTexture20);
 
         if (whole_screen) {
             PresentScreen();  /* flip it now. */
