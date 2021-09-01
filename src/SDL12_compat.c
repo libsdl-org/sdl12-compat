@@ -584,7 +584,7 @@ typedef struct SDL12_keysym
 #define SDL12_PRESSED  1
 
 #if defined(SDL_VIDEO_DRIVER_X11)  /* SDL_VIDEO_DRIVER_X11 refers to the SDL2 headers. */
-typedef enum SDL_SYSWM_TYPE  /* this is only used for 1.2 X11 syswm */
+typedef enum  /* this is only used for 1.2 X11 syswm */
 {
     SDL12_SYSWM_X11
 } SDL12_SYSWM_TYPE;
