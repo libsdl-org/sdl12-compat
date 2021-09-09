@@ -116,6 +116,12 @@
 #include "SDL.h"
 #include "SDL_syswm.h"    /* includes windows.h for _WIN32, os2.h for __OS2__ */
 
+/* Headers from SDL2 >= 2.0.7 needed for SDL_AudioStream:
+ */
+#if !SDL_VERSION_ATLEAST(2,0,7)
+#error You need to compile against SDL >= 2.0.7 headers.
+#endif
+
 /* Missing SDL_thread.h stuff (see above): */
 #if defined(_WIN32) || defined(__OS2__)
 typedef struct SDL_Thread SDL_Thread;

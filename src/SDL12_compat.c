@@ -23,10 +23,6 @@
 
 #include "SDL20_include_wrapper.h"
 
-#if !SDL_VERSION_ATLEAST(2,0,0)
-#error You need to compile against SDL 2.0 headers.
-#endif
-
 /*
  * We report the library version as 1.2.$(SDL12_COMPAT_VERSION). This number
  *  should be way ahead of what SDL-1.2 Classic would report, so apps can
@@ -940,7 +936,9 @@ static JoystickOpenedItem JoystickOpenList[16];
 static Uint8 KeyState[SDLK12_LAST];
 static SDL_bool MouseInputIsRelative = SDL_FALSE;
 static SDL_Point MousePosition = { 0, 0 };
-static SDL_FPoint MouseRelativeRemainder = { 0.f, 0.f };
+static struct { /* SDL_FPoint */
+    float x, y;
+} MouseRelativeRemainder = { 0.f, 0.f };
 static SDL_bool UseMouseRelativeScaling = SDL_FALSE;
 static OpenGLEntryPoints OpenGLFuncs;
 static int OpenGLBlitLockCount = 0;
