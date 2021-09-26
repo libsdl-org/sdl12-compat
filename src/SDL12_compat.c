@@ -4408,6 +4408,7 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
     }
 
     if (flags12 & SDL12_OPENGL) {
+        const char *vsync_env = SDL20_getenv("SDL12COMPAT_SYNC_TO_VBLANK");
         SDL_assert(!VideoTexture20);  /* either a new window or we destroyed all this */
         SDL_assert(!VideoRenderer20);
         FIXME("Should we force a compatibility context here?");
@@ -4456,7 +4457,11 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
             VideoSurface12->flags |= SDL12_OPENGLBLIT;
         }
 
-        SDL20_GL_SetSwapInterval(SwapInterval);
+        if (vsync_env) {
+            SDL20_GL_SetSwapInterval(SDL20_atoi(vsync_env));
+        } else {
+            SDL20_GL_SetSwapInterval(SwapInterval);
+        }
 
     } else {
         /* always use a renderer for non-OpenGL windows. */
@@ -5728,7 +5733,6 @@ SDL_GL_SetAttribute(SDL12_GLattr attr, int value)
     /* swap control was moved out of this API, everything else lines up. */
     if (attr == SDL12_GL_SWAP_CONTROL) {
         SwapInterval = value;
-        FIXME("Actually set swap interval somewhere");
         return 0;
     }
     else if (attr == SDL12_GL_MULTISAMPLESAMPLES) {
