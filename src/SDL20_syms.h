@@ -113,7 +113,6 @@ SDL20_SYM(void,UnlockSurface,(SDL_Surface *a),(a),)
 SDL20_SYM(int,UpperBlit,(SDL_Surface *a,const SDL_Rect *b,SDL_Surface *c, SDL_Rect *d),(a,b,c,d),return)
 SDL20_SYM(int,LowerBlit,(SDL_Surface *a,const SDL_Rect *b,SDL_Surface *c, SDL_Rect *d),(a,b,c,d),return)
 SDL20_SYM(int,SoftStretch,(SDL_Surface *a,const SDL_Rect *b,SDL_Surface *c,const SDL_Rect *d),(a,b,c,d),return)
-SDL20_SYM(SDL_bool,HasColorKey,(SDL_Surface *a),(a),return)
 SDL20_SYM(int,SetColorKey,(SDL_Surface *a, int b, Uint32 c),(a,b,c),return)
 SDL20_SYM(int,GetColorKey,(SDL_Surface *a, Uint32 *b),(a,b),return)
 SDL20_SYM(void,FreeSurface,(SDL_Surface *a),(a),)
@@ -301,15 +300,15 @@ SDL20_SYM(int,atoi,(const char *a),(a),return)
 #ifdef __WATCOMC__ /* Watcom builds are broken with SDL math functions. */
 #ifndef SDL12_MATH
 #include <math.h>
-#define SDL20_fabsf fabs
-#define SDL20_ceilf ceil
-#define SDL20_floorf floor
+#define SDL20_fabs fabs
+#define SDL20_ceil ceil
+#define SDL20_floor floor
 #define SDL12_MATH
 #endif
 #else
-SDL20_SYM(float,fabsf,(float a),(a),return)
-SDL20_SYM(float,ceilf,(float a),(a),return)
-SDL20_SYM(float,floorf,(float a),(a),return)
+SDL20_SYM(double,fabs,(double a),(a),return)
+SDL20_SYM(double,ceil,(double a),(a),return)
+SDL20_SYM(double,floor,(double a),(a),return)
 #endif
 
 SDL20_SYM(SDL_Renderer *,CreateRenderer,(SDL_Window *a, int b, Uint32 c),(a,b,c),return)

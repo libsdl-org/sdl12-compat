@@ -23,7 +23,7 @@ that.
 will have a drop-in replacement that can be used with any existing binary
 that relies on SDL 1.2. You can copy this library over the existing 1.2 build,
 or force it to take priority over a system copy with LD_LIBRARY_PATH, etc.
-At runtime, sdl12-compat needs to be able to find a copy of SDL2 (v2.0.9 or
+At runtime, sdl12-compat needs to be able to find a copy of SDL2 (v2.0.7 or
 newer -- v2.0.12 or newer for Windows), so plan to include it with the library
 if necessary.
 

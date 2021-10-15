@@ -171,7 +171,7 @@ SDL20_MostSignificantBitIndex32(Uint32 x)
 /* SDL_truncf needs SDL >=2.0.14, so copy it here. */
 static float SDL20_truncf(float x)
 {
-    return (x < 0.0f) ? SDL20_ceilf(x) : SDL20_floorf(x);
+    return (x < 0.0f) ? (float)SDL20_ceil(x) : (float)SDL20_floor(x);
 }
 
 #define SDL12_DEFAULT_REPEAT_DELAY 500
@@ -989,7 +989,7 @@ static char loaderror[256];
     #include <os2.h>
     #define DIRSEP "\\"
     #define SDL20_LIBNAME "SDL2.dll"
-    #define SDL20_REQUIRED_VER SDL_VERSIONNUM(2,0,9)
+    #define SDL20_REQUIRED_VER SDL_VERSIONNUM(2,0,7)
     #define strcpy_fn  strcpy
     #define sprintf_fn sprintf
     static HMODULE Loaded_SDL20 = NULLHANDLE;
@@ -1017,7 +1017,7 @@ static char loaderror[256];
     #include <unistd.h>
     #define SDL20_LIBNAME "libSDL2-2.0.0.dylib"
     #define SDL20_FRAMEWORK "SDL2.framework/Versions/A/SDL2"
-    #define SDL20_REQUIRED_VER SDL_VERSIONNUM(2,0,9)
+    #define SDL20_REQUIRED_VER SDL_VERSIONNUM(2,0,7)
     #define strcpy_fn  strcpy
     #define sprintf_fn sprintf
     static void *Loaded_SDL20 = NULL;
@@ -1068,7 +1068,7 @@ static char loaderror[256];
 #elif defined(__unix__)
     #include <dlfcn.h>
     #define SDL20_LIBNAME "libSDL2-2.0.so.0"
-    #define SDL20_REQUIRED_VER SDL_VERSIONNUM(2,0,9)
+    #define SDL20_REQUIRED_VER SDL_VERSIONNUM(2,0,7)
     static void *Loaded_SDL20 = NULL;
     #define LoadSDL20Library() ((Loaded_SDL20 = dlopen(SDL20_LIBNAME, RTLD_LOCAL|RTLD_NOW)) != NULL)
     #define LookupSDL20Sym(sym) dlsym(Loaded_SDL20, sym)
@@ -2182,7 +2182,7 @@ GetOpenGLLogicalScalingViewport(int physical_width, int physical_height)
     want_aspect = ((float) OpenGLLogicalScalingWidth) / ((float) OpenGLLogicalScalingHeight);
     real_aspect = ((float) physical_width) / ((float) physical_height);
 
-    if (SDL20_fabsf(want_aspect-real_aspect) < 0.0001f) {
+    if (SDL20_fabs(want_aspect-real_aspect) < 0.0001) {
         /* The aspect ratios are the same, just scale appropriately */
         dstrect.x = 0;
         dstrect.y = 0;
@@ -2193,14 +2193,14 @@ GetOpenGLLogicalScalingViewport(int physical_width, int physical_height)
         const float scale = ((float) physical_width) / OpenGLLogicalScalingWidth;
         dstrect.x = 0;
         dstrect.w = physical_width;
-        dstrect.h = (int)SDL20_floorf(OpenGLLogicalScalingHeight * scale);
+        dstrect.h = (int)SDL20_floor(OpenGLLogicalScalingHeight * scale);
         dstrect.y = (physical_height - dstrect.h) / 2;
     } else {
         /* We want a narrower aspect ratio than is available - use side-bars */
         const float scale = ((float)physical_height) / OpenGLLogicalScalingHeight;
         dstrect.y = 0;
         dstrect.h = physical_height;
-        dstrect.w = (int)SDL20_floorf(OpenGLLogicalScalingWidth * scale);
+        dstrect.w = (int)SDL20_floor(OpenGLLogicalScalingWidth * scale);
         dstrect.x = (physical_width - dstrect.w) / 2;
     }
 
@@ -3429,12 +3429,10 @@ Surface20to12(SDL_Surface *surface20)
     format12->Bmask = surface20->format->Bmask;
     format12->Amask = surface20->format->Amask;
 
-    if (SDL20_HasColorKey(surface20)) {
-        if (SDL20_GetColorKey(surface20, &format12->colorkey) < 0) {
-            format12->colorkey = 0;
-        } else {
-            surface12->flags |= SDL12_SRCCOLORKEY;
-        }
+    if (SDL20_GetColorKey(surface20, &format12->colorkey) < 0) {
+        format12->colorkey = 0;
+    } else {
+        surface12->flags |= SDL12_SRCCOLORKEY;
     }
 
     if (SDL20_GetSurfaceAlphaMod(surface20, &format12->alpha) < 0) {
