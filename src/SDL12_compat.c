@@ -6383,6 +6383,16 @@ SDL_LoadWAV_RW(SDL12_RWops *rwops12, int freerwops12,
 
 #include "dr_mp3.h"
 
+static SDL_INLINE Sint64 SDLCALL SDL20_RWseek(SDL_RWops *ctx, Sint64 ofs, int whence) {
+    return ctx->seek(ctx, ofs, whence);
+}
+static SDL_INLINE size_t SDLCALL SDL20_RWread(SDL_RWops *ctx, void *ptr, size_t size, size_t n) {
+    return ctx->read(ctx, ptr, size, n);
+}
+static SDL_INLINE int SDLCALL SDL20_RWclose(SDL_RWops *ctx) {
+    return ctx->close(ctx);
+}
+
 static size_t
 mp3_sdlrwops_read(void *data, void *buf, size_t bytesToRead)
 {
