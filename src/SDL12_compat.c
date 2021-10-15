@@ -972,6 +972,13 @@ static EventQueueType *EventQueueAvailable = NULL;
 /* This is a KEYDOWN event which is being held for a follow-up TEXTINPUT */
 static SDL12_Event PendingKeydownEvent;
 
+/* SDL_atoi() before SDL2-2.0.17 is non-compliant */
+static SDL_INLINE int SDLCALL
+SDL20_atoi(const char *str)
+{
+    return SDL20_strtol(str, NULL, 10);
+}
+
 /* Obviously we can't use SDL_LoadObject() to load SDL2.  :)  */
 static char loaderror[256];
 #if defined(_WIN32)

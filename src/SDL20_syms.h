@@ -296,7 +296,7 @@ SDL20_SYM_PASSTHROUGH(int,iconv_close,(SDL_iconv_t a),(a),return)
 SDL20_SYM_PASSTHROUGH(size_t,iconv,(SDL_iconv_t a, const char **b, size_t *c, char **d, size_t *e),(a,b,c,d,e),return)
 SDL20_SYM_PASSTHROUGH(char *,iconv_string,(const char *a, const char *b, const char *c, size_t d),(a,b,c,d),return)
 SDL20_SYM(int,setenv,(const char *a, const char *b, int c),(a,b,c),return)
-SDL20_SYM(int,atoi,(const char *a),(a),return)
+
 #ifdef __WATCOMC__ /* Watcom builds are broken with SDL math functions. */
 #ifndef SDL12_MATH
 #include <math.h>
