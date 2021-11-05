@@ -923,6 +923,7 @@ static char *WindowTitle = NULL;
 static char *WindowIconTitle = NULL;
 static SDL_Surface *VideoIcon20 = NULL;
 static int EnabledUnicode = 0;
+static SDL_bool TranslateKeyboardLayout = SDL_FALSE;
 static int VideoDisplayIndex = 0;
 static SDL_bool SupportSysWM = SDL_FALSE;
 static SDL_bool CDRomInit = SDL_FALSE;
@@ -1729,8 +1730,11 @@ static int
 Init12Video(void)
 {
     const char *driver = SDL20_GetCurrentVideoDriver();
+    const char *layout_env = SDL20_getenv("SDL12COMPAT_USE_KEYBOARD_LAYOUT");
     SDL_DisplayMode mode;
     int i;
+
+    TranslateKeyboardLayout = (!layout_env || SDL20_atoi(layout_env)) ? SDL_TRUE : SDL_FALSE;
 
     IsDummyVideo = ((driver != NULL) && (SDL20_strcmp(driver, "dummy") == 0)) ? SDL_TRUE : SDL_FALSE;
 
@@ -2561,8 +2565,6 @@ SDL_GetKeyName(SDL12Key key)
     return (char *) "unknown key";
 }
 
-#if 0 /* https://github.com/libsdl-org/sdl12-compat/pull/97 */
-# define KeysymFromSDL2(_ev20) Keysym20to12((_ev20)->key.keysym.sym)
 static SDL12Key
 Keysym20to12(const SDL_Keycode keysym20)
 {
@@ -2649,8 +2651,6 @@ Keysym20to12(const SDL_Keycode keysym20)
     FIXME("map some of the SDLK12_WORLD keys");
     return SDLK12_UNKNOWN;
 }
-#else /* https://github.com/libsdl-org/sdl12-compat/pull/97 */
-# define KeysymFromSDL2(_ev20) Scancode20toKeysym12((_ev20)->key.keysym.scancode)
 static SDL12Key
 Scancode20toKeysym12(const SDL_Scancode scancode20)
 {
@@ -2795,7 +2795,6 @@ Scancode20toKeysym12(const SDL_Scancode scancode20)
     FIXME("map some of the SDLK12_WORLD keys");
     return SDLK12_UNKNOWN;
 }
-#endif
 
 static Uint8
 Scancode20to12(SDL_Scancode sc)
@@ -3086,7 +3085,12 @@ EventFilter20to12(void *data, SDL_Event *event20)
             if (event20->key.repeat) {
                 return 1;  /* ignore 2.0-style key repeat events */
             }
-            event12.key.keysym.sym = KeysymFromSDL2(event20);
+
+            if (TranslateKeyboardLayout) {
+                event12.key.keysym.sym = Keysym20to12(event20->key.keysym.sym);
+            } else {
+                event12.key.keysym.sym = Scancode20toKeysym12(event20->key.keysym.scancode);
+            }
 
             KeyState[event12.key.keysym.sym] = event20->key.state;
 
@@ -3108,7 +3112,11 @@ EventFilter20to12(void *data, SDL_Event *event20)
                 return 1;  /* ignore 2.0-style key repeat events */
             }
 
-            PendingKeydownEvent.key.keysym.sym = KeysymFromSDL2(event20);
+            if (TranslateKeyboardLayout) {
+                PendingKeydownEvent.key.keysym.sym = Keysym20to12(event20->key.keysym.sym);
+            } else {
+                PendingKeydownEvent.key.keysym.sym = Scancode20toKeysym12(event20->key.keysym.scancode);
+            }
 
             KeyState[PendingKeydownEvent.key.keysym.sym] = event20->key.state;
 
