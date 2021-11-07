@@ -68,13 +68,19 @@ static void PrintKey(SDL_keysym *sym, int pressed)
 			printf(" (^%c)", sym->unicode+'@');
 		} else {
 #ifdef UNICODE
-			printf(" (%c)", sym->unicode);
-#else
+			printf(" '%c' (0x%.4X)", sym->unicode, (int)sym->unicode);
+#elif defined(_WIN32)
 			/* This is a Latin-1 program, so only show 8-bits */
 			if ( !(sym->unicode & 0xFF00) )
-				printf(" (%c)", sym->unicode);
+				printf(" '%c' (0x%.4X)", sym->unicode, (int)sym->unicode);
 			else
-				printf(" (0x%X)", sym->unicode);
+				printf(" (0x%.4X)", (int)sym->unicode);
+#else /* other platforms than Windows hopefully use UTF-8 for 8bit chars */
+			Uint32 utf32str[2] = { sym->unicode, 0 };
+			const char* utf32type = (SDL_BYTEORDER == SDL_LIL_ENDIAN) ? "UTF-32LE" : "UTF-32BE";
+			char* utf8str = SDL_iconv_string("UTF-8", utf32type, (const char*)utf32str, 2*4);
+			printf(" '%s' (0x%.4X)", utf8str, (int)sym->unicode);
+			SDL_free(utf8str);
 #endif
 		}
 	}
