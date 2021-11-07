@@ -2654,7 +2654,7 @@ Keysym20to12(const SDL_Keycode keysym20)
     CASEKEYSYM20TO12(LALT);
     CASEKEYSYM20TO12(MODE);
     CASEKEYSYM20TO12(HELP);
-    CASEKEYSYM20TO12(SYSREQ);;
+    CASEKEYSYM20TO12(SYSREQ);
     CASEKEYSYM20TO12(MENU);
     CASEKEYSYM20TO12(POWER);
     CASEKEYSYM20TO12(UNDO);
@@ -2671,7 +2671,7 @@ Keysym20to12(const SDL_Keycode keysym20)
      * So I'm using that as a reference for our mappings, which only use
      * the lowest byte of the XK_* value, because of X11_KeySym & 0xFF in SDL1.2
      *
-     * case UTC4_code: return (SDL12Key)lowest_byte_of_corresponding_X11_KeySym; */
+     * case UCS4_code: return (SDL12Key)lowest_byte_of_corresponding_X11_KeySym; */
 
     /* Latin-2 */
     case 0x0104: return (SDL12Key)0xa1;
