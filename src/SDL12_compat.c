@@ -923,7 +923,17 @@ static char *WindowTitle = NULL;
 static char *WindowIconTitle = NULL;
 static SDL_Surface *VideoIcon20 = NULL;
 static int EnabledUnicode = 0;
+/* Windows SDL1.2 never uses translated keyboard layouts for compatibility with
+DirectInput, which didn't support them. Other platforms (MacOS, Linux) seem to,
+but with varying levels of bugginess. So default to Translated Layouts on
+all non-Windows platforms (but have an option to change this, as many apps are
+buggy with non-US layouts, or provide their own keyboard layout translation,
+such as DOSBox. */
+#if !defined(_WIN32)
+static SDL_bool TranslateKeyboardLayout = SDL_TRUE;
+#else
 static SDL_bool TranslateKeyboardLayout = SDL_FALSE;
+#endif
 static int VideoDisplayIndex = 0;
 static SDL_bool SupportSysWM = SDL_FALSE;
 static SDL_bool CDRomInit = SDL_FALSE;
@@ -1734,7 +1744,10 @@ Init12Video(void)
     SDL_DisplayMode mode;
     int i;
 
-    TranslateKeyboardLayout = (!layout_env || SDL20_atoi(layout_env)) ? SDL_TRUE : SDL_FALSE;
+    /* Only override this if the env var is set, as the default is platform-specific. */
+    if (layout_env) {
+        TranslateKeyboardLayout = SDL20_atoi(layout_env) ? SDL_TRUE : SDL_FALSE;
+    }
 
     IsDummyVideo = ((driver != NULL) && (SDL20_strcmp(driver, "dummy") == 0)) ? SDL_TRUE : SDL_FALSE;
 
