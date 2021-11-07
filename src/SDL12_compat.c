@@ -2870,7 +2870,7 @@ Scancode20to12(SDL_Scancode sc)
     CASESCANCODE20TO12(F8, 0x4A, 0x64);
     CASESCANCODE20TO12(F9, 0x4B, 0x65);
     CASESCANCODE20TO12(G, 0x2A, 0x05);
-    CASESCANCODE20TO12(GRAVE, 0x31, 0x32);
+    CASESCANCODE20TO12(GRAVE, 0x31, 0x32); /* Note: the mac scancode might not be 100% correct, see below */
     CASESCANCODE20TO12(H, 0x2B, 0x04);
     CASESCANCODE20TO12(HOME, 0x00, 0x73);
     CASESCANCODE20TO12(I, 0x1F, 0x22);
@@ -2904,7 +2904,11 @@ Scancode20to12(SDL_Scancode sc)
     CASESCANCODE20TO12(M, 0x3A, 0x2E);
     CASESCANCODE20TO12(MINUS, 0x14, 0x1B);
     CASESCANCODE20TO12(N, 0x39, 0x2D);
-    CASESCANCODE20TO12(NONUSBACKSLASH, 0x33, 0x2A);
+    /* On Macs with ANSI layout, 0x32 is SDL_SCANCODE_GRAVE and _NONUSBACKSLASH doesn't exist.
+     * On Macs with ISO layout, 0x32 is _NONUSBACKSLASH and 0x0A is the key at the position of _GRAVE..
+     * Probably it's best to keep _GRAVE at 0x32 and use 0x0A for _NONUSBACKSLASH instead,
+     * so at least it has a unique scancode at all. */
+    CASESCANCODE20TO12(NONUSBACKSLASH, 0x5E, 0x0A);
     CASESCANCODE20TO12(NUMLOCKCLEAR, 0x4D, 0x47);
     CASESCANCODE20TO12(O, 0x20, 0x1F);
     CASESCANCODE20TO12(P, 0x21, 0x23);
