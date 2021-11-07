@@ -1142,7 +1142,7 @@ LoadSDL20(void)
                 if (!okay) {
                     sprintf_fn(loaderror, "SDL2 %d.%d.%d library is too old.", v.major, v.minor, v.patch);
                 } else {
-                    const char *envr = SDL20_getenv("SDL12_COMPAT_DEBUG_LOGGING");
+                    const char *envr = SDL20_getenv("SDL12COMPAT_DEBUG_LOGGING");
                     const SDL_bool debug_logging = (!envr || (SDL20_atoi(envr) == 0)) ? SDL_FALSE : SDL_TRUE;
                     #if ENABLE_FIXMES == 1
                     PrintFixmes = debug_logging;
@@ -1637,7 +1637,7 @@ Init12VidModes(void)
     int i, j;
     SDL12_Rect prev_mode = { 0, 0, 0, 0 }, current_mode = { 0, 0, 0, 0 };
     /* We only want to enable fake modes if OpenGL Logical Scaling is enabled. */
-    char *env = SDL20_getenv("SDL12COMPAT_OPENGL_SCALING");
+    const char *env = SDL20_getenv("SDL12COMPAT_OPENGL_SCALING");
     SDL_bool use_fake_modes = (!env || SDL20_atoi(env)) ? SDL_TRUE : SDL_FALSE;
 
     if (VideoModesCount > 0) {
