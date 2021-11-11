@@ -5,11 +5,11 @@
 INCLUDES = -Iinclude
 
 ifeq ($(CROSS),)
-CC=gcc
-RC=windres
+CC = gcc
+RC = windres
 else
-CC=$(CROSS)-gcc
-RC=$(CROSS)-windres
+CC = $(CROSS)-gcc
+RC = $(CROSS)-windres
 endif
 LD = $(CC)
 

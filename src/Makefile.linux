@@ -4,7 +4,7 @@
 # change INCLUDES so it points to SDL2 headers directory:
 INCLUDES = -Iinclude
 
-CC=gcc
+CC = gcc
 LD = $(CC)
 
 CPPFLAGS = -DNDEBUG -D_THREAD_SAFE -D_REENTRANT
@@ -12,7 +12,7 @@ CPPFLAGS+= -DSDL_DISABLE_IMMINTRIN_H
 
 CFLAGS  = -fPIC -O3 -Wall
 LDFLAGS = -shared -Wl,-soname,libSDL-1.2.so.0
-#make sure this is supported:
+# make sure this is supported:
 LDFLAGS+= -Wl,--no-undefined
 LDLIBS  = -ldl
 
@@ -21,15 +21,15 @@ SHLIB = libSDL-1.2.so.1.2.50
 OBJ = SDL12_compat.o
 
 .SUFFIXES:
-.SUFFIXES: .o .c .m
+.SUFFIXES: .o .c
 
 all: $(SHLIB)
 
 $(SHLIB): $(OBJ)
 	$(LD) -o $@ $(LDFLAGS) $(OBJ) $(LDLIBS)
-	ln -s $(SHLIB) libSDL-1.2.so
-	ln -s $(SHLIB) libSDL-1.2.so.0
-	ln -s $(SHLIB) libSDL.so
+	ln -sf $(SHLIB) libSDL-1.2.so
+	ln -sf $(SHLIB) libSDL-1.2.so.0
+	ln -sf $(SHLIB) libSDL.so
 
 .c.o:
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(INCLUDES) -o $@ -c $<

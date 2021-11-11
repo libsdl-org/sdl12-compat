@@ -5,9 +5,9 @@
 INCLUDES = -Iinclude
 
 ifeq ($(CROSS),)
-CC=gcc
+CC = gcc
 else
-CC=$(CROSS)-gcc
+CC = $(CROSS)-gcc
 endif
 LD = $(CC)
 
@@ -34,7 +34,8 @@ all: $(DYLIB)
 
 $(DYLIB): $(OBJ)
 	$(LD) -o $@ $(LDFLAGS) $(OBJ) $(LDLIBS)
-	ln -s $(DYLIB) libSDL.dylib
+	ln -sf $(DYLIB) libSDL.dylib
+
 .c.o:
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(INCLUDES) -o $@ -c $<
 .m.o:

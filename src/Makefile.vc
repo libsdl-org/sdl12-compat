@@ -31,6 +31,7 @@ all: $(DLLNAME)
 
 $(DLLNAME): $(OBJ)
 	$(LD) /OUT:$@ $(LDFLAGS) $(OBJ) $(LDLIBS)
+
 .c.obj:
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(INCLUDES) /Fo$@ -c $<
 .rc.res:
