@@ -46,40 +46,53 @@ running your application with them set on the command-line, for example:
 ```
 SDL12COMPAT_HIGHDPI=1 SDL12COMPAT_OPENGL_SCALING=0 %command%
 ```
-will run ``%command%`` with high-dpi monitor support enabled, but OpenGL
+will run `%command%` with high-dpi monitor support enabled, but OpenGL
 scaling support disabled.
 
 The available options are:
 
-- ``SDL12COMPAT_DEBUG_LOGGING`` — if enabled, print debugging messages to
-  ``stderr``. These messages are mostly useful to developers, or if trying to
-  track down a specific bug.
-- ``SDL12COMPAT_FAKE_CDROM_PATH`` — a path to a directory containing MP3 files
-  (named trackXX.mp3, where XX is a two-digit track number) to be used by
-  applications which play CD audio.
-- ``SDL12COMPAT_OPENGL_SCALING`` — enables scaling of OpenGL applications to
-  the current desktop resolution. If disabled, applications can change the
-  real screen resolution. This option is enabled by default, but not all
-  applications are compatible with it: try changing this if you can only see
-  a black screen.
-- ``SDL12COMPAT_SYNC_TO_VBLANK`` — force the application to sync (or not sync)
-  to the vertical blanking interval (VSync). When enabled, this will cap the
-  application's framerate to the screen's refresh rate (and may resolve issues
-  with screen tearing).
-- ``SDL12COMPAT_SCALE_METHOD`` — choose the scaling method used when
-  applications render at a non-native resolution. The options are ``nearest``,
-  for nearest-neighbour sampling (more pixelated) and ``linear`` for bilinear
-  sampling (blurrier).
-- ``SDL12COMPAT_HIGHDPI`` — advertise the application as supporting high-DPI
-  displays. Enabling this will usually result in sharper graphics, but on some
-  applications text and other elements may become very small.
-- ``SDL12COMPAT_USE_KEYBOARD_LAYOUT`` — make all keyboard input take the current
-  keyboard layout into account. This may need to be disabled for applications
-  which provide their own keyboard layout support, or if the position of the
-  keys on the keyboard is more important than the character they produce. Note
-  that text input (in most applications) will take the keyboard layout into
-  account regardless of this option.
-- ``SDL_MOUSE_RELATIVE_SCALING`` — if enabled, relative mouse motion is scaled
-  when the application is running at a non-native resolution. This may be
-  required with some applications which use their own mouse cursors. See also
+- SDL12COMPAT_DEBUG_LOGGING:
+  If enabled, print debugging messages to stderr.  These messages are
+  mostly useful to developers, or when trying to track down a specific
+  bug.
+
+- SDL12COMPAT_FAKE_CDROM_PATH:
+  A path to a directory containing MP3 files (named trackXX.mp3, where
+  XX is a two-digit track number) to be used by applications which play
+  CD audio.
+
+- SDL12COMPAT_OPENGL_SCALING:
+  Enables scaling of OpenGL applications to the current desktop resolution.
+  If disabled, applications can change the real screen resolution.  This
+  option is enabled by default, but not all applications are compatible
+  with it: try changing this if you can only see a black screen.
+
+- SDL12COMPAT_SYNC_TO_VBLANK:
+  Force the application to sync (or not sync) to the vertical blanking
+  interval (VSync).  When enabled, this will cap the application's
+  framerate to the screen's refresh rate (and may resolve issues with
+  screen tearing).
+
+- SDL12COMPAT_SCALE_METHOD:
+  Choose the scaling method used when applications render at a non-native
+  resolution.  The options are `nearest`, for nearest-neighbour sampling
+  (more pixelated) and `linear` for bilinear sampling (blurrier).
+
+- SDL12COMPAT_HIGHDPI:
+  Advertise the application as supporting high-DPI displays.  Enabling
+  this will usually result in sharper graphics, but on some applications
+  text and other elements may become very small.
+
+- SDL12COMPAT_USE_KEYBOARD_LAYOUT:
+  Make all keyboard input take the current keyboard layout into account.
+  This may need to be disabled for applications which provide their own
+  keyboard layout support, or if the position of the keys on the keyboard
+  is more important than the character they produce.  Note that text input
+  (in most applications) will take the keyboard layout into account
+  regardless of this option.
+
+- SDL_MOUSE_RELATIVE_SCALING:
+  If enabled, relative mouse motion is scaled when the application is
+  running at a non-native resolution.  This may be required with some
+  applications which use their own mouse cursors. See also:
   https://wiki.libsdl.org/SDL_HINT_MOUSE_RELATIVE_SCALING
