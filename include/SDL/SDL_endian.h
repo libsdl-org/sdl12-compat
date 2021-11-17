@@ -30,7 +30,7 @@ real SDL-1.2 available to you. */
 
 #if defined(_MSC_VER) && (_MSC_VER >= 1400)
 #include <intrin.h>
-#endi
+#endif
 
 /* This is all lifted out of SDL2's zlib-licensed headers. */
 
@@ -290,4 +290,3 @@ SDL_Swap64(Uint64 x)
 #include "close_code.h"
 
 #endif
-
