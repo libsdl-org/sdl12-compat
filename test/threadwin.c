@@ -21,7 +21,7 @@ static void quit(int rc)
 	exit(rc);
 }
 
-SDL_Surface *LoadIconSurface(char *file, Uint8 **maskp)
+SDL_Surface *LoadIconSurface(const char *file, Uint8 **maskp)
 {
 	SDL_Surface *icon;
 	Uint8       *pixels;

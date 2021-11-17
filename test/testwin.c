@@ -18,7 +18,7 @@ static void quit(int rc)
 	exit(rc);
 }
 
-void DrawPict(SDL_Surface *screen, char *bmpfile,
+void DrawPict(SDL_Surface *screen, const char *bmpfile,
 					int speedy, int flip, int nofade)
 {
 	SDL_Surface *picture;

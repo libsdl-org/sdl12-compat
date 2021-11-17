@@ -178,7 +178,7 @@ static SDL_Rect    position;
 static int         x_vel, y_vel;
 static int	   alpha_vel;
 
-int LoadSprite(SDL_Surface *screen, char *file)
+int LoadSprite(SDL_Surface *screen, const char *file)
 {
 	SDL_Surface *converted;
 

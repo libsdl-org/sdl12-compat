@@ -61,7 +61,7 @@ static void quit(int rc)
 	exit(rc);
 }
 
-static void sdlerr(char *when)
+static void sdlerr(const char *when)
 {
     fprintf(stderr, "SDL error: %s: %s\n", when, SDL_GetError());
     quit(1);

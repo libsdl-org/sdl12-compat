@@ -51,7 +51,7 @@ static void ListTracks(SDL_CD *cdrom)
 {
 	int i;
 	int m, s, f;
-	char* trtype;
+	const char *trtype;
 
 	SDL_CDStatus(cdrom);
 	printf("Drive tracks: %d\n", cdrom->numtracks);

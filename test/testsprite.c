@@ -28,7 +28,7 @@ static void quit(int rc)
 	exit(rc);
 }
 
-int LoadSprite(char *file)
+int LoadSprite(const char *file)
 {
 	SDL_Surface *temp;
 
