@@ -1259,6 +1259,7 @@ SDL_SetModuleHandle(void *handle)
     (void) handle;/* handled internally by SDL2 - nothing to do.. */
 }
 
+/* FIXME: forward these two to the SDL2 versions ? */
 DECLSPEC int SDLCALL
 SDL_RegisterApp(char *name, Uint32 style, void *hInst)
 {
