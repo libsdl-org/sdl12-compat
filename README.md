@@ -67,12 +67,6 @@ The available options are:
   option is enabled by default, but not all applications are compatible
   with it: try changing this if you can only see a black screen.
 
-- SDL12COMPAT_SYNC_TO_VBLANK:
-  Force the application to sync (or not sync) to the vertical blanking
-  interval (VSync).  When enabled, this will cap the application's
-  framerate to the screen's refresh rate (and may resolve issues with
-  screen tearing).
-
 - SDL12COMPAT_SCALE_METHOD:
   Choose the scaling method used when applications render at a non-native
   resolution.  The options are `nearest`, for nearest-neighbour sampling
@@ -82,6 +76,12 @@ The available options are:
   Advertise the application as supporting high-DPI displays.  Enabling
   this will usually result in sharper graphics, but on some applications
   text and other elements may become very small.
+
+- SDL12COMPAT_SYNC_TO_VBLANK:
+  Force the application to sync (or not sync) to the vertical blanking
+  interval (VSync).  When enabled, this will cap the application's
+  framerate to the screen's refresh rate (and may resolve issues with
+  screen tearing).
 
 - SDL12COMPAT_USE_KEYBOARD_LAYOUT:
   Make all keyboard input take the current keyboard layout into account.
