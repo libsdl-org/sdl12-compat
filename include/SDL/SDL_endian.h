@@ -270,20 +270,16 @@ SDL_Swap64(Uint64 x)
 #define SDL_SwapLE16(X)     (X)
 #define SDL_SwapLE32(X)     (X)
 #define SDL_SwapLE64(X)     (X)
-#define SDL_SwapFloatLE(X)  (X)
 #define SDL_SwapBE16(X)     SDL_Swap16(X)
 #define SDL_SwapBE32(X)     SDL_Swap32(X)
 #define SDL_SwapBE64(X)     SDL_Swap64(X)
-#define SDL_SwapFloatBE(X)  SDL_SwapFloat(X)
 #else
 #define SDL_SwapLE16(X)     SDL_Swap16(X)
 #define SDL_SwapLE32(X)     SDL_Swap32(X)
 #define SDL_SwapLE64(X)     SDL_Swap64(X)
-#define SDL_SwapFloatLE(X)  SDL_SwapFloat(X)
 #define SDL_SwapBE16(X)     (X)
 #define SDL_SwapBE32(X)     (X)
 #define SDL_SwapBE64(X)     (X)
-#define SDL_SwapFloatBE(X)  (X)
 #endif
 /* @} *//* Swap to native */
 
