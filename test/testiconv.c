@@ -29,7 +29,8 @@ int main(int argc, char *argv[])
 		"UCS4",
 		"UCS-4",
 	};
-	const char *fname;
+
+	const char * fname;
 	char buffer[BUFSIZ];
 	char *ucs4;
 	char *test[2];
@@ -40,7 +41,7 @@ int main(int argc, char *argv[])
 	fname = (argc < 2) ? "utf8.txt" : argv[1];
 	file = fopen(fname, "rb");
 	if ( !file ) {
-		fprintf(stderr, "Unable to open %s\n", argv[1]);
+		fprintf(stderr, "Unable to open %s\n", fname);
 		return (1);
 	}
 

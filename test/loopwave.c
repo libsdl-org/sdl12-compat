@@ -70,12 +70,10 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "Couldn't initialize SDL: %s\n",SDL_GetError());
 		return(1);
 	}
-	file = (argc < 2)? "sample.wav" : argv[1];
+	file = (argc < 2) ? "sample.wav" : argv[1];
 	/* Load the wave file into memory */
-	if ( SDL_LoadWAV(file,
-			&wave.spec, &wave.sound, &wave.soundlen) == NULL ) {
-		fprintf(stderr, "Couldn't load %s: %s\n",
-						argv[1], SDL_GetError());
+	if ( SDL_LoadWAV(file, &wave.spec, &wave.sound, &wave.soundlen) == NULL ) {
+		fprintf(stderr, "Couldn't load %s: %s\n", file, SDL_GetError());
 		quit(1);
 	}
 
