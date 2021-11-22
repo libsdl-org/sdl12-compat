@@ -79,6 +79,7 @@ SDL20_SYM(int,GetNumDisplayModes,(int a),(a),return)
 SDL20_SYM(int,GetDisplayMode,(int a, int b, SDL_DisplayMode *c),(a,b,c),return)
 SDL20_SYM(int,GetDesktopDisplayMode,(int a, SDL_DisplayMode *b),(a,b),return)
 SDL20_SYM(int,GetCurrentDisplayMode,(int a, SDL_DisplayMode *b),(a,b),return)
+SDL20_SYM(int,GetWindowDisplayMode,(SDL_Window *a, SDL_DisplayMode *b),(a,b),return)
 
 SDL20_SYM(void,EnableScreenSaver,(void),(),)
 SDL20_SYM(void,DisableScreenSaver,(void),(),)

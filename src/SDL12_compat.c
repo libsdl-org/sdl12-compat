@@ -5581,6 +5581,26 @@ UpdateRect12to20(SDL12_Surface *surface12, const SDL12_Rect *rect12, SDL_Rect *r
     }
 }
 
+/* For manual throttling of screen updates. */
+static int
+GetDesiredMillisecondsPerFrame()
+{
+    SDL_DisplayMode mode;
+    if (VideoSurface12->flags & SDL12_FULLSCREEN) {
+       if (SDL20_GetWindowDisplayMode(VideoWindow20, &mode) == 0) {
+           if (mode.refresh_rate) {
+               return 1000 / mode.refresh_rate;
+           }
+       }
+    } else if (SDL20_GetCurrentDisplayMode(VideoDisplayIndex, &mode) == 0) {
+        /* If we're windowed, assume we're on the default screen. */
+        if (mode.refresh_rate) {
+            return 1000 / mode.refresh_rate;
+        }
+    }
+    return 15;
+}
+
 /* SDL_OPENGLBLIT support APIs. https://discourse.libsdl.org/t/ogl-and-sdl/2775/3 */
 DECLSPEC void SDLCALL
 SDL_GL_Lock(void)
@@ -5767,9 +5787,7 @@ SDL_UpdateRects(SDL12_Surface *surface12, int numrects, SDL12_Rect *rects12)
         if (whole_screen) {
             PresentScreen();  /* flip it now. */
         } else {
-            FIXME("Don't hardcode 15, do this based on display refresh rate.");
-            FIXME("Maybe just flip it immediately in PumpEvents if this flag is set, instead?");
-            VideoSurfacePresentTicks = VideoSurfaceLastPresentTicks + 15;  /* flip it later. */
+            VideoSurfacePresentTicks = VideoSurfaceLastPresentTicks + GetDesiredMillisecondsPerFrame();  /* flip it later. */
         }
     }
 }
@@ -6327,7 +6345,7 @@ SDL_DisplayYUVOverlay(SDL12_Overlay *overlay12, SDL12_Rect *dstrect12)
     FIXME("is it legal to display multiple yuv overlays?");  /* if so, this will need to be a list instead of a single pointer. */
     QueuedDisplayOverlay12 = overlay12;
     SDL20_memcpy(&QueuedDisplayOverlayDstRect12, dstrect12, sizeof (SDL12_Rect));
-    VideoSurfacePresentTicks = VideoSurfaceLastPresentTicks + 15;  /* flip it later. */
+    VideoSurfacePresentTicks = VideoSurfaceLastPresentTicks + GetDesiredMillisecondsPerFrame();  /* flip it later. */
 
     return 0;
 }
