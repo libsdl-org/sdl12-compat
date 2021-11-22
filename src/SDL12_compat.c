@@ -923,6 +923,7 @@ static char *WindowTitle = NULL;
 static char *WindowIconTitle = NULL;
 static SDL_Surface *VideoIcon20 = NULL;
 static int EnabledUnicode = 0;
+static SDL_bool EnabledKeyRepeat = SDL_TRUE;
 /* Windows SDL1.2 never uses translated keyboard layouts for compatibility with
 DirectInput, which didn't support them. Other platforms (MacOS, Linux) seem to,
 but with varying levels of bugginess. So default to Translated Layouts on
@@ -3785,7 +3786,7 @@ EventFilter20to12(void *data, SDL_Event *event20)
 
         case SDL_KEYDOWN:
             FlushPendingKeydownEvent(0);
-            if (event20->key.repeat) {
+            if (event20->key.repeat && !EnabledKeyRepeat) {
                 return 1;  /* ignore 2.0-style key repeat events */
             }
 
@@ -6569,21 +6570,22 @@ SDL_GetGammaRamp(Uint16 *red, Uint16 *green, Uint16 *blue)
 DECLSPEC int SDLCALL
 SDL_EnableKeyRepeat(int delay, int interval)
 {
-    FIXME("write me");
-    (void) delay;
+    FIXME("Support non-default delay and interval for Key Repeat");
     (void) interval;
+
+    EnabledKeyRepeat = (delay != 0) ? SDL_TRUE : SDL_FALSE;
+
     return 0;
 }
 
 DECLSPEC void SDLCALL
 SDL_GetKeyRepeat(int *delay, int *interval)
 {
-    FIXME("write me");
     if (delay) {
-        *delay = SDL12_DEFAULT_REPEAT_DELAY;
+        *delay = EnabledKeyRepeat ? SDL12_DEFAULT_REPEAT_DELAY : 0;
     }
     if (interval) {
-        *interval = SDL12_DEFAULT_REPEAT_INTERVAL;
+        *interval = EnabledKeyRepeat ? SDL12_DEFAULT_REPEAT_INTERVAL : 0;
     }
 }
 
