@@ -1569,6 +1569,12 @@ GetVideoDisplay(void)
         variable = SDL20_getenv("SDL_VIDEO_FULLSCREEN_HEAD");
     }
     if (variable) {
+        int preferred_display = SDL20_atoi(variable);
+        
+        if (preferred_display < 0 || preferred_display >= SDL20_GetNumVideoDisplays()) {
+            return 0;
+        }
+
         return SDL20_atoi(variable);
     } else {
         return 0;
@@ -4579,6 +4585,9 @@ GetEnvironmentWindowPosition(int *x, int *y)
     if (center) {
         *x = SDL_WINDOWPOS_CENTERED_DISPLAY(display);
         *y = SDL_WINDOWPOS_CENTERED_DISPLAY(display);
+    } else {
+        *x = SDL_WINDOWPOS_UNDEFINED_DISPLAY(display);
+        *y = SDL_WINDOWPOS_UNDEFINED_DISPLAY(display);
     }
 }
 
@@ -4969,8 +4978,7 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
         return NULL;
     }
 
-    FIXME("There's an environment variable to choose a display");
-    if (SDL20_GetCurrentDisplayMode(0, &dmode) < 0) {
+    if (SDL20_GetCurrentDisplayMode(VideoDisplayIndex, &dmode) < 0) {
         return NULL;
     }
 
