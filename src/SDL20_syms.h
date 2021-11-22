@@ -74,6 +74,7 @@ SDL20_SYM(Uint8,EventState,(Uint32 a, int b),(a,b),return)
 
 SDL20_SYM(SDL_bool,GetWindowWMInfo,(SDL_Window *a, SDL_SysWMinfo *b),(a,b),)
 
+SDL20_SYM(int,GetNumVideoDisplays,(void),(),return)
 SDL20_SYM(int,GetNumDisplayModes,(int a),(a),return)
 SDL20_SYM(int,GetDisplayMode,(int a, int b, SDL_DisplayMode *c),(a,b,c),return)
 SDL20_SYM(int,GetDesktopDisplayMode,(int a, SDL_DisplayMode *b),(a,b),return)
