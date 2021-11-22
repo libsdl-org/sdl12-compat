@@ -96,3 +96,41 @@ The available options are:
   running at a non-native resolution.  This may be required with some
   applications which use their own mouse cursors. See also:
   https://wiki.libsdl.org/SDL_HINT_MOUSE_RELATIVE_SCALING
+
+# Compatibility issues with OpenGL scaling
+
+The OpenGL scaling feature of sdl12-compat allows applications which wish to
+run at a non-native screen resolution to do so without changing the system
+resolution. It does this by redirecting OpenGL rendering calls to a "fake"
+backbuffer which is scaled when rendering.
+
+This works well for simple applications, but for more complicated applications
+which use Frame Buffer Objects, sdl12-compat needs to intercept and redirect
+some OpenGL calls. Applications which access these functions without going
+though SDL (even if via a library) may not successfully render anything, or
+may render incorrectly if OpenGL scaling is enabled.
+
+In these cases, you can disable OpenGL scaling by setting the environment
+variable:
+```
+SDL12COMPAT_OPENGL_SCALING=0
+```
+
+# Compatibility issues with applications directly accessing underlying APIs
+
+Some applications combine the use of SDL with direct access to the underlying
+OS or window system. When running these applications on the same OS and SDL
+video driver (e.g. a program written for X11 on Linux is run on X11 on Linux),
+sdl12-compat is usually compatible.
+
+However, if you wish to run an application on a different video driver, the
+application will be unable to access the underlying API it is expecting, and
+may fail. This often occurs trying to run applications written for X11 under
+Wayland, and particularly affects a number of popular OpenGL extension loaders.
+
+In this case, the best workaround is to run under a compatibility layer like
+XWayland, and set the SDL_VIDEODRIVER environment variable to the driver the
+program is expecting:
+```
+SDL_VIDEODRIVER=x11
+```
