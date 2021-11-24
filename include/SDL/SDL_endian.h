@@ -34,8 +34,8 @@ real SDL-1.2 available to you. */
 
 /* This is all lifted out of SDL2's zlib-licensed headers. */
 
-#define SDL_LIL_ENDIAN	1234
-#define SDL_BIG_ENDIAN	4321
+#define SDL_LIL_ENDIAN  1234
+#define SDL_BIG_ENDIAN  4321
 
 #ifndef SDL_BYTEORDER           /* Not defined in SDL_config.h? */
 #ifdef __linux__
@@ -59,6 +59,7 @@ real SDL-1.2 available to you. */
 #endif
 #endif /* __linux__ */
 #endif /* !SDL_BYTEORDER */
+
 
 #include "begin_code.h"
 
@@ -129,7 +130,7 @@ SDL_Swap16(Uint16 x)
     return x;
 }
 #elif defined(__WATCOMC__) && defined(__386__)
-extern _inline Uint16 SDL_Swap16(Uint16);
+extern __inline Uint16 SDL_Swap16(Uint16);
 #pragma aux SDL_Swap16 = \
   "xchg al, ah" \
   parm   [ax]   \
@@ -187,7 +188,7 @@ SDL_Swap32(Uint32 x)
     return x;
 }
 #elif defined(__WATCOMC__) && defined(__386__)
-extern _inline Uint32 SDL_Swap32(Uint32);
+extern __inline Uint32 SDL_Swap32(Uint32);
 #pragma aux SDL_Swap32 = \
   "bswap eax"  \
   parm   [eax] \
@@ -230,7 +231,7 @@ SDL_Swap64(Uint64 x)
     return x;
 }
 #elif defined(__WATCOMC__) && defined(__386__)
-extern _inline Uint64 SDL_Swap64(Uint64);
+extern __inline Uint64 SDL_Swap64(Uint64);
 #pragma aux SDL_Swap64 = \
   "bswap eax"     \
   "bswap edx"     \
@@ -253,6 +254,7 @@ SDL_Swap64(Uint64 x)
     return (x);
 }
 #endif
+
 
 /* remove extra macros */
 #undef HAS_BROKEN_BSWAP
@@ -285,4 +287,4 @@ SDL_Swap64(Uint64 x)
 
 #include "close_code.h"
 
-#endif
+#endif /* _SDL_endian_h */

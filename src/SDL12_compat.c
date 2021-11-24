@@ -110,7 +110,7 @@ extern "C" {
 
 /* From SDL2.0's SDL_bits.h: a force-inlined function. */
 #if defined(__WATCOMC__) && defined(__386__)
-extern _inline int _SDL20_bsr_watcom (Uint32);
+extern __inline int _SDL20_bsr_watcom(Uint32);
 #pragma aux _SDL20_bsr_watcom = \
     "bsr eax, eax" \
     parm [eax] nomemory \
