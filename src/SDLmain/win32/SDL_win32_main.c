@@ -26,6 +26,9 @@
 #define STDOUT_FILE	"stdout.txt"
 #define STDERR_FILE	"stderr.txt"
 
+#undef SDL_isspace
+#define SDL_isspace(a) ((a) == ' ' || (a) == '\t')
+
 /* Set a variable to tell if the stdio redirect has been enabled. */
 static int stdioRedirectEnabled = 0;
 
@@ -63,7 +66,7 @@ static int ParseCommandLine(char *cmdline, char **argv)
 	argc = last_argc = 0;
 	for ( bufp = cmdline; *bufp; ) {
 		/* Skip leading whitespace */
-		while ( isspace(*bufp) ) {
+		while ( SDL_isspace(*bufp) ) {
 			++bufp;
 		}
 		/* Skip over argument */
@@ -88,7 +91,7 @@ static int ParseCommandLine(char *cmdline, char **argv)
 				++argc;
 			}
 			/* Skip over word */
-			while ( *bufp && ! isspace(*bufp) ) {
+			while ( *bufp && ! SDL_isspace(*bufp) ) {
 				++bufp;
 			}
 		}
