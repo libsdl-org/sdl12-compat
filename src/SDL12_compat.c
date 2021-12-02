@@ -5073,6 +5073,8 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
     } else {  /* resize it */
         SDL20_SetWindowSize(VideoWindow20, width, height);
         SDL20_SetWindowFullscreen(VideoWindow20, fullscreen_flags20);
+        /* This second SetWindowSize is a workaround for an SDL2 bug, see https://github.com/libsdl-org/sdl12-compat/issues/148 */
+        SDL20_SetWindowSize(VideoWindow20, width, height);
         SDL20_SetWindowBordered(VideoWindow20, (flags12 & SDL12_NOFRAME) ? SDL_FALSE : SDL_TRUE);
         SDL20_SetWindowResizable(VideoWindow20, (flags12 & SDL12_RESIZABLE) ? SDL_TRUE : SDL_FALSE);
     }
