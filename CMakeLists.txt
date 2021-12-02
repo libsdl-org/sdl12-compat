@@ -90,6 +90,12 @@ elseif(UNIX AND NOT ANDROID)
         VERSION "${SDL12_COMPAT_VERSION_STR}"
         SOVERSION "0"
         OUTPUT_NAME "SDL-1.2")
+elseif(OS2)
+    # OS/2 version was built as SDL12.dll
+    set_target_properties(SDL PROPERTIES
+        VERSION "${SDL12_COMPAT_VERSION_STR}"
+        SOVERSION "0"
+        OUTPUT_NAME "SDL12")
 else()
     set_target_properties(SDL PROPERTIES
         VERSION "${SDL12_COMPAT_VERSION_STR}"
