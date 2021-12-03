@@ -4853,6 +4853,7 @@ static SDL_bool
 InitializeOpenGLScaling(const int w, const int h)
 {
     const char *env;
+    int alpha_size = 0;
 
     /* Support the MOUSE_RELATIVE_SCALING hint from SDL 2.0 for OpenGL scaling. */
     env = SDL20_getenv("SDL_MOUSE_RELATIVE_SCALING");
@@ -4865,11 +4866,14 @@ InitializeOpenGLScaling(const int w, const int h)
     OpenGLFuncs.glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     SDL20_GL_SwapWindow(VideoWindow20);
 
+    FIXME("This should check if app requested a depth buffer, etc, too.");
+    SDL20_GL_GetAttribute(SDL_GL_ALPHA_SIZE, &alpha_size);
+
     OpenGLFuncs.glGenFramebuffers(1, &OpenGLLogicalScalingFBO);
     OpenGLFuncs.glBindFramebuffer(GL_FRAMEBUFFER, OpenGLLogicalScalingFBO);
     OpenGLFuncs.glGenRenderbuffers(1, &OpenGLLogicalScalingColor);
     OpenGLFuncs.glBindRenderbuffer(GL_RENDERBUFFER, OpenGLLogicalScalingColor);
-    OpenGLFuncs.glRenderbufferStorageMultisample(GL_RENDERBUFFER, OpenGLLogicalScalingSamples, GL_RGB8, w, h);
+    OpenGLFuncs.glRenderbufferStorageMultisample(GL_RENDERBUFFER, OpenGLLogicalScalingSamples, (alpha_size > 0) ? GL_RGBA8 : GL_RGB8, w, h);
     OpenGLFuncs.glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, OpenGLLogicalScalingColor);
     OpenGLFuncs.glGenRenderbuffers(1, &OpenGLLogicalScalingDepth);
     OpenGLFuncs.glBindRenderbuffer(GL_RENDERBUFFER, OpenGLLogicalScalingDepth);
@@ -4892,7 +4896,7 @@ InitializeOpenGLScaling(const int w, const int h)
         OpenGLFuncs.glBindFramebuffer(GL_FRAMEBUFFER, OpenGLLogicalScalingMultisampleFBO);
         OpenGLFuncs.glGenRenderbuffers(1, &OpenGLLogicalScalingMultisampleColor);
         OpenGLFuncs.glBindRenderbuffer(GL_RENDERBUFFER, OpenGLLogicalScalingMultisampleColor);
-        OpenGLFuncs.glRenderbufferStorage(GL_RENDERBUFFER, GL_RGB8, w, h);
+        OpenGLFuncs.glRenderbufferStorage(GL_RENDERBUFFER, (alpha_size > 0) ? GL_RGBA8 : GL_RGB8, w, h);
         OpenGLFuncs.glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, OpenGLLogicalScalingMultisampleColor);
         OpenGLFuncs.glGenRenderbuffers(1, &OpenGLLogicalScalingMultisampleDepth);
         OpenGLFuncs.glBindRenderbuffer(GL_RENDERBUFFER, OpenGLLogicalScalingMultisampleDepth);
@@ -5107,6 +5111,7 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
         SDL_assert(!VideoTexture20);  /* either a new window or we destroyed all this */
         SDL_assert(!VideoRenderer20);
         FIXME("Should we force a compatibility context here?");
+        FIXME("If we're using logical scaling, we can turn off depth buffer, alpha, etc, since we'll make our own and only need an RGB color buffer for the window.");
         VideoGLContext20 = SDL20_GL_CreateContext(VideoWindow20);
         if (!VideoGLContext20) {
             return EndVidModeCreate();
