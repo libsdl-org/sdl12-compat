@@ -66,12 +66,6 @@ endif()
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${EXTRA_CFLAGS}")
 string(STRIP "${CMAKE_C_FLAGS}" CMAKE_C_FLAGS)
 
-# avoid DLL having 'lib' prefix with Windows MinGW builds
-if(WIN32)
-  set(CMAKE_SHARED_LIBRARY_PREFIX "")
-  set_target_properties(SDL PROPERTIES COMPILE_DEFINITIONS "DLL_EXPORT")
-endif()
-
 if(UNIX AND NOT APPLE)
     set_target_properties(SDL PROPERTIES COMPILE_DEFINITIONS "_REENTRANT")
     target_link_libraries(SDL PRIVATE dl)
@@ -90,8 +84,16 @@ elseif(UNIX AND NOT ANDROID)
         VERSION "${SDL12_COMPAT_VERSION_STR}"
         SOVERSION "0"
         OUTPUT_NAME "SDL-1.2")
+elseif(WIN32)
+    # avoid DLL having 'lib' prefix with MinGW
+    set(CMAKE_SHARED_LIBRARY_PREFIX "")
+    set_target_properties(SDL PROPERTIES COMPILE_DEFINITIONS "DLL_EXPORT")
+    set_target_properties(SDL PROPERTIES
+        VERSION "${SDL12_COMPAT_VERSION_STR}"
+        SOVERSION "0"
+      OUTPUT_NAME "SDL")
 elseif(OS2)
-    # OS/2 version was built as SDL12.dll
+    set_target_properties(SDL PROPERTIES COMPILE_DEFINITIONS "BUILD_SDL") # for DECLSPEC
     set_target_properties(SDL PROPERTIES
         VERSION "${SDL12_COMPAT_VERSION_STR}"
         SOVERSION "0"

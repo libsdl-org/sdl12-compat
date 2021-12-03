@@ -17,14 +17,14 @@ LIBFILE = $(LIBNAME).lib
 LNKFILE = $(LIBNAME).lnk
 
 CFLAGS_DEF=-bt=nt -d0 -zq -bm -5s -fp5 -fpi87 -sg -oteanbmier $(INCPATH)
-CFLAGS_DEF+= -DSDL_DISABLE_IMMINTRIN_H
+CFLAGS_DEF+= -DNDEBUG -DSDL_DISABLE_IMMINTRIN_H
 # we override the DECLSPEC define in begin_code.h, because we are using
 # an exports file to remove the _cdecl '_' prefix from the symbol names
-CFLAGS_DLL=$(CFLAGS_DEF) -bd -DDLL_EXPORT -DDECLSPEC=
+CFLAGS_DLL=$(CFLAGS_DEF) -bd -DDECLSPEC=
 
 # Special flags for building SDL
 CFLAGS=$(CFLAGS_DLL) -otexan -wx -ei
-# avoid bogus W200 from cpuid code:
+# avoid bogus W200 from cpuid code
 CFLAGS+= -wcd=200
 # newer OpenWatcom versions enable W303 by default
 CFLAGS+= -wcd=303

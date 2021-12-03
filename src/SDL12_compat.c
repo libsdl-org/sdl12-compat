@@ -1246,7 +1246,7 @@ unsigned _System LibMain(unsigned hmod, unsigned termination)
 }
 
 #else
-    #error Please define your platform
+    #error Please define an init procedure for your platform.
 #endif
 
 #ifdef _WIN32

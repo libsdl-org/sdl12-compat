@@ -101,8 +101,6 @@
 #define SDL_RegisterApp IGNORE_THIS_VERSION_OF_SDL_RegisterApp
 #define SDL_UnregisterApp IGNORE_THIS_VERSION_OF_SDL_UnregisterApp
 
-#define BUILD_SDL 1
-
 /* *** HACK HACK HACK:
  * *** Avoid including SDL_thread.h: it defines SDL_CreateThread() as a macro */
 #if defined(_WIN32) || defined(__OS2__)
