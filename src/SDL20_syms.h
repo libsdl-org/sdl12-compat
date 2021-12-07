@@ -328,6 +328,11 @@ SDL20_SYM(void,DestroyTexture,(SDL_Texture *a),(a),)
 SDL20_SYM(void,DestroyRenderer,(SDL_Renderer *a),(a),)
 SDL20_SYM(void,RenderPresent,(SDL_Renderer *a),(a),)
 
+#ifdef _WIN32
+SDL20_SYM_PASSTHROUGH(int,RegisterApp,(const char *a, Uint32 b, void *c),(a,b,c),return)
+SDL20_SYM_PASSTHROUGH(void,UnregisterApp,(void),(),)
+#endif
+
 /* These are optional OpenGL entry points for sdl12-compat's internal use. */
 OPENGL_SYM(Core,const GLubyte *,glGetString,(GLenum a),(a),return)
 OPENGL_SYM(Core,GLenum,glGetError,(),(),return)
