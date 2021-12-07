@@ -1828,6 +1828,20 @@ SDL_InitSubSystem(Uint32 sdl12flags)
     Uint32 sdl20flags = 0;
     int rc;
 
+#ifdef __WINDOWS__
+    /* DOSBox (and probably other things), try to force the "windib" video
+       backend, but it doesn't exist in SDL2. Force to "windows" instead. */
+    char *origenv = NULL;
+    const char *env = SDL20_getenv("SDL_VIDEODRIVER");
+    if (env && (SDL20_strcmp(env, "windib") == 0)) {
+        origenv = SDL20_strdup(env);
+        if (origenv == NULL) {
+            return SDL20_OutOfMemory();
+        }
+        SDL20_setenv("SDL_VIDEODRIVER", "windows", 1);
+    }
+#endif
+
 #ifdef __MACOSX__
     extern void sdl12_compat_macos_init(void);
     sdl12_compat_macos_init();
@@ -1851,9 +1865,13 @@ SDL_InitSubSystem(Uint32 sdl12flags)
     rc = SDL20_Init(sdl20flags);
     if ((rc == 0) && (sdl20flags & SDL_INIT_VIDEO)) {
         if (Init12Video() < 0) {
-            return -1;
+            rc = -1;
         }
     }
+
+#ifdef __WINDOWS__
+    SDL20_free(origenv);
+#endif
 
     return rc;
 }
