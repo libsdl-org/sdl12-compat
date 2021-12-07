@@ -6471,6 +6471,8 @@ SDL_GL_SetAttribute(SDL12_GLattr attr, int value)
 DECLSPEC int SDLCALL
 SDL_GL_GetAttribute(SDL12_GLattr attr, int* value)
 {
+    int retval;
+
     if (attr >= SDL12_GL_MAX_ATTRIBUTE) {
         return SDL20_SetError("Unknown GL attribute");
     }
@@ -6487,7 +6489,19 @@ SDL_GL_GetAttribute(SDL12_GLattr attr, int* value)
         *value = (OpenGLLogicalScalingSamples) ? 1 : 0;
         return 0;
     }        
-    return SDL20_GL_GetAttribute((SDL_GLattr) attr, value);
+
+    /* SDL2 has a bug where FBO 0 must be bound or SDL20_GL_GetAttribute gives incorrect information.
+       See https://github.com/libsdl-org/sdl12-compat/issues/150 */
+    if (OpenGLCurrentDrawFBO == 0) {
+        retval = SDL20_GL_GetAttribute((SDL_GLattr) attr, value);
+    } else {
+        SDL_assert(OpenGLFuncs.glBindFramebuffer != NULL);
+        OpenGLFuncs.glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+        retval = SDL20_GL_GetAttribute((SDL_GLattr) attr, value);
+        OpenGLFuncs.glBindFramebuffer(GL_DRAW_FRAMEBUFFER, OpenGLCurrentDrawFBO);
+    }
+
+    return retval;
 }
 
 
