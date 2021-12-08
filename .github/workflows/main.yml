@@ -24,7 +24,7 @@ jobs:
       uses: actions/checkout@v2
       with:
         repository: libsdl-org/SDL
-        ref: release-2.0.14
+        ref: release-2.0.18
         path: SDL2
     - name: Configure CMake
       run: cmake -DSDL2_INCLUDE_DIR="${{ github.workspace }}/SDL2/include" -B build ${{ matrix.platform.flags }}
