@@ -1818,7 +1818,7 @@ SDL_InitSubSystem(Uint32 sdl12flags)
 #ifdef __WINDOWS__
     /* DOSBox (and probably other things), try to force the "windib" video
        backend, but it doesn't exist in SDL2. Force to "windows" instead. */
-    char *origvidenv = NULL;
+    const char *origvidenv = NULL;
     const char *env = SDL20_getenv("SDL_VIDEODRIVER");
     if (env && (SDL20_strcmp(env, "windib") == 0)) {
         origvidenv = "windib";
