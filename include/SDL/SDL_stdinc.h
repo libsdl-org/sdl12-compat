@@ -410,7 +410,7 @@ extern DECLSPEC int SDLCALL SDL_vsnprintf(char *text, size_t maxlen, const char 
 
 #define SDL_itoa(value, string, radix) SDL_ltoa((long)value, string, radix)
 #define SDL_uitoa(value, string, radix) SDL_ultoa((long)value, string, radix)
-#define SDL_atoi(X)     SDL_strtol(X, NULL, 0)
+#define SDL_atoi(X)     SDL_strtol(X, NULL, 10)
 #define SDL_atof(X)     SDL_strtod(X, NULL)
 
 #define SDL_ICONV_ERROR (size_t)-1
