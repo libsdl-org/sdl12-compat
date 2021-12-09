@@ -76,7 +76,6 @@ if(APPLE)
             "-Wl,-compatibility_version,${DYLIB_COMPAT_VERSION} -Wl,-current_version,${DYLIB_CURRENT_VERSION}")
     target_link_libraries(SDL PRIVATE "-framework AppKit")
     set_target_properties(SDL PROPERTIES
-        MACOSX_RPATH 1
         OUTPUT_NAME "SDL-1.2.0"
     )
 elseif(UNIX AND NOT ANDROID)
