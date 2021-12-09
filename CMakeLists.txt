@@ -38,6 +38,11 @@ set(SDL12COMPAT_SRCS
 )
 add_library(SDL SHARED ${SDL12COMPAT_SRCS})
 
+if(APPLE)
+  set_target_properties(SDL PROPERTIES INSTALL_NAME_DIR "")
+endif()
+
+
 include(CheckCSourceCompiles)
 include(CheckIncludeFile)
 include(CheckCCompilerFlag)
