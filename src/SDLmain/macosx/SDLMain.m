@@ -22,19 +22,6 @@
 /* Same deal with the NSCommandKeyMask... */
 #define EventModifierFlagCommand (1 << 20)
 
-#ifdef SDL_USE_CPS
-/* Portions of CPS.h */
-typedef struct CPSProcessSerNum
-{
-	UInt32		lo;
-	UInt32		hi;
-} CPSProcessSerNum;
-
-extern OSErr	CPSGetCurrentProcess( CPSProcessSerNum *psn);
-extern OSErr 	CPSEnableForegroundOperation( CPSProcessSerNum *psn, UInt32 _arg2, UInt32 _arg3, UInt32 _arg4, UInt32 _arg5);
-extern OSErr	CPSSetFrontProcess( CPSProcessSerNum *psn);
-
-#endif /* SDL_USE_CPS */
 
 static int    gArgc;
 static char  **gArgv;
@@ -195,19 +182,9 @@ static void CustomApplicationMain (int argc, char **argv)
     NSAutoreleasePool	*pool = [[NSAutoreleasePool alloc] init];
     SDLMain				*sdlMain;
 
-    /* Ensure the application object is initialised */
-    [NSApplication sharedApplication];
-    
-#ifdef SDL_USE_CPS
-    {
-        CPSProcessSerNum PSN;
-        /* Tell the dock about us */
-        if (!CPSGetCurrentProcess(&PSN))
-            if (!CPSEnableForegroundOperation(&PSN,0x03,0x3C,0x2C,0x1103))
-                if (!CPSSetFrontProcess(&PSN))
-                    [NSApplication sharedApplication];
-    }
-#endif /* SDL_USE_CPS */
+    /* Ensure the application object is initialised and converted to a GUI app if necessary. */
+    ProcessSerialNumber psn = { 0, kCurrentProcess};
+    TransformProcessType(&psn, kProcessTransformToForegroundApplication);
 
     /* Set up the menubar */
     [NSApp setMainMenu:[[NSMenu alloc] init]];
@@ -281,6 +258,14 @@ static void CustomApplicationMain (int argc, char **argv)
 - (void) applicationDidFinishLaunching: (NSNotification *) note
 {
     int status;
+
+    /* Get more aggressive about activation for Catalina and later: activate the Dock first so we definitely reset all activation state. */
+    for (NSRunningApplication *i in [NSRunningApplication runningApplicationsWithBundleIdentifier:@"com.apple.dock"]) {
+        [i activateWithOptions:NSApplicationActivateIgnoringOtherApps];
+        break;
+    }
+    SDL_Delay(300);  /* !!! FIXME: this isn't right. */
+    [NSApp activateIgnoringOtherApps:YES];
 
     /* Set the working directory to the .app's parent directory */
     [self setupWorkingDirectory:gFinderLaunch];
