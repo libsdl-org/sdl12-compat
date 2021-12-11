@@ -7,6 +7,8 @@ project(sdl12_compat
         VERSION 0.0.1
         LANGUAGES C)
 
+cmake_policy(SET CMP0068 NEW)  # on macOS, don't let RPATH affect install_name.
+
 set(SDL12_COMPAT_VERSION_STR "1.2.50")
 
 option(SDL12TESTS "Enable to build SDL-1.2 test programs" ON)
