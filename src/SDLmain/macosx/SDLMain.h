@@ -19,13 +19,13 @@
 /* Use this flag to determine whether we use CPS (docking) or not */
 #define		SDL_USE_CPS		1
 
-@interface SDLMain : NSApplicationDelegate
+@interface SDLMain : NSObject<NSApplicationDelegate>
 - (NSApplicationTerminateReply) applicationShouldTerminate:(NSApplication *)sender;
 - (void) setupWorkingDirectory:(BOOL)shouldChdir;
-- (BOOL) application:(NSApplication *)theApplication openFile:(NSString *)filename
-- (void) applicationDidFinishLaunching: (NSNotification *) note
+- (BOOL) application:(NSApplication *)theApplication openFile:(NSString *)filename;
+- (void) applicationDidFinishLaunching: (NSNotification *) note;
 #if SDL_USE_NIB_FILE
-- (void)fixMenu:(NSMenu *)aMenu withAppName:(NSString *)appName
+- (void)fixMenu:(NSMenu *)aMenu withAppName:(NSString *)appName;
 #endif
 @end
 
