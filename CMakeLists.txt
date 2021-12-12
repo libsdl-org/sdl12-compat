@@ -7,8 +7,6 @@ project(sdl12_compat
         VERSION 0.0.1
         LANGUAGES C)
 
-cmake_policy(SET CMP0068 NEW)  # on macOS, don't let RPATH affect install_name.
-
 set(SDL12_COMPAT_VERSION_STR "1.2.50")
 
 option(SDL12TESTS "Enable to build SDL-1.2 test programs" ON)
@@ -28,7 +26,12 @@ if(APPLE)
   set(DYLIB_COMPAT_VERSION 1.0.0 CACHE STRING "library compatibility version")
   set(DYLIB_CURRENT_VERSION 12.50.0 CACHE STRING "library current version")
   include_directories("/opt/X11/include")  # hack.
+  if(CMAKE_VERSION VERSION_LESS 3.9)
+  else()
+    cmake_policy(SET CMP0068 NEW)  # on macOS, don't let RPATH affect install_name.
+  endif()
 endif()
+
 if(WIN32)
   set(WIN32_SRCS "src/version.rc")
 endif()
@@ -39,11 +42,6 @@ set(SDL12COMPAT_SRCS
   ${WIN32_SRCS}
 )
 add_library(SDL SHARED ${SDL12COMPAT_SRCS})
-
-if(APPLE)
-  set_target_properties(SDL PROPERTIES INSTALL_NAME_DIR "")
-endif()
-
 
 include(CheckCSourceCompiles)
 include(CheckIncludeFile)
@@ -78,6 +76,7 @@ if(UNIX AND NOT APPLE)
     target_link_libraries(SDL PRIVATE dl)
 endif()
 if(APPLE)
+    set_target_properties(SDL PROPERTIES INSTALL_NAME_DIR "")
     set_target_properties(SDL PROPERTIES COMPILE_DEFINITIONS "_THREAD_SAFE")
     set_target_properties(SDL PROPERTIES LINK_FLAGS
             "-Wl,-compatibility_version,${DYLIB_COMPAT_VERSION} -Wl,-current_version,${DYLIB_CURRENT_VERSION}")
