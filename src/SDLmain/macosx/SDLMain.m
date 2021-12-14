@@ -262,14 +262,6 @@ static void CustomApplicationMain (int argc, char **argv)
 {
     int status;
 
-    /* Get more aggressive about activation for Catalina and later: activate the Dock first so we definitely reset all activation state. */
-    for (NSRunningApplication *i in [NSRunningApplication runningApplicationsWithBundleIdentifier:@"com.apple.dock"]) {
-        [i activateWithOptions:NSApplicationActivateIgnoringOtherApps];
-        break;
-    }
-    SDL_Delay(300);  /* !!! FIXME: this isn't right. */
-    [NSApp activateIgnoringOtherApps:YES];
-
     /* Set the working directory to the .app's parent directory */
     [self setupWorkingDirectory:gFinderLaunch];
 
