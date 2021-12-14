@@ -186,6 +186,9 @@ static void CustomApplicationMain (int argc, char **argv)
     ProcessSerialNumber psn = { 0, kCurrentProcess};
     TransformProcessType(&psn, kProcessTransformToForegroundApplication);
 
+    /* Ensure the application object is initialised */
+    [NSApplication sharedApplication];
+
     /* Set up the menubar */
     [NSApp setMainMenu:[[NSMenu alloc] init]];
     setApplicationMenu();
