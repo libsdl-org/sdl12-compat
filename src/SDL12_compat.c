@@ -7888,6 +7888,9 @@ OpenSDL2AudioDevice(SDL_AudioSpec *want)
     want->userdata = orig_userdata;
     want->size = want->samples * want->channels * (SDL_AUDIO_BITSIZE(want->format) / 8);
 
+    /* note that 0x80 isn't perfect silence for U16 formats, but we only have one byte that is used for memset() calls, so it has to do. SDL2 has the same bug. */
+    want->silence = SDL_AUDIO_ISSIGNED(want->format) ? 0x00 : 0x80;
+
     /* reset audiostreams if device format changed. */
     FIXME("deal with failure in here");
     ResetAudioStreamForDeviceChange(&audio_cbdata->app_callback_stream, &audio_cbdata->app_callback_format);
