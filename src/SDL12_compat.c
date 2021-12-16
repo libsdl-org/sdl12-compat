@@ -57,8 +57,6 @@
 #undef snprintf
 #undef vsnprintf
 
-/* !!! IMPLEMENT_ME X11_KeyToUnicode ? */
-
 #define SDL_BlitSurface SDL_UpperBlit
 
 #ifdef __cplusplus
@@ -8093,6 +8091,35 @@ SDL_GL_EnableContext_Thread(void)
 {
     const SDL_bool enable = (VideoGLContext20 && VideoWindow20)? SDL_TRUE : SDL_FALSE;
     SDL20_GL_MakeCurrent(enable ? VideoWindow20 : NULL, enable ? VideoGLContext20 : NULL);
+}
+
+
+/* X11_KeyToUnicode is an internal function in the SDL 1.2 x11 backend that some Linux
+   software (older versions of the Torque Engine, for example) would call directly, so
+   we're supplying an extremely naive implementation here. Apps using this should be
+   fixed if possible, and this implementation is generally incorrect but hopefully
+   enough to get apps to limp along.
+   As this isn't X11-specific, we supply it globally, so x11 binaries can transition
+   to Wayland, and if there's some wildly-misbuilt win32 software, they can call it
+   too. :) */
+
+DECLSPEC Uint16 SDLCALL
+X11_KeyToUnicode(SDL12Key key, SDL12Mod mod)
+{
+    if (((int) key) >= 127) {
+        return 0;
+    } else if ((key >= SDLK12_0) && (key <= SDLK12_9)) {
+        return (Uint16) ('0' + (key - SDLK12_0));
+    } else if ((key >= SDLK12_a) && (key <= SDLK12_z)) {
+        const int shifted = ((mod & (KMOD12_LSHIFT|KMOD12_RSHIFT)) != 0) ? 1 : 0;
+        int capital = ((mod & KMOD12_CAPS) != 0) ? 1 : 0;
+        if (shifted) {
+            capital = !capital;
+        }
+        return (Uint16) ((capital ? 'A' : 'a') + (key - SDLK12_a));
+    }
+
+    return (Uint16) key;
 }
 
 #ifdef __cplusplus
