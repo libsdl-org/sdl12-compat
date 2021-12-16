@@ -8102,13 +8102,14 @@ SDL_GL_EnableContext_Thread(void)
    As this isn't X11-specific, we supply it globally, so x11 binaries can transition
    to Wayland, and if there's some wildly-misbuilt win32 software, they can call it
    too. :) */
-
+#if !(defined(_WIN32) || defined(__OS2__)) /* #if defined(__unix__) || defined(__APPLE__) ?? */
 DECLSPEC Uint16 SDLCALL
 X11_KeyToUnicode(SDL12Key key, SDL12Mod mod)
 {
     if (((int) key) >= 127) {
         return 0;
-    } else if ((key >= SDLK12_a) && (key <= SDLK12_z)) {
+    }
+    if ((key >= SDLK12_a) && (key <= SDLK12_z)) {
         const int shifted = ((mod & (KMOD12_LSHIFT|KMOD12_RSHIFT)) != 0) ? 1 : 0;
         int capital = ((mod & KMOD12_CAPS) != 0) ? 1 : 0;
         if (shifted) {
@@ -8119,6 +8120,7 @@ X11_KeyToUnicode(SDL12Key key, SDL12Mod mod)
 
     return (Uint16) key;
 }
+#endif
 
 #ifdef __cplusplus
 }
