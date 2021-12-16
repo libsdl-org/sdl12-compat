@@ -8108,8 +8108,6 @@ X11_KeyToUnicode(SDL12Key key, SDL12Mod mod)
 {
     if (((int) key) >= 127) {
         return 0;
-    } else if ((key >= SDLK12_0) && (key <= SDLK12_9)) {
-        return (Uint16) ('0' + (key - SDLK12_0));
     } else if ((key >= SDLK12_a) && (key <= SDLK12_z)) {
         const int shifted = ((mod & (KMOD12_LSHIFT|KMOD12_RSHIFT)) != 0) ? 1 : 0;
         int capital = ((mod & KMOD12_CAPS) != 0) ? 1 : 0;
