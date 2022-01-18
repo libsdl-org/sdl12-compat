@@ -16,18 +16,21 @@ DLLFILE = $(LIBNAME).dll
 LIBFILE = $(LIBNAME).lib
 LNKFILE = $(LIBNAME).lnk
 
-CFLAGS_DEF=-bt=os2 -d0 -zq -bm -5s -fp5 -fpi87 -sg -oteanbmier $(INCPATH)
-CFLAGS_DEF+= -DNDEBUG -DSDL_DISABLE_IMMINTRIN_H
-# for DECLSPEC
-CFLAGS_DEF+= -DBUILD_SDL
-CFLAGS_DLL=$(CFLAGS_DEF) -bd
-
-# Special flags for building SDL
-CFLAGS=$(CFLAGS_DLL) -otexan -wx -ei
+CFLAGS = -bt=os2 -d0 -zq -bm -5s -fp5 -fpi87 -sg -oeatxhn -ei
+# max warnings:
+CFLAGS+= -wx
 # avoid bogus W200 from cpuid code
 CFLAGS+= -wcd=200
 # newer OpenWatcom versions enable W303 by default
 CFLAGS+= -wcd=303
+# the include paths :
+CFLAGS+= $(INCPATH)
+# building dll:
+CFLAGS+= -bd
+# for DECLSPEC
+CFLAGS+= -DBUILD_SDL
+# misc
+CFLAGS+= -DNDEBUG -DSDL_DISABLE_IMMINTRIN_H
 
 DESCRIPTION = Simple DirectMedia Layer 1.2
 
