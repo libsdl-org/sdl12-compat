@@ -3665,9 +3665,9 @@ EventFilter20to12(void *data, SDL_Event *event20)
 
         case SDL_WINDOWEVENT:
             switch (event20->window.event) {
-                case SDL_WINDOWEVENT_CLOSE:
-                    event12.type = SDL12_QUIT;
-                    break;
+                /* don't send an SDL12_QUIT event for SDL_WINDOWEVENT_CLOSE;
+                   we only ever have a single window, so an SDL_QUIT will be
+                   coming from SDL2 next anyhow, so just send that on. */
 
                 case SDL_WINDOWEVENT_SHOWN:
                 case SDL_WINDOWEVENT_EXPOSED:
