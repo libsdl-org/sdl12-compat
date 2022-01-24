@@ -5260,8 +5260,6 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
         HandleInputGrab(SDL12_GRAB_ON);
     }
 
-    FIXME("setup screen saver");
-
     VideoSurfacePresentTicks = 0;
     VideoSurfaceLastPresentTicks = 0;
 
