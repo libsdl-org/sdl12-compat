@@ -4594,30 +4594,6 @@ GetEnvironmentWindowPosition(int *x, int *y)
     }
 }
 
-#if 0 /* unused, yet. */
-static void
-SetupScreenSaver(const int flags12)
-{
-    const char *env;
-    SDL_bool allow_screensaver;
-
-    /* Allow environment override of screensaver disable */
-    env = SDL20_getenv("SDL_VIDEO_ALLOW_SCREENSAVER");
-    if (env) {
-        allow_screensaver = SDL20_atoi(env) ? SDL_TRUE : SDL_FALSE;
-    } else if (flags12 & SDL12_FULLSCREEN) {
-        allow_screensaver = SDL_FALSE;
-    } else {
-        allow_screensaver = SDL_TRUE;
-    }
-    if (allow_screensaver) {
-        SDL20_EnableScreenSaver();
-    } else {
-        SDL20_DisableScreenSaver();
-    }
-}
-#endif
-
 static SDL12_Surface *
 EndVidModeCreate(void)
 {
