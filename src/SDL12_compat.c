@@ -7677,6 +7677,7 @@ SDL_CDClose(SDL12_CD *cdrom)
 
     SDL20_LockAudio();
     if (audio_cbdata) {
+        audio_cbdata->cdrom_status = SDL12_CD_STOPPED;
         audio_cbdata->cdrom_opened = SDL_FALSE;
     }
     SDL20_UnlockAudio();
