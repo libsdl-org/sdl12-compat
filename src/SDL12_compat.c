@@ -1797,9 +1797,18 @@ Init12Video(void)
 DECLSPEC int SDLCALL
 SDL_VideoInit(const char *driver, Uint32 flags)
 {
-    (void) flags;
-    FIXME("Does this need to call Init12Video?");
-    return SDL20_VideoInit(driver);
+    int retval;
+
+    (void) flags;  /* unused. */
+
+    retval = SDL20_VideoInit(driver);
+    if (retval != -1) {
+        retval = Init12Video();
+        if (retval == -1) {
+            SDL20_VideoQuit();
+        }
+    }
+    return retval;
 }
 
 
