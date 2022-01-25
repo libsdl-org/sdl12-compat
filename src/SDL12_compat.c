@@ -7035,7 +7035,6 @@ SDL_SaveBMP_RW(SDL12_Surface *surface12, SDL12_RWops *rwops12, int freerwops12)
 {
     SDL_RWops *rwops20 = RWops12to20(rwops12);
     const int retval = SDL20_SaveBMP_RW(surface12->surface20, rwops20, freerwops12);
-    FIXME("wrap surface");
     if (!freerwops12) {  /* free our wrapper if SDL2 didn't close it. */
         SDL20_FreeRW(rwops20);
     }
