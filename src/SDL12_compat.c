@@ -4927,10 +4927,7 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
     Uint32 appfmt;
     SDL_bool use_gl_scaling = SDL_FALSE;
     const char *env;
-    SDL_bool use_highdpi;
-
-    env = SDL20_getenv("SDL12COMPAT_HIGHDPI");
-    use_highdpi = (!env || SDL20_atoi(env)) ? SDL_TRUE : SDL_FALSE;
+    SDL_bool use_highdpi = SDL_TRUE;
 
     FIXME("Should we offer scaling for windowed modes, too?");
     if (flags12 & SDL12_OPENGL) {
@@ -4947,6 +4944,18 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
         /* for now we default GL scaling to ENABLED. If an app breaks or is linked directly
            to glBindFramebuffer, they'll need to turn it off with this environment variable */
         use_gl_scaling = (!env || SDL20_atoi(env)) ? SDL_TRUE : SDL_FALSE;
+
+        /* default use_highdpi to false for OpenGL windows when not using
+           OpenGL scaling as legacy OpenGL applications are unlikely to support
+           high-DPI setups properly. (They often use the window size to determine
+           the resolute in some or all parts of their code.) Because OpenGL scaling
+           is never used for windows, it is always false there. */
+        use_highdpi = (flags12 & SDL12_FULLSCREEN) ? use_gl_scaling : SDL_FALSE;
+    }
+
+    env = SDL20_getenv("SDL12COMPAT_HIGHDPI");
+    if (env) {
+        use_highdpi = SDL20_atoi(env) ? SDL_TRUE : SDL_FALSE;
     }
 
     FIXME("currently ignores SDL_WINDOWID, which we could use with SDL_CreateWindowFrom ...?");
