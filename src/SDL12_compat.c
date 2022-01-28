@@ -4850,19 +4850,29 @@ InitializeOpenGLScaling(const int w, const int h)
         return SDL_FALSE;  /* no FBOs, no scaling. */
     }
 
+    OpenGLFuncs.glBindFramebuffer(GL_FRAMEBUFFER, 0);
     OpenGLFuncs.glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     SDL20_GL_SwapWindow(VideoWindow20);
 
     FIXME("This should check if app requested a depth buffer, etc, too.");
     SDL20_GL_GetAttribute(SDL_GL_ALPHA_SIZE, &alpha_size);
 
-    OpenGLFuncs.glGenFramebuffers(1, &OpenGLLogicalScalingFBO);
+    if (!OpenGLLogicalScalingFBO) {
+        OpenGLFuncs.glGenFramebuffers(1, &OpenGLLogicalScalingFBO);
+    }
+
+    if (!OpenGLLogicalScalingColor) {
+        OpenGLFuncs.glGenRenderbuffers(1, &OpenGLLogicalScalingColor);
+    }
+
+    if (!OpenGLLogicalScalingDepth) {
+        OpenGLFuncs.glGenRenderbuffers(1, &OpenGLLogicalScalingDepth);
+    }
+
     OpenGLFuncs.glBindFramebuffer(GL_FRAMEBUFFER, OpenGLLogicalScalingFBO);
-    OpenGLFuncs.glGenRenderbuffers(1, &OpenGLLogicalScalingColor);
     OpenGLFuncs.glBindRenderbuffer(GL_RENDERBUFFER, OpenGLLogicalScalingColor);
     OpenGLFuncs.glRenderbufferStorageMultisample(GL_RENDERBUFFER, OpenGLLogicalScalingSamples, (alpha_size > 0) ? GL_RGBA8 : GL_RGB8, w, h);
     OpenGLFuncs.glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, OpenGLLogicalScalingColor);
-    OpenGLFuncs.glGenRenderbuffers(1, &OpenGLLogicalScalingDepth);
     OpenGLFuncs.glBindRenderbuffer(GL_RENDERBUFFER, OpenGLLogicalScalingDepth);
     OpenGLFuncs.glRenderbufferStorageMultisample(GL_RENDERBUFFER, OpenGLLogicalScalingSamples, GL_DEPTH24_STENCIL8, w, h);
     OpenGLFuncs.glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, OpenGLLogicalScalingDepth);
@@ -4879,13 +4889,20 @@ InitializeOpenGLScaling(const int w, const int h)
     }
 
     if (OpenGLLogicalScalingSamples) {
-        OpenGLFuncs.glGenFramebuffers(1, &OpenGLLogicalScalingMultisampleFBO);
+        if (!OpenGLLogicalScalingMultisampleFBO) {
+            OpenGLFuncs.glGenFramebuffers(1, &OpenGLLogicalScalingMultisampleFBO);
+        }
+        if (!OpenGLLogicalScalingMultisampleColor) {
+            OpenGLFuncs.glGenRenderbuffers(1, &OpenGLLogicalScalingMultisampleColor);
+        }
+        if (!OpenGLLogicalScalingMultisampleDepth) {
+            OpenGLFuncs.glGenRenderbuffers(1, &OpenGLLogicalScalingMultisampleDepth);
+        }
+
         OpenGLFuncs.glBindFramebuffer(GL_FRAMEBUFFER, OpenGLLogicalScalingMultisampleFBO);
-        OpenGLFuncs.glGenRenderbuffers(1, &OpenGLLogicalScalingMultisampleColor);
         OpenGLFuncs.glBindRenderbuffer(GL_RENDERBUFFER, OpenGLLogicalScalingMultisampleColor);
         OpenGLFuncs.glRenderbufferStorage(GL_RENDERBUFFER, (alpha_size > 0) ? GL_RGBA8 : GL_RGB8, w, h);
         OpenGLFuncs.glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, OpenGLLogicalScalingMultisampleColor);
-        OpenGLFuncs.glGenRenderbuffers(1, &OpenGLLogicalScalingMultisampleDepth);
         OpenGLFuncs.glBindRenderbuffer(GL_RENDERBUFFER, OpenGLLogicalScalingMultisampleDepth);
         OpenGLFuncs.glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, w, h);
         OpenGLFuncs.glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, OpenGLLogicalScalingMultisampleDepth);
@@ -5016,21 +5033,62 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
     } else if (VideoSurface12 && (VideoSurface12->surface20->format->format != appfmt)) {
         EndVidModeCreate();  /* rebuild the window if changing pixel format */
     } else if (VideoGLContext20) {
-        /* SDL 1.2 (infuriatingly!) destroys the GL context on each resize, so we will too */
-        SDL20_GL_MakeCurrent(NULL, NULL);
-        SDL20_GL_DeleteContext(VideoGLContext20);
-        VideoGLContext20 = NULL;
-        SDL_zero(OpenGLFuncs);
-        OpenGLBlitTexture = 0;
-        OpenGLBlitLockCount = 0;
-        OpenGLLogicalScalingWidth = 0;
-        OpenGLLogicalScalingHeight = 0;
-        OpenGLLogicalScalingFBO = 0;
-        OpenGLLogicalScalingColor = 0;
-        OpenGLLogicalScalingDepth = 0;
-        OpenGLLogicalScalingMultisampleFBO = 0;
-        OpenGLLogicalScalingMultisampleColor = 0;
-        OpenGLLogicalScalingMultisampleDepth = 0;
+        /* SDL 1.2 (infuriatingly!) destroys the GL context on each resize in some cases, on various platforms. Try to match that. */
+        #ifdef __WINDOWS__
+            /* The windx5 driver _always_ destroyed the GL context, unconditionally, but the default (windib) did not, so match windib.
+             *  windib: keep if:
+             *   - window already exists
+             *   - BitsPerPixel hasn't changed
+             *   - none of the window flags (except SDL_ANYFORMAT) have changed
+             *   - window is already SDL_OPENGL.
+             *   - window is not a fullscreen window.
+             */
+            const SDL_bool destroy_gl_context = (
+                ((VideoSurface12->flags & ~SDL12_ANYFORMAT) != (flags12 & ~SDL12_ANYFORMAT)) ||
+                (VideoSurface12->format->BitsPerPixel != bpp) ||
+                ((flags12 & SDL12_OPENGL) != SDL12_OPENGL) ||
+                ((flags12 & SDL12_FULLSCREEN) == SDL12_FULLSCREEN)
+            ) ? SDL_TRUE : SDL_FALSE;
+        #elif defined(__APPLE__)
+            const SDL_bool destroy_gl_context = SDL_TRUE; /* macOS ("quartz" backend) unconditionally destroys the GL context */
+        #elif defined(__HAIKU__)
+            const SDL_bool destroy_gl_context = SDL_FALSE; /* BeOS and Haiku ("bwindow" backend) unconditionally keeps the GL context */
+        #elif defined(__LINUX__) || defined(unix) || defined(__unix__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(sun)
+            /* The x11 backend does in _some_ cases, and since Linux software depends on that, even though Wayland and
+             *   such wasn't a thing at the time, we treat everything that looks a little like Unix this way.
+             *  x11: keep if:
+             *   - window already exists
+             *   - window is already SDL_OPENGL.
+             *   - new flags also want SDL_OPENGL.
+             *   - BitsPerPixel hasn't changed
+             *   - SDL_NOFRAME hasn't changed
+             */
+            const SDL_bool destroy_gl_context = (
+                ((VideoSurface12->flags & SDL12_OPENGL) != (flags12 & SDL12_OPENGL)) ||
+                ((flags12 & SDL12_OPENGL) != SDL12_OPENGL) ||
+                (VideoSurface12->format->BitsPerPixel != bpp) ||
+                ((VideoSurface12->flags & SDL12_NOFRAME) != (flags12 & SDL12_NOFRAME))
+            ) ? SDL_TRUE : SDL_FALSE;
+        #else
+            const SDL_bool destroy_gl_context = SDL_TRUE;  /* everywhere else: nuke it from orbit. Oh well. */
+        #endif
+
+        if (destroy_gl_context) {
+            SDL20_GL_MakeCurrent(NULL, NULL);
+            SDL20_GL_DeleteContext(VideoGLContext20);
+            VideoGLContext20 = NULL;
+            SDL_zero(OpenGLFuncs);
+            OpenGLBlitTexture = 0;
+            OpenGLBlitLockCount = 0;
+            OpenGLLogicalScalingWidth = 0;
+            OpenGLLogicalScalingHeight = 0;
+            OpenGLLogicalScalingFBO = 0;
+            OpenGLLogicalScalingColor = 0;
+            OpenGLLogicalScalingDepth = 0;
+            OpenGLLogicalScalingMultisampleFBO = 0;
+            OpenGLLogicalScalingMultisampleColor = 0;
+            OpenGLLogicalScalingMultisampleDepth = 0;
+        }
     }
 
     if (flags12 & SDL12_FULLSCREEN) {
@@ -5106,15 +5164,18 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
         const char *vsync_env = SDL20_getenv("SDL12COMPAT_SYNC_TO_VBLANK");
         SDL_assert(!VideoTexture20);  /* either a new window or we destroyed all this */
         SDL_assert(!VideoRenderer20);
+
         FIXME("If we're using logical scaling, we can turn off depth buffer, alpha, etc, since we'll make our own and only need an RGB color buffer for the window.");
-        VideoGLContext20 = SDL20_GL_CreateContext(VideoWindow20);
+
         if (!VideoGLContext20) {
-            return EndVidModeCreate();
+            VideoGLContext20 = SDL20_GL_CreateContext(VideoWindow20);
+            if (!VideoGLContext20) {
+                return EndVidModeCreate();
+            }
+            LoadOpenGLFunctions();
         }
 
         VideoSurface12->flags |= SDL12_OPENGL;
-
-        LoadOpenGLFunctions();
 
         /* Try to set up a logical scaling */
         if (use_gl_scaling) {
@@ -5138,7 +5199,9 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
                 return EndVidModeCreate();
             }
 
-            OpenGLFuncs.glGenTextures(1, &OpenGLBlitTexture);
+            if (!OpenGLBlitTexture) {
+                OpenGLFuncs.glGenTextures(1, &OpenGLBlitTexture);
+            }
             OpenGLFuncs.glBindTexture(GL_TEXTURE_2D, OpenGLBlitTexture);
             OpenGLFuncs.glTexImage2D(GL_TEXTURE_2D, 0, (pixsize == 4) ? GL_RGBA : GL_RGB, VideoSurface12->w, VideoSurface12->h, 0, glfmt, gltype, NULL);
 
