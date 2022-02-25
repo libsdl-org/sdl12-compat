@@ -35,6 +35,36 @@ new headers are also under the zlib license. Note that sdl12-compat itself
 does not use these headers, so if you just want the library, you don't need
 them.
 
+# Building the library:
+
+These are quick-start instructions; there isn't anything out of the ordinary
+here if you're used to using CMake. 
+
+You'll need to use CMake to build sdl12-compat. Download at
+[cmake.org](https://cmake.org/) or install from your package manager
+(`sudo apt-get install cmake` on Ubuntu, etc).
+
+Please refer to the [CMake documentation](https://cmake.org/documentation/)
+for complete details, as platform and build tool details vary.
+
+Now just point CMake at sdl12-compat's directory. Here's a command-line
+example:
+
+```bash
+cd sdl12-compat
+cmake -Bbuild -DCMAKE_BUILD_TYPE=Release .
+cmake --build build
+```
+
+On Windows or macOS, you might prefer to use CMake's GUI, but it's the same
+idea: give it the directory where sdl12-compat is located, click "Configure,"
+choose your favorite compiler, then click "Generate." Then you can build
+however you like with Visual Studio, Xcode, etc.
+
+When the build is complete, you'll have a shared library you can drop in
+as a replacement for an existing SDL 1.2 build. This will also build
+the original SDL 1.2 test apps, so you can verify the library is working.
+
 # Configuration options:
 
 sdl12-compat has a number of configuration options which can be used to work
