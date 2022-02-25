@@ -47,6 +47,12 @@ You'll need to use CMake to build sdl12-compat. Download at
 Please refer to the [CMake documentation](https://cmake.org/documentation/)
 for complete details, as platform and build tool details vary.
 
+You'll need a copy of SDL 2.0.x to build sdl12-compat, because we need the
+SDL2 headers. You can build this from source or install from a package
+manager. Windows and Mac users can download prebuilt binaries from
+[SDL's download page](https://libsdl.org/download-2.0.php); make sure you
+get the "development libraries" and not "runtime binaries" there.
+
 Now just point CMake at sdl12-compat's directory. Here's a command-line
 example:
 
@@ -58,8 +64,16 @@ cmake --build build
 
 On Windows or macOS, you might prefer to use CMake's GUI, but it's the same
 idea: give it the directory where sdl12-compat is located, click "Configure,"
-choose your favorite compiler, then click "Generate." Then you can build
-however you like with Visual Studio, Xcode, etc.
+choose your favorite compiler, then click "Generate." Now you have project
+files! Click "Open Project" to launch your development environment. Then you
+can build however you like with Visual Studio, Xcode, etc.
+
+If necessary, you might have to fill in the location of the SDL2 headers
+when using CMake. sdl12-compat does not need SDL2's library to _build_,
+just its headers (although it may complain about the missing library,
+you can ignore that). From the command line, add
+`-DSDL2_INCLUDE_DIR=/path/to/SDL2/include`, or find this in the CMake
+GUI and set it appropriately, click "Configure" again, and then "Generate."
 
 When the build is complete, you'll have a shared library you can drop in
 as a replacement for an existing SDL 1.2 build. This will also build
