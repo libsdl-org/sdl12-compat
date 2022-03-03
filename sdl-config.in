@@ -47,7 +47,7 @@ while test $# -gt 0; do
       echo $exec_prefix
       ;;
     --version)
-      echo @SDL_VERSION@
+      echo @PROJECT_VERSION@
       ;;
     --cflags)
       echo -I${includedir}/SDL @SDL_CFLAGS@
