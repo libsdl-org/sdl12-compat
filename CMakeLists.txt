@@ -4,10 +4,8 @@
 
 cmake_minimum_required(VERSION 3.0.0)
 project(sdl12_compat
-        VERSION 0.0.1
+        VERSION 1.2.50
         LANGUAGES C)
-
-set(SDL12_COMPAT_VERSION_STR "1.2.50")
 
 option(SDL12TESTS "Enable to build SDL-1.2 test programs" ON)
 option(SDL12DEVEL "Enable installing SDL-1.2 development headers" ON)
@@ -86,7 +84,7 @@ if(APPLE)
     )
 elseif(UNIX AND NOT ANDROID)
     set_target_properties(SDL PROPERTIES
-        VERSION "${SDL12_COMPAT_VERSION_STR}"
+        VERSION "${PROJECT_VERSION}"
         SOVERSION "0"
         OUTPUT_NAME "SDL-1.2")
 elseif(WIN32)
@@ -94,18 +92,18 @@ elseif(WIN32)
     set(CMAKE_SHARED_LIBRARY_PREFIX "")
     set_target_properties(SDL PROPERTIES COMPILE_DEFINITIONS "DLL_EXPORT")
     set_target_properties(SDL PROPERTIES
-        VERSION "${SDL12_COMPAT_VERSION_STR}"
+        VERSION "${PROJECT_VERSION}"
         SOVERSION "0"
       OUTPUT_NAME "SDL")
 elseif(OS2)
     set_target_properties(SDL PROPERTIES COMPILE_DEFINITIONS "BUILD_SDL") # for DECLSPEC
     set_target_properties(SDL PROPERTIES
-        VERSION "${SDL12_COMPAT_VERSION_STR}"
+        VERSION "${PROJECT_VERSION}"
         SOVERSION "0"
         OUTPUT_NAME "SDL12")
 else()
     set_target_properties(SDL PROPERTIES
-        VERSION "${SDL12_COMPAT_VERSION_STR}"
+        VERSION "${PROJECT_VERSION}"
         SOVERSION "0"
       OUTPUT_NAME "SDL")
 endif()
@@ -239,8 +237,6 @@ install(TARGETS SDL SDLmain
 )
 
 if(SDL12DEVEL)
-  set(SDL_VERSION "${SDL12_COMPAT_VERSION_STR}")
-
   install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
   if(NOT MSVC)
@@ -303,7 +299,7 @@ if(STATICDEVEL AND SDL12DEVEL)
   set_target_properties(SDL-static PROPERTIES COMPILE_DEFINITIONS "_REENTRANT")
   target_link_libraries(SDL-static PRIVATE dl)
   set_target_properties(SDL-static PROPERTIES
-          VERSION "${SDL12_COMPAT_VERSION_STR}"
+          VERSION "${PROJECT_VERSION}"
         OUTPUT_NAME "SDL")
 
   install(TARGETS SDL-static

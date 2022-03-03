@@ -8,7 +8,7 @@ includedir=@CMAKE_INSTALL_FULL_INCLUDEDIR@
 Name: sdl12_compat
 Description: An SDL-1.2 compatibility layer that uses SDL 2.0 behind the scenes.
 Version: @PROJECT_VERSION@
-Provides: sdl = @SDL_VERSION@
+Provides: sdl = @PROJECT_VERSION@
 Libs: -L${libdir} @SDL_RLD_FLAGS@ @SDL_LIBS@
 @ENABLE_STATIC_TRUE@Libs.private: -L${libdir} @SDL_LIBS@ @SDL_STATIC_LIBS@
 Cflags: -I${includedir}/SDL @SDL_CFLAGS@
