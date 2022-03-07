@@ -6337,6 +6337,10 @@ SDL_CreateYUVOverlay(int w, int h, Uint32 format12, SDL12_Surface *display12)
     retval->hw_overlay = 1;
     retval->pitches = hwdata->pitches;
 
+    /* Some programs (e.g. mplayer) access pixels without locking. */
+    retval->pixels = hwdata->pixels;
+    hwdata->dirty = SDL_TRUE;
+
     return retval;
 }
 
