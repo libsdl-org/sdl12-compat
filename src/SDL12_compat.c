@@ -4879,7 +4879,7 @@ InitializeOpenGLScaling(const int w, const int h)
     OpenGLFuncs.glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, OpenGLLogicalScalingDepth);
     OpenGLFuncs.glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
-    if ( (OpenGLFuncs.glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) || OpenGLFuncs.glGetError() ) {
+    if ((OpenGLFuncs.glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) || OpenGLFuncs.glGetError()) {
         OpenGLFuncs.glBindFramebuffer(GL_FRAMEBUFFER, 0);
         OpenGLFuncs.glDeleteRenderbuffers(1, &OpenGLLogicalScalingColor);
         OpenGLFuncs.glDeleteRenderbuffers(1, &OpenGLLogicalScalingDepth);
@@ -4909,7 +4909,7 @@ InitializeOpenGLScaling(const int w, const int h)
         OpenGLFuncs.glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, OpenGLLogicalScalingMultisampleDepth);
         OpenGLFuncs.glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
-        if ( (OpenGLFuncs.glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) || OpenGLFuncs.glGetError() ) {
+        if ((OpenGLFuncs.glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) || OpenGLFuncs.glGetError()) {
             OpenGLFuncs.glBindFramebuffer(GL_FRAMEBUFFER, 0);
             OpenGLFuncs.glDeleteRenderbuffers(1, &OpenGLLogicalScalingMultisampleColor);
             OpenGLFuncs.glDeleteRenderbuffers(1, &OpenGLLogicalScalingMultisampleDepth);
@@ -5028,7 +5028,7 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
     FIXME("don't do anything if the window's dimensions, etc haven't changed.");
     FIXME("we need to preserve VideoSurface12 (but not its pixels), I think...");
 
-    if (VideoSurface12 && ((VideoSurface12->flags & SDL12_OPENGL) != (flags12 & SDL12_OPENGL)) ) {
+    if (VideoSurface12 && ((VideoSurface12->flags & SDL12_OPENGL) != (flags12 & SDL12_OPENGL))) {
         EndVidModeCreate();  /* rebuild the window if moving to/from a GL context */
     } else if (VideoSurface12 && (VideoSurface12->surface20->format->format != appfmt)) {
         EndVidModeCreate();  /* rebuild the window if changing pixel format */
@@ -6557,11 +6557,11 @@ SDL_GL_GetAttribute(SDL12_GLattr attr, int* value)
     else if (attr == SDL12_GL_MULTISAMPLESAMPLES) {
         *value = OpenGLLogicalScalingSamples;
         return 0;
-    }        
+    }
     else if (attr == SDL12_GL_MULTISAMPLEBUFFERS) {
         *value = (OpenGLLogicalScalingSamples) ? 1 : 0;
         return 0;
-    }        
+    }
 
     /* SDL2 has a bug where FBO 0 must be bound or SDL20_GL_GetAttribute gives incorrect information.
        See https://github.com/libsdl-org/sdl12-compat/issues/150 */
@@ -7939,8 +7939,8 @@ OpenSDL2AudioDevice(SDL_AudioSpec *want)
         if ( (want->freq > have->freq) ||
              (want->channels > have->channels) ||
              (want->samples > have->samples) ||
-             ( (SDL_AUDIO_ISFLOAT(want->format)) && (!SDL_AUDIO_ISFLOAT(have->format)) ) ||
-             ( SDL_AUDIO_BITSIZE(want->format) > SDL_AUDIO_BITSIZE(have->format) ) ) {
+             (SDL_AUDIO_ISFLOAT(want->format) && !SDL_AUDIO_ISFLOAT(have->format)) ||
+             (SDL_AUDIO_BITSIZE(want->format) > SDL_AUDIO_BITSIZE(have->format)) ) {
             SDL20_CloseAudio();
         } else {
             SDL20_LockAudio();  /* Device is already at acceptable parameters, just pause it for further setup by caller. */
