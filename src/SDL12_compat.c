@@ -6218,6 +6218,9 @@ DECLSPEC int SDLCALL
 SDL_GetWMInfo(SDL12_SysWMinfo *info12)
 {
     SDL_SysWMinfo info20;
+    SDL_bool temp_window = SDL_FALSE;
+    SDL_Window *win20 = VideoWindow20;
+    int rc;
 
     if (info12->version.major > 1) {
         SDL20_SetError("Requested version is unsupported");
@@ -6227,15 +6230,30 @@ SDL_GetWMInfo(SDL12_SysWMinfo *info12)
         return 0;  /* some programs only test against 0, not -1 */
     }
 
+    if (win20 == NULL) {
+        /* It was legal to call SDL_GetWMInfo without SDL_SetVideoMode() on X11 and Windows (and others...?) in 1.2. */
+        win20 = SDL20_CreateWindow("SDL_GetWMInfo support window", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 128, 128, SDL_WINDOW_HIDDEN);
+        if (!win20) {
+            return 0;
+        }
+        temp_window = SDL_TRUE;
+    }
+
     SDL_zero(info20);
     SDL_VERSION(&info20.version);
-    if (!SDL20_GetWindowWMInfo(VideoWindow20, &info20)) {
+    rc = SDL20_GetWindowWMInfo(win20, &info20);
+
+    if (temp_window) {
+        SDL20_DestroyWindow(win20);
+    }
+
+    if (!rc) {
         return 0;  /* some programs only test against 0, not -1 */
     }
 
 #if defined(SDL_VIDEO_DRIVER_WINDOWS)
     SDL_assert(info20.subsystem == SDL_SYSWM_WINDOWS);
-    info12->window = info20.info.win.window;
+    info12->window = temp_window ? 0 : info20.info.win.window;
     if (SDL_VERSIONNUM(info12->version.major, info12->version.minor, info12->version.patch) >= SDL_VERSIONNUM(1, 2, 5)) {
         info12->hglrc = (HGLRC) VideoGLContext20;
     }
@@ -6243,7 +6261,7 @@ SDL_GetWMInfo(SDL12_SysWMinfo *info12)
     SDL_assert(info20.subsystem == SDL_SYSWM_X11);
     info12->subsystem = SDL12_SYSWM_X11;
     info12->info.x11.display = info20.info.x11.display;
-    info12->info.x11.window = info20.info.x11.window;
+    info12->info.x11.window = temp_window ? 0 : info20.info.x11.window;
     if (SDL_VERSIONNUM(info12->version.major, info12->version.minor, info12->version.patch) >= SDL_VERSIONNUM(1, 0, 2)) {
         info12->info.x11.fswindow = 0;  /* these don't exist in SDL2. */
         info12->info.x11.wmwindow = 0;
