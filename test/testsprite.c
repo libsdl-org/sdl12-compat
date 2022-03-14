@@ -202,6 +202,9 @@ int main(int argc, char *argv[])
 		if ( strcmp(argv[argc], "-fullscreen") == 0 ) {
 			videoflags ^= SDL_FULLSCREEN;
 		} else
+		if ( strcmp(argv[argc], "-noframe") == 0 ) {
+			videoflags ^= SDL_NOFRAME;
+		} else
 		if ( isdigit(argv[argc][0]) ) {
 			numsprites = atoi(argv[argc]);
 		} else {

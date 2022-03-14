@@ -111,6 +111,15 @@ The available options are:
   option is enabled by default, but not all applications are compatible
   with it: try changing this if you can only see a black screen.
 
+- SDL12COMPAT_FIX_BORDERLESS_FS_WIN:
+  Enables turning borderless windows at the desktop resolution into actual
+  fullscreen windows (so they'll go into a separate space on macOS and
+  properly hide dock windows on other desktop environments, etc).
+  If disabled, applications may not get the full display to theirselves as
+  they expect. This option is enabled by default, but this option is here
+  so it can be manually disabled, in case this causes some negative result
+  we haven't anticipated.
+
 - SDL12COMPAT_SCALE_METHOD:
   Choose the scaling method used when applications render at a non-native
   resolution.  The options are `nearest`, for nearest-neighbour sampling

@@ -4948,6 +4948,7 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
     SDL_bool use_gl_scaling = SDL_FALSE;
     const char *env;
     SDL_bool use_highdpi = SDL_TRUE;
+    SDL_bool fix_bordless_fs_win = SDL_TRUE;
 
     FIXME("Should we offer scaling for windowed modes, too?");
     if (flags12 & SDL12_OPENGL) {
@@ -4976,6 +4977,11 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
     env = SDL20_getenv("SDL12COMPAT_HIGHDPI");
     if (env) {
         use_highdpi = SDL20_atoi(env) ? SDL_TRUE : SDL_FALSE;
+    }
+
+    env = SDL20_getenv("SDL12COMPAT_FIX_BORDERLESS_FS_WIN");
+    if (env) {
+        fix_bordless_fs_win = SDL20_atoi(env) ? SDL_TRUE : SDL_FALSE;
     }
 
     FIXME("currently ignores SDL_WINDOWID, which we could use with SDL_CreateWindowFrom ...?");
@@ -5104,6 +5110,11 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
         } else {
             fullscreen_flags20 |= SDL_WINDOW_FULLSCREEN;
         }
+    } else if (fix_bordless_fs_win && (flags12 & SDL12_NOFRAME) && (width == dmode.w) && (height == dmode.h)) {
+        /* app appears to be trying to do a "borderless fullscreen windowed" mode, so just bump
+           it to FULLSCREEN_DESKTOP so it cooperates with various display managers
+           (into a fullscreen space on macOS, hide the Dock on Gnome, etc). */
+        fullscreen_flags20 |= SDL_WINDOW_FULLSCREEN_DESKTOP;
     }
 
     if (!VideoWindow20) {  /* create it */
