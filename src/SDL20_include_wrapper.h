@@ -110,6 +110,7 @@
 #endif
 #ifdef __OS2__
 #define INCL_DOSMODULEMGR /* for Dos_LoadModule() & co. */
+#define INCL_DOSPROCESS
 #endif
 
 #define __BUILDING_SDL12_COMPAT__ 1
