@@ -75,7 +75,7 @@ clean: .SYMBOLIC
 	@echo * Clean: $(LIBNAME) $(VERSION)
 	@if exist *.obj rm *.obj
 	@if exist *.res rm *.res
-	@if exist *.map rm *.lbc
+	@if exist *.lbc rm *.lbc
 	@if exist *.map rm *.map
 	@if exist $(LNKFILE) rm $(LNKFILE)
 
