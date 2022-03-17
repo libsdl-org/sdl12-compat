@@ -968,6 +968,7 @@ static GLuint OpenGLLogicalScalingMultisampleColor = 0;
 static GLuint OpenGLLogicalScalingMultisampleDepth = 0;
 static GLuint OpenGLCurrentReadFBO = 0;
 static GLuint OpenGLCurrentDrawFBO = 0;
+static SDL_bool ForceGLSwapBufferContext = SDL_FALSE;
 
 /* !!! FIXME: need a mutex for the event queue. */
 #define SDL12_MAXEVENTS 128
@@ -1138,6 +1139,7 @@ static QuirkEntryType quirks[] = {
     /* Awesomenauts uses Cg, and does weird things with the GL context. */
     {"Awesomenauts.bin.x86", "SDL12COMPAT_OPENGL_SCALING", "0"},
     {"Awesomenauts.bin.x86", "SDL_VIDEODRIVER", "x11"},
+    {"Awesomenauts.bin.x86", "SDL12COMPAT_FORCE_GL_SWAPBUFFER_CONTEXT", "1"},
 
     /* Braid uses Cg, which uses glXGetProcAddress(). */
     {"braid", "SDL_VIDEODRIVER", "x11"},
@@ -5098,6 +5100,8 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
 
     fix_bordless_fs_win = SDL12Compat_GetHintBoolean("SDL12COMPAT_FIX_BORDERLESS_FS_WIN", fix_bordless_fs_win);
 
+    ForceGLSwapBufferContext = SDL12Compat_GetHintBoolean("SDL12COMPAT_FORCE_GL_SWAPBUFFER_CONTEXT", SDL_FALSE);
+
     FIXME("currently ignores SDL_WINDOWID, which we could use with SDL_CreateWindowFrom ...?");
 
     flags12 &= ~SDL12_HWACCEL; /* just in case - https://github.com/libsdl-org/SDL-1.2/issues/817 */
@@ -6710,6 +6714,11 @@ DECLSPEC void SDLCALL
 SDL_GL_SwapBuffers(void)
 {
     if (VideoWindow20) {
+        /* Some applications, e.g. Awesomenauts, play with glXMakeCurrent() behind out backs and break SwapBuffers() */
+        if (ForceGLSwapBufferContext) {
+            SDL20_GL_MakeCurrent(VideoWindow20, VideoGLContext20);
+        }
+
         if (OpenGLLogicalScalingFBO != 0) {
             const GLboolean has_scissor = OpenGLFuncs.glIsEnabled(GL_SCISSOR_TEST);
             const char *scale_method_env = SDL12Compat_GetHint("SDL12COMPAT_SCALE_METHOD");
