@@ -6714,7 +6714,7 @@ DECLSPEC void SDLCALL
 SDL_GL_SwapBuffers(void)
 {
     if (VideoWindow20) {
-        /* Some applications, e.g. Awesomenauts, play with glXMakeCurrent() behind out backs and break SwapBuffers() */
+        /* Some applications, e.g. Awesomenauts, play with glXMakeCurrent() behind our backs and break SwapBuffers() */
         if (ForceGLSwapBufferContext) {
             SDL20_GL_MakeCurrent(VideoWindow20, VideoGLContext20);
         }
