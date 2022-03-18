@@ -1157,7 +1157,7 @@ static QuirkEntryType quirks[] = {
     /* Braid uses Cg, which uses glXGetProcAddress(). */
     {"braid", "SDL_VIDEODRIVER", "x11"},
     {"braid", "SDL12COMPAT_OPENGL_SCALING", "0"},
-    
+
     /* GOG's DOSBox builds have architecture-specific filenames. */
     {"dosbox", "SDL12COMPAT_USE_KEYBOARD_LAYOUT", "0"},
     {"dosbox_i686", "SDL12COMPAT_USE_KEYBOARD_LAYOUT", "0"},
@@ -1166,7 +1166,7 @@ static QuirkEntryType quirks[] = {
     /* TODO: Add any quirks needed for this system. */
 
     /* A dummy entry to keep compilers happy. */
-    {"", "", NULL}
+    {"", "", "0"}
 #endif
 };
 
@@ -1220,7 +1220,7 @@ SDL12Compat_GetHint(const char *name)
     const char *value;
     const char *exe_name;
     int i;
-    
+
     /* First, check if there's an environment variable override. */
     value = SDL20_getenv(name);
     if (value) {
@@ -1229,6 +1229,10 @@ SDL12Compat_GetHint(const char *name)
 
     /* Else, look up the quirks table. */
     exe_name = SDL12Compat_GetExeName();
+    if (*exe_name == '\0') {
+        return NULL;
+    }
+
     for (i = 0; i < SDL_arraysize(quirks); i++) {
         if (!SDL20_strcmp(exe_name, quirks[i].exe_name)) {
             if (!SDL20_strcmp(name, quirks[i].hint_name)) {
@@ -1259,6 +1263,9 @@ SDL12Compat_PrintQuirks(void)
     int i;
     const char *exe_name = SDL12Compat_GetExeName();
 
+    if (*exe_name == '\0') {
+        return;
+    }
     for (i = 0; i < SDL_arraysize(quirks); i++) {
         if (!SDL20_strcmp(exe_name, quirks[i].exe_name)) {
             if (!SDL20_getenv(quirks[i].hint_name)) {
