@@ -59,8 +59,21 @@
 
 #define SDL_BlitSurface SDL_UpperBlit
 
-#ifdef __LINUX__
+#ifdef __linux__
 #include <unistd.h> /* for readlink() */
+#endif
+
+#if defined(__unix__) || defined(__APPLE__)
+#ifndef PATH_MAX
+#define PATH_MAX 1024
+#endif
+#define SDL12_MAXPATH PATH_MAX
+#elif defined _WIN32
+#define SDL12_MAXPATH MAX_PATH
+#elif defined __OS2__
+#define SDL12_MAXPATH CCHMAXPATH
+#else
+#define SDL12_MAXPATH 1024
 #endif
 
 #ifdef __cplusplus
@@ -1157,25 +1170,38 @@ static QuirkEntryType quirks[] = {
 #endif
 };
 
+#ifdef __linux__
+static void OS_GetExeName(char *buf, const unsigned maxpath) {
+    buf[0] = '\0';
+    readlink("/proc/self/exe", buf, maxpath);
+}
+#elif defined(_WIN32)
+static void OS_GetExeName(char *buf, const unsigned maxpath) {
+    buf[0] = '\0';
+    GetModuleFileName(NULL, buf, maxpath);
+}
+#elif defined(__OS2__)
+static void OS_GetExeName(char *buf, const unsigned maxpath) {
+    PPIB pib;
+    DosGetInfoBlocks(NULL, &pib);
+    buf[0] = '\0';
+    DosQueryModuleName(pib->pib_hmte, maxpath, buf);
+}
+#else /* FIXME */
+static void OS_GetExeName(char *buf, const unsigned maxpath) {
+    buf[0] = '\0';
+    (void)maxpath;
+}
+#endif
+
 static const char *
 SDL12Compat_GetExeName(void)
 {
     static const char *exename = NULL;
     if (exename == NULL) {
-        static char path_buf[260];
+        static char path_buf[SDL12_MAXPATH];
         static char *base_path;
-#ifdef _WIN32
-        GetModuleFileName(NULL, path_buf, 260);
-#elif defined(__linux__)
-        readlink("/proc/self/exe", path_buf, 260);
-#elif defined(__OS2__)
-        PTIB tib;
-        PPIB pib;
-        DosGetInfoBlocks(&tib, &pib);
-        DosQueryModuleName(pib->pib_hmte, 260, path_buf);
-#else
-        path_buf[0] = '\0';
-#endif
+        OS_GetExeName(path_buf, SDL12_MAXPATH);
         base_path = SDL20_strrchr(path_buf, *DIRSEP);
         if (base_path) {
             /* We have a '\\' component. */
