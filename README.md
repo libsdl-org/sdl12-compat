@@ -53,6 +53,13 @@ manager. Windows and Mac users can download prebuilt binaries from
 [SDL's download page](https://libsdl.org/download-2.0.php); make sure you
 get the "development libraries" and not "runtime binaries" there.
 
+Linux users might need some packages from their Linux distribution. On Ubuntu,
+you might need to do:
+
+```bash
+sudo apt-get install build-essential cmake libsdl2-2.0-0 libsdl2-dev libgl-dev
+```
+
 Now just point CMake at sdl12-compat's directory. Here's a command-line
 example:
 
@@ -78,6 +85,50 @@ GUI and set it appropriately, click "Configure" again, and then "Generate."
 When the build is complete, you'll have a shared library you can drop in
 as a replacement for an existing SDL 1.2 build. This will also build
 the original SDL 1.2 test apps, so you can verify the library is working.
+
+
+# Building for older CPU architectures on Linux:
+
+There are a lot of binaries from many years ago that used SDL 1.2, which is
+to say they are for CPU architectures that are likely not your current
+system's.
+
+If you want to build a 32-bit x86 library on an x86-64 Linux machine, for
+compatibility with older games, you should install some basic 32-bit
+development libraries for your distribution. On Ubuntu, this would be:
+
+
+```bash
+sudo apt-get install gcc-multilib libsdl2-dev:i386
+```
+
+...and then add `-m32` to your build options:
+
+
+```bash
+cd sdl12-compat
+cmake -Bbuild32 -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS=-m32
+cmake --build build32
+```
+
+
+# Building for older CPU architectures on macOS:
+
+macOS users can try adding `-DCMAKE_OSX_ARCHITECTURES='arm64;x86_64'` instead
+of `-DCMAKE_C_FLAGS=-m32` to make a Universal Binary for both 64-bit Intel and
+Apple Silicon machines. If you have an older (or much older!) version of Xcode,
+you can try to build with "i386" or maybe even "powerpc" for 32-bit Intel or
+PowerPC systems, but Xcode (and macOS itself) has not supported either of
+these for quite some time, and you will likely struggle to get SDL2 to compile
+here in small ways, as well...but with some effort, it's maybe _possible_ to
+run SDL2 and sdl12-compat on Apple's abandoned architectures.
+
+
+# Building for older CPU architectures on Windows:
+
+Windows users just select a 32-bit version of Visual Studio when running
+CMake, when it asks you what compiler to target in the CMake GUI.
+
 
 # Configuration options:
 
