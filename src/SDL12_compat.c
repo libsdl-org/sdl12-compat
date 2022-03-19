@@ -1178,7 +1178,7 @@ static void OS_GetExeName(char *buf, const unsigned maxpath) {
 #elif defined(_WIN32)
 static void OS_GetExeName(char *buf, const unsigned maxpath) {
     buf[0] = '\0';
-    GetModuleFileName(NULL, buf, maxpath);
+    GetModuleFileNameA(NULL, buf, maxpath);
 }
 #elif defined(__OS2__)
 static void OS_GetExeName(char *buf, const unsigned maxpath) {
