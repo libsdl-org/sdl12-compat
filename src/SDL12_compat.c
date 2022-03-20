@@ -952,6 +952,7 @@ static SDL_bool TranslateKeyboardLayout = SDL_FALSE;
 #endif
 static int VideoDisplayIndex = 0;
 static SDL_bool SupportSysWM = SDL_FALSE;
+static SDL_bool EventThreadEnabled = SDL_FALSE;
 static SDL_bool CDRomInit = SDL_FALSE;
 static char *CDRomPath = NULL;
 static SDL12_CD *CDRomDevice = NULL;
@@ -1997,7 +1998,6 @@ SDL_InitSubSystem(Uint32 sdl12flags)
         SDL20_setenv("SDL_VIDEODRIVER", forcevideodrv, 1);
     }
 
-    FIXME("support SDL_INIT_EVENTTHREAD where it makes sense?");
     #define SETFLAG(flag) if (sdl12flags & SDL12_INIT_##flag) sdl20flags |= SDL_INIT_##flag
     SETFLAG(TIMER);
     SETFLAG(AUDIO);
@@ -2017,6 +2017,9 @@ SDL_InitSubSystem(Uint32 sdl12flags)
         if (Init12Video() < 0) {
             rc = -1;
         }
+
+        /* SDL_INIT_EVENTTHREAD takes effect when SDL_INIT_VIDEO is also set */
+        EventThreadEnabled = (sdl12flags & SDL12_INIT_EVENTTHREAD) ? SDL_TRUE : SDL_FALSE;
     }
 
 #ifdef __WINDOWS__
@@ -2128,6 +2131,9 @@ SDL_QuitSubSystem(Uint32 sdl12flags)
 
     if (sdl12flags & SDL12_INIT_VIDEO) {
         Quit12Video();
+
+        /* Shutdown the fake event thread. */
+        EventThreadEnabled = SDL_FALSE;
     }
 
     SDL20_QuitSubSystem(sdl20flags);
@@ -2267,6 +2273,17 @@ DECLSPEC int SDLCALL
 SDL_PeepEvents(SDL12_Event *events12, int numevents, SDL_eventaction action, Uint32 mask)
 {
     SDL12_Event dummy_event;
+
+    /* We don't actually implement an event thread in sdl12-compat, but some
+     * games will only call SDL_PeepEvents(), which doesn't otherwise pump
+     * events, and get stuck when they've consumed all the events.
+     *
+     * Just pumping the event loop here simulates an event thread well enough
+     * for most things.
+     */
+    if (EventThreadEnabled) {
+        SDL_PumpEvents();
+    }
 
     if (action == SDL_ADDEVENT) {
         int i;
