@@ -154,7 +154,8 @@ The available options are:
 - SDL12COMPAT_FAKE_CDROM_PATH:
   A path to a directory containing MP3 files (named trackXX.mp3, where
   XX is a two-digit track number) to be used by applications which play
-  CD audio.
+  CD audio.  Using an absolute path is recommended: relative paths are
+  not guaranteed to work correctly.
 
 - SDL12COMPAT_OPENGL_SCALING:
   Enables scaling of OpenGL applications to the current desktop resolution.
