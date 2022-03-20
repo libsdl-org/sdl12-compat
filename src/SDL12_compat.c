@@ -7455,7 +7455,17 @@ InitializeCDSubsystem(void)
 
     cdpath = SDL12Compat_GetHint("SDL12COMPAT_FAKE_CDROM_PATH");
     if (cdpath) {
+        char abspath[SDL12_MAXPATH];
+        /* Some games chdir() after initialising, making relative paths break. */
+#ifdef WIN32
+        /* There is a _fullpath() function, but it needs libc, which we don't use on Win32. */
+        GetFullPathNameA(cdpath, SDL12_MAXPATH, abspath, NULL);
+        CDRomPath = SDL_strdup(abspath);
+#elif defined(__unix__)
+        CDRomPath = SDL_strdup(realpath(cdpath, abspath));
+#else
         CDRomPath = SDL_strdup(cdpath);
+#endif
     }
 
     CDRomInit = SDL_TRUE;
