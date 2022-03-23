@@ -6630,10 +6630,11 @@ DECLSPEC void SDLCALL
 SDL_FreeYUVOverlay(SDL12_Overlay *overlay12)
 {
     if (overlay12) {
+        SDL12_YUVData *hwdata;
         if (QueuedDisplayOverlay12 == overlay12) {
             QueuedDisplayOverlay12 = NULL;
         }
-        SDL12_YUVData *hwdata = (SDL12_YUVData *) overlay12->hwdata;
+        hwdata = (SDL12_YUVData *) overlay12->hwdata;
         SDL20_DestroyTexture(hwdata->texture20);
         SDL20_free(hwdata->pixelbuf);
         SDL20_free(overlay12);
