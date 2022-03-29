@@ -1162,7 +1162,10 @@ static QuirkEntryType quirks[] = {
     /* GOG's DOSBox builds have architecture-specific filenames. */
     {"dosbox", "SDL12COMPAT_USE_KEYBOARD_LAYOUT", "0"},
     {"dosbox_i686", "SDL12COMPAT_USE_KEYBOARD_LAYOUT", "0"},
-    {"dosbox_x86_64", "SDL12COMPAT_USE_KEYBOARD_LAYOUT", "0"}
+    {"dosbox_x86_64", "SDL12COMPAT_USE_KEYBOARD_LAYOUT", "0"},
+
+    /* The 32-bit Steam build only of Multiwinia Quits but doesn't re-Init */
+    {"multiwinia.bin.x86", "SDL12COMPAT_NO_QUIT_VIDEO", "1"}
 #else
     /* TODO: Add any quirks needed for this system. */
 
@@ -2119,6 +2122,14 @@ DECLSPEC void SDLCALL
 SDL_QuitSubSystem(Uint32 sdl12flags)
 {
     Uint32 sdl20flags, extraflags;
+
+    /* Some games (notably the Steam build of Multiwinia), will
+     * SDL_Quit(SDL_INIT_VIDEO) on resolution change, and never call
+     * SDL_Init() again before creating their new window.
+     */
+    if (SDL12Compat_GetHintBoolean("SDL12COMPAT_NO_QUIT_VIDEO", SDL_FALSE)) {
+        sdl12flags &= ~SDL12_INIT_VIDEO;
+    }
     InitFlags12to20(sdl12flags, &sdl20flags, &extraflags);
 
     if (extraflags & SDL12_INIT_CDROM) {
