@@ -59,7 +59,6 @@ has these C runtime functions available. We're trying to avoid a configure
 stage, though. Send patches if your platform lacks something. */
 #ifndef _WIN32
 #define HAVE_LIBC 1
-#define HAVE_ALLOCA_H 1
 #define HAVE_SYS_TYPES_H 1
 #define HAVE_STDIO_H 1
 #define STDC_HEADERS 1
@@ -70,6 +69,10 @@ stage, though. Send patches if your platform lacks something. */
 #define HAVE_INTTYPES_H 1
 #define HAVE_CTYPE_H 1
 #define HAVE_MATH_H 1
+#endif
+
+#if defined(__linux__) || defined(__sun)
+#define HAVE_ALLOCA_H 1
 #endif
 
 #if defined(__unix__) || defined(__APPLE__)
