@@ -5826,6 +5826,10 @@ SDL_DisplayFormatAlpha(SDL12_Surface *surface12)
 static void
 PresentScreen(void)
 {
+    if (!VideoRenderer20) {
+        return;
+    }
+
     SDL20_RenderClear(VideoRenderer20);
     SDL20_RenderCopy(VideoRenderer20, VideoTexture20, NULL, NULL);
 
