@@ -2137,6 +2137,7 @@ Quit12Video(void)
     VideoInfoVfmt20 = NULL;
     EventFilter12 = NULL;
     EventQueueAvailable = EventQueueHead = EventQueueTail = NULL;
+    SDL20_memset(&PendingKeydownEvent, 0, sizeof(SDL12_Event));
     SDL_FreeCursor(CurrentCursor12);
     VideoModes = NULL;
     VideoModesCount = 0;
