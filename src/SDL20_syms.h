@@ -299,19 +299,9 @@ SDL20_SYM_PASSTHROUGH(size_t,iconv,(SDL_iconv_t a, const char **b, size_t *c, ch
 SDL20_SYM_PASSTHROUGH(char *,iconv_string,(const char *a, const char *b, const char *c, size_t d),(a,b,c,d),return)
 SDL20_SYM(int,setenv,(const char *a, const char *b, int c),(a,b,c),return)
 
-#ifdef __WATCOMC__ /* Watcom builds are broken with SDL math functions. */
-#ifndef SDL12_MATH
-#include <math.h>
-#define SDL20_fabs fabs
-#define SDL20_ceil ceil
-#define SDL20_floor floor
-#define SDL12_MATH
-#endif
-#else
 SDL20_SYM(double,fabs,(double a),(a),return)
 SDL20_SYM(double,ceil,(double a),(a),return)
 SDL20_SYM(double,floor,(double a),(a),return)
-#endif
 
 SDL20_SYM(SDL_Renderer *,CreateRenderer,(SDL_Window *a, int b, Uint32 c),(a,b,c),return)
 SDL20_SYM(int,GetRendererInfo,(SDL_Renderer *a, SDL_RendererInfo *b),(a,b),return)
