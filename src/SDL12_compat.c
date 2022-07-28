@@ -4056,7 +4056,16 @@ EventFilter20to12(void *data, SDL_Event *event20)
                     FlushPendingKeydownEvent(0x1B); /* '\e' */
                     break;
                 default:
-                    /* not a supported control character */
+                    /* not a supported control character
+                       when CTRL is pressed, text events aren't sent so use fallback for unicode */
+                    if (PendingKeydownEvent.key.keysym.mod & KMOD_CTRL) {
+                        const char *keyName = SDL_GetKeyName(PendingKeydownEvent.key.keysym.sym);
+                        /* use key name as unicode if it's a single character */
+                        if (keyName[0] && !keyName[1])
+                            FlushPendingKeydownEvent(keyName[0]);
+                        else
+                            FlushPendingKeydownEvent(0);
+                    }
                     break;
             }
 
