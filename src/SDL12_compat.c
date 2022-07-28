@@ -7101,8 +7101,8 @@ DECLSPEC SDL_bool SDLCALL
 SDL_RemoveTimer(SDL12_TimerID data)
 {
     /* !!! FIXME:  1.2 will safely return SDL_FALSE if this is a
-     * bogus timer. This code will dereference a bogus pointer. */
-    const SDL_bool retval = SDL20_RemoveTimer(data->timer_id);
+     * bogus timer. This code will dereference a bogus pointer, though it handles NULL. */
+    const SDL_bool retval = data ? SDL20_RemoveTimer(data->timer_id) : SDL_FALSE;
     if (retval) {
         SDL20_free(data);
     }
