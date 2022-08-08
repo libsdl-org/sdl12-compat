@@ -120,6 +120,22 @@ real SDL-1.2 available to you. */
 
 #include "begin_code.h"
 
+/* SPECIAL CASE FOR SDL12-COMPAT: if version.major == 2, we'll fill in this struct with the native window handle. */
+/* This is not part of the real 1.2 API! */
+typedef struct SDL_SysWMinfo2on12
+{
+    SDL_version version;
+    SDL_SYSWM_TYPE subsystem;
+    void *data1;
+    void *data2;
+    void *data3;
+    void *data4;
+    void *data5;
+    void *data6;
+    void *data7;
+    void *data8;
+} SDL_SysWMinfo2on12;
+
 extern DECLSPEC int SDLCALL SDL_GetWMInfo(SDL_SysWMinfo *info);
 
 #include "close_code.h"

@@ -33,3 +33,4 @@ These are test programs for the SDL library:
 	testwm		Test window manager -- title, icon, events
 	threadwin	Test multi-threaded event handling
 	torturethread	Simple test for thread creation/destruction
+	testsyswm2on12	Simple test for SDL_SysWM2on12 compatibility magic.
