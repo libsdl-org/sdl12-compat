@@ -13,7 +13,7 @@
 typedef struct SDL_SysWMinfo2on12
 {
     SDL_version version;
-    SDL_SYSWM_TYPE subsystem;
+    Uint32 subsystem;
     void *data1;
     void *data2;
     void *data3;
@@ -46,10 +46,10 @@ typedef enum
 } SDL20_SYSWM_TYPE;
 
 static const char *
-subsystem_name(const SDL20_SYSWM_TYPE typ)
+subsystem_name(const Uint32 typ)
 {
     static char unrecognized[64];
-    switch (typ) {
+    switch ((SDL20_SYSWM_TYPE) typ) {
         case SDL20_SYSWM_UNKNOWN: return "Unknown";
         case SDL20_SYSWM_WINDOWS: return "Windows";
         case SDL20_SYSWM_X11: return "X11";

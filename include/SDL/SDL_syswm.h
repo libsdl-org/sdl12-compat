@@ -125,7 +125,7 @@ real SDL-1.2 available to you. */
 typedef struct SDL_SysWMinfo2on12
 {
     SDL_version version;
-    SDL_SYSWM_TYPE subsystem;
+    Uint32 subsystem;
     void *data1;
     void *data2;
     void *data3;

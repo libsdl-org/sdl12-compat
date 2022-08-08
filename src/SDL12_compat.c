@@ -646,7 +646,7 @@ typedef struct SDL12_SysWMinfo
 typedef struct SDL12_SysWMinfo2on12
 {
     SDL_version version;
-    SDL12_SYSWM_TYPE subsystem;
+    Uint32 subsystem;
     void *data1;
     void *data2;
     void *data3;
@@ -6504,7 +6504,7 @@ SDL_GetWMInfo(SDL12_SysWMinfo *info12)
         SDL12_SysWMinfo2on12 *wminfo2 = (SDL12_SysWMinfo2on12 *) info12;
         SDL_zerop(wminfo2);
         SDL20_memcpy(&wminfo2->version, &info20.version, sizeof (wminfo2->version));
-        wminfo2->subsystem = info20.subsystem;  /* these do not map to SDL 1.2 values! You're on your own! */
+        wminfo2->subsystem = (Uint32) info20.subsystem;  /* these do not map to SDL 1.2 values! You're on your own! */
 
         switch (info20.subsystem) {
             #if defined(SDL_VIDEO_DRIVER_WINDOWS)
