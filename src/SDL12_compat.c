@@ -6467,7 +6467,7 @@ SDL_GetWMInfo(SDL12_SysWMinfo *info12)
     SDL_SysWMinfo info20;
     SDL_bool temp_window = SDL_FALSE;
     SDL_Window *win20 = VideoWindow20;
-    const SDL_bool do_2on12 = ((info12->version.major == 2) && (info12->version.minor == 0) && (info12->version.major == 2) && (info12->version.patch == 0));
+    const int do_2on12 = ((info12->version.major == 2) && (info12->version.minor == 0) && (info12->version.major == 2) && (info12->version.patch == 0));
     int rc;
 
     if ((info12->version.major > 1) && !do_2on12) {
