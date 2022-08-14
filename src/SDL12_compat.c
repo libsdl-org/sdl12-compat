@@ -888,9 +888,14 @@ typedef struct
 
 typedef struct
 {
-    int device_index;
-    SDL_Joystick *joystick;
-} JoystickOpenedItem;
+    char *name;
+    SDL_atomic_t refcount;
+    SDL_JoystickID instance_id;
+    union {
+        SDL_Joystick *joystick;
+        SDL_GameController *controller;
+    } dev;
+} SDL12_Joystick;
 
 /* this is identical to SDL2, except SDL2 forced the structure packing in
    some instances, so we can't passthrough without converting the struct. :( */
@@ -976,7 +981,9 @@ static SDL12_EventFilter EventFilter12 = NULL;
 static SDL12_Cursor *CurrentCursor12 = NULL;
 static Uint8 EventStates[SDL12_NUMEVENTS];
 static int SwapInterval = 0;
-static JoystickOpenedItem JoystickOpenList[16];
+static SDL_bool JoysticksAreGameControllers = SDL_FALSE;
+static SDL12_Joystick *JoystickList = NULL;
+static Uint32 NumJoysticks = 0;
 static Uint8 KeyState[SDLK12_LAST];
 static SDL_bool MouseInputIsRelative = SDL_FALSE;
 static SDL_Point MousePosition = { 0, 0 };
@@ -1554,92 +1561,290 @@ SDL_Has3DNowExt(void)
     return (get_cpu_ext_features() & 0x40000000)? SDL_TRUE : SDL_FALSE;
 }
 
-DECLSPEC SDL_Joystick * SDLCALL
-SDL_JoystickOpen(int device_index)
+
+/* SDL 1.2 has no concept of joystick hotplug, so you only have
+   access to sticks seen during SDL_Init() and if one of them is
+   unplugged, all you can do is fail to open it, or stop reporting
+   new input.
+
+   Also, we optionally let the app see SDL2 Game Controllers as
+   SDL 1.2 joysticks, which gives them a stable button/axis layout
+   and can deal with other hardware quirks.
+*/
+
+static SDL_bool
+BogusJoystick(SDL12_Joystick *stick12)
 {
-    size_t i;
+    const int device_index = (int) (stick12 - JoystickList);
+    if (!stick12 || (device_index < 0) || (device_index >= NumJoysticks)) {
+        SDL20_SetError("Invalid SDL_Joystick");
+        return SDL_TRUE;
+    }
+    return SDL_FALSE;
+}
+
+static SDL_bool
+BogusJoystickIndex(const int device_index)
+{
+    if ((device_index < 0) || (device_index >= NumJoysticks)) {
+        SDL20_SetError("Invalid SDL_Joystick");
+        return SDL_TRUE;
+    }
+    return SDL_FALSE;
+}
+
+static int
+FindJoystick12IndexByInstanceId(const SDL_JoystickID instance_id)
+{
+    int i;
+    for (i = 0; i < NumJoysticks; i++) {
+        if (JoystickList[i].instance_id == instance_id) {
+            return (SDL20_AtomicGet(&JoystickList[i].refcount) > 0) ? i : -1;
+        }
+    }
+    return -1;
+}
+
+static void
+Init12Joystick(void)
+{
+    int numsticks20;
+    int i;
+
+    JoysticksAreGameControllers = SDL12Compat_GetHintBoolean("SDL12COMPAT_USE_GAME_CONTROLLERS", SDL_FALSE);
+    NumJoysticks = 0;
+
     SDL20_LockJoysticks();
-    for (i = 0; i < SDL_arraysize(JoystickOpenList); i++) {
-        if (JoystickOpenList[i].joystick == NULL) {
-            break;
+
+    numsticks20 = SDL20_NumJoysticks();
+
+    if (numsticks20 > 255) {
+        numsticks20 = 255;  /* it has to fit in a Uint8 for the joystick events. */
+    }
+
+    JoystickList = (SDL12_Joystick *) ((numsticks20 > 0) ? SDL20_calloc(numsticks20, sizeof (SDL12_Joystick)) : NULL);
+    if (JoystickList != NULL) {
+        for (i = 0; i < numsticks20; i++) {
+            const char *name;
+            SDL_bool opened;
+
+            if (JoysticksAreGameControllers && !SDL20_IsGameController(i)) {
+                continue;
+            }
+
+            name = JoysticksAreGameControllers ? SDL20_GameControllerNameForIndex(i) : SDL20_JoystickNameForIndex(i);
+            if (!name) {
+                name = JoysticksAreGameControllers ? "Generic SDL2 Game Controller" : "Generic SDL2 Joystick";
+            }
+
+            JoystickList[NumJoysticks].name = SDL20_strdup(name);
+            if (!JoystickList[NumJoysticks].name) {
+                continue;
+            }
+
+            if (JoysticksAreGameControllers) {
+                JoystickList[NumJoysticks].dev.controller = SDL20_GameControllerOpen(i);
+                opened = JoystickList[NumJoysticks].dev.controller != NULL;
+            } else {
+                JoystickList[NumJoysticks].dev.joystick = SDL20_JoystickOpen(i);
+                opened = JoystickList[NumJoysticks].dev.joystick != NULL;
+            }
+
+            if (!opened) {
+                SDL20_free(JoystickList[NumJoysticks].name);
+                JoystickList[NumJoysticks].name = NULL;
+            }
+
+            JoystickList[NumJoysticks].instance_id = SDL20_JoystickGetDeviceInstanceID(i);
+
+            NumJoysticks++;
         }
     }
 
-    if (i == SDL_arraysize(JoystickOpenList)) {
-        SDL20_UnlockJoysticks();
-        SDL20_SetError("Too many open joysticks");
-        return NULL;
-    }
-
-    JoystickOpenList[i].joystick = SDL20_JoystickOpen(device_index);
-    if (JoystickOpenList[i].joystick) {
-        JoystickOpenList[i].device_index = device_index;
-    }
-
     SDL20_UnlockJoysticks();
-    return JoystickOpenList[i].joystick;
+
+    if ((NumJoysticks == 0) && (JoystickList)) {
+        SDL20_free(JoystickList);
+        JoystickList = NULL;
+    } else if (NumJoysticks < numsticks20) {  /* shrink the array if possible. */
+        void *ptr = SDL20_realloc(JoystickList, sizeof (*JoystickList) * NumJoysticks);
+        if (ptr) {
+            JoystickList = (SDL12_Joystick *) ptr;
+        }
+    }
+}
+
+static void
+Quit12Joystick(void)
+{
+    int i;
+    for (i = 0; i < NumJoysticks; i++) {
+        SDL12_Joystick *stick12 = &JoystickList[i];
+        if (JoysticksAreGameControllers) {
+            SDL20_GameControllerClose(stick12->dev.controller);
+        } else {
+            SDL20_JoystickClose(stick12->dev.joystick);
+        }
+        SDL20_free(stick12->name);
+    }
+
+    SDL20_free(JoystickList);
+    JoystickList = NULL;
+    NumJoysticks = 0;
+}
+
+DECLSPEC int SDLCALL
+SDL_NumJoysticks(void)
+{
+    return NumJoysticks;
+}
+
+DECLSPEC int SDLCALL
+SDL_JoystickNumAxes(SDL12_Joystick *stick12)
+{
+    if (BogusJoystick(stick12)) {
+        return -1;
+    }
+    return JoysticksAreGameControllers ? (SDL_CONTROLLER_AXIS_MAX + 1) : SDL20_JoystickNumAxes(stick12->dev.joystick);
+}
+
+DECLSPEC int SDLCALL
+SDL_JoystickNumBalls(SDL12_Joystick *stick12)
+{
+    if (BogusJoystick(stick12)) {
+        return -1;
+    }
+    return JoysticksAreGameControllers ? 0 : SDL20_JoystickNumBalls(stick12->dev.joystick);
+}
+
+DECLSPEC int SDLCALL
+SDL_JoystickNumHats(SDL12_Joystick *stick12)
+{
+    if (BogusJoystick(stick12)) {
+        return -1;
+    }
+    return JoysticksAreGameControllers ? 0 : SDL20_JoystickNumHats(stick12->dev.joystick);
+}
+
+DECLSPEC int SDLCALL
+SDL_JoystickNumButtons(SDL12_Joystick *stick12)
+{
+    if (BogusJoystick(stick12)) {
+        return -1;
+    }
+    return JoysticksAreGameControllers ? (SDL_CONTROLLER_BUTTON_MAX + 1) : SDL20_JoystickNumButtons(stick12->dev.joystick);
 }
 
 DECLSPEC void SDLCALL
-SDL_JoystickClose(SDL_Joystick *joystick)
+SDL_JoystickUpdate(void)
 {
-    size_t i;
-    SDL20_LockJoysticks();
-    for (i = 0; i < SDL_arraysize(JoystickOpenList); i++) {
-        if (JoystickOpenList[i].joystick == joystick) {
-            break;
+    if (JoysticksAreGameControllers) {
+        SDL20_GameControllerUpdate();
+    } else {
+        SDL20_JoystickUpdate();
+    }
+}
+
+DECLSPEC int SDLCALL
+SDL_JoystickEventState(int state)
+{
+    switch (state) {
+        case SDL_DISABLE:
+        case SDL_ENABLE:
+            if (JoysticksAreGameControllers) {
+                SDL20_JoystickEventState(state);
+                return SDL20_GameControllerEventState(state);
+            }
+            SDL20_GameControllerEventState(state);
+            return SDL20_JoystickEventState(state);
+        default:  /* everything else is treated as SDL_QUERY */
+            /* we turn joystick and controller event state off together, so we only have to query one. */
+            return SDL20_JoystickEventState(SDL_QUERY);
+    }
+}
+
+DECLSPEC Sint16 SDLCALL
+SDL_JoystickGetAxis(SDL12_Joystick *stick12, int axis)
+{
+    if (BogusJoystick(stick12)) {
+        return 0;
+    }
+    return JoysticksAreGameControllers ? SDL20_GameControllerGetAxis(stick12->dev.controller, axis) : SDL20_JoystickGetAxis(stick12->dev.joystick, axis);
+}
+
+DECLSPEC Uint8 SDLCALL
+SDL_JoystickGetHat(SDL12_Joystick *stick12, int hat)
+{
+    if (BogusJoystick(stick12)) {
+        return 0;
+    }
+    return JoysticksAreGameControllers ? 0 : SDL20_JoystickGetHat(stick12->dev.joystick, hat);
+}
+
+DECLSPEC int SDLCALL
+SDL_JoystickGetBall(SDL12_Joystick *stick12, int ball, int *dx, int *dy)
+{
+    if (BogusJoystick(stick12)) {
+        return 0;
+    } else if (JoysticksAreGameControllers) {
+        if (dx) { *dx = 0; }
+        if (dy) { *dy = 0; }
+        return SDL20_SetError("No joystick balls available");
+    }
+    return SDL20_JoystickGetBall(stick12->dev.joystick, ball, dx, dy);
+}
+
+DECLSPEC Uint8 SDLCALL
+SDL_JoystickGetButton(SDL12_Joystick *stick12, int button)
+{
+    if (BogusJoystick(stick12)) {
+        return 0;
+    }
+    return JoysticksAreGameControllers ? SDL20_GameControllerGetButton(stick12->dev.controller, button) : SDL20_JoystickGetButton(stick12->dev.joystick, button);
+}
+
+DECLSPEC SDL12_Joystick * SDLCALL
+SDL_JoystickOpen(int device_index)
+{
+    if (BogusJoystickIndex(device_index)) {
+        return NULL;
+    }
+
+    /* multiple opens just increments a refcount and returns the same object in SDL 1.2 Classic. */
+    SDL20_AtomicAdd(&JoystickList[device_index].refcount, 1);
+    return &JoystickList[device_index];
+}
+
+DECLSPEC void SDLCALL
+SDL_JoystickClose(SDL12_Joystick *stick12)
+{
+    if (!BogusJoystick(stick12)) {
+        /* we don't actually close anything here, just drop the refcount. */
+        if (SDL20_AtomicAdd(&stick12->refcount, -1) == 0) {
+            SDL20_AtomicAdd(&stick12->refcount, 1);  /* whoops, wasn't open, bounce it back to zero. */
         }
     }
-
-    if (i < SDL_arraysize(JoystickOpenList)) {
-        JoystickOpenList[i].joystick = NULL;
-    }
-
-    SDL20_UnlockJoysticks();
-
-    SDL20_JoystickClose(joystick);
 }
 
 DECLSPEC const char * SDLCALL
 SDL_JoystickName(int device_index)
 {
-    return SDL20_JoystickNameForIndex(device_index);
+    return BogusJoystickIndex(device_index) ? NULL : JoystickList[device_index].name;
 }
 
 DECLSPEC int SDLCALL
-SDL_JoystickIndex(SDL_Joystick *joystick)
+SDL_JoystickIndex(SDL12_Joystick *stick12)
 {
-    size_t i;
-    SDL20_LockJoysticks();
-    for (i = 0; i < SDL_arraysize(JoystickOpenList); i++) {
-        if (JoystickOpenList[i].joystick == joystick) {
-            break;
-        }
-    }
-
-    if (i < SDL_arraysize(JoystickOpenList)) {
-        SDL20_UnlockJoysticks();
-        return JoystickOpenList[i].device_index;
-    }
-
-    SDL20_UnlockJoysticks();
-    return SDL20_SetError("Can't find joystick");
+    return BogusJoystick(stick12) ? -1 : (int) (stick12 - JoystickList);
 }
 
 DECLSPEC int SDLCALL
 SDL_JoystickOpened(int device_index)
 {
-    int retval = 0;
-    size_t i;
-    SDL20_LockJoysticks();
-    for (i = 0; i < SDL_arraysize(JoystickOpenList); i++) {
-        if ((JoystickOpenList[i].joystick) && (JoystickOpenList[i].device_index == device_index)) {
-            retval = 1;
-            break;
-        }
+    if (BogusJoystickIndex(device_index)) {
+        return 0;  /* SDL 1.2 classic doesn't return an error here, either. */
     }
-    SDL20_UnlockJoysticks();
-    return retval;
+    return SDL20_AtomicGet(&JoystickList[device_index].refcount) ? 1 : 0;
 }
 
 static SDL_PixelFormat *
@@ -2071,6 +2276,10 @@ SDL_InitSubSystem(Uint32 sdl12flags)
     }
 #endif
 
+    if ((rc == 0) && (sdl20flags & SDL_INIT_JOYSTICK)) {
+        Init12Joystick();  /* if this fails, we just won't report any sticks. */
+    }
+
     return rc;
 }
 
@@ -2130,6 +2339,7 @@ SDL_WasInit(Uint32 sdl12flags)
     return InitFlags20to12(SDL20_WasInit(sdl20flags)) | extraflags;
 }
 
+
 static SDL12_Surface *EndVidModeCreate(void);
 static void
 Quit12Video(void)
@@ -2186,6 +2396,10 @@ SDL_QuitSubSystem(Uint32 sdl12flags)
 
         /* Shutdown the fake event thread. */
         EventThreadEnabled = SDL_FALSE;
+    }
+
+    if (sdl12flags & SDL12_INIT_JOYSTICK) {
+        Quit12Joystick();
     }
 
     SDL20_QuitSubSystem(sdl20flags);
@@ -4210,47 +4424,84 @@ EventFilter20to12(void *data, SDL_Event *event20)
             break;
 
         case SDL_JOYAXISMOTION:
-            event12.type = SDL12_JOYAXISMOTION;
-            event12.jaxis.which = (Uint8) event20->jaxis.which;
-            event12.jaxis.axis = event20->jaxis.axis;
-            event12.jaxis.value = event20->jaxis.value;
+            if (!JoysticksAreGameControllers) {
+                const int which = FindJoystick12IndexByInstanceId(event20->jaxis.which);
+                if (which != -1) {
+                    event12.type = SDL12_JOYAXISMOTION;
+                    event12.jaxis.which = (Uint8) which;
+                    event12.jaxis.axis = event20->jaxis.axis;
+                    event12.jaxis.value = event20->jaxis.value;
+                }
+            }
             break;
 
         case SDL_JOYBALLMOTION:
-            event12.type = SDL12_JOYBALLMOTION;
-            event12.jball.which = (Uint8) event20->jball.which;
-            event12.jball.ball = event20->jball.ball;
-            event12.jball.xrel = event20->jball.xrel;
-            event12.jball.yrel = event20->jball.yrel;
+            if (!JoysticksAreGameControllers) {
+                const int which = FindJoystick12IndexByInstanceId(event20->jball.which);
+                if (which != -1) {
+                    event12.type = SDL12_JOYBALLMOTION;
+                    event12.jball.which = (Uint8) which;
+                    event12.jball.ball = event20->jball.ball;
+                    event12.jball.xrel = event20->jball.xrel;
+                    event12.jball.yrel = event20->jball.yrel;
+                }
+            }
             break;
 
         case SDL_JOYHATMOTION:
-            event12.type = SDL12_JOYHATMOTION;
-            event12.jhat.which = (Uint8) event20->jhat.which;
-            event12.jhat.hat = event20->jhat.hat;
-            event12.jhat.value = event20->jhat.value;
+            if (!JoysticksAreGameControllers) {
+                const int which = FindJoystick12IndexByInstanceId(event20->jhat.which);
+                if (which != -1) {
+                    event12.type = SDL12_JOYHATMOTION;
+                    event12.jhat.which = (Uint8) which;
+                    event12.jhat.hat = event20->jhat.hat;
+                    event12.jhat.value = event20->jhat.value;
+                }
+            }
             break;
 
         case SDL_JOYBUTTONDOWN:
-            event12.type = SDL12_JOYBUTTONDOWN;
-            event12.jbutton.which = (Uint8) event20->jbutton.which;
-            event12.jbutton.button = event20->jbutton.button;
-            event12.jbutton.state = event20->jbutton.state;
+        case SDL_JOYBUTTONUP:
+            if (!JoysticksAreGameControllers) {
+                const int which = FindJoystick12IndexByInstanceId(event20->jbutton.which);
+                if (which != -1) {
+                    event12.type = (event20->jbutton.state) ? SDL12_JOYBUTTONDOWN : SDL12_JOYBUTTONUP;
+                    event12.jbutton.which = (Uint8) which;
+                    event12.jbutton.button = event20->jbutton.button;
+                    event12.jbutton.state = event20->jbutton.state;
+                }
+            }
             break;
 
-        case SDL_JOYBUTTONUP:
-            event12.type = SDL12_JOYBUTTONUP;
-            event12.jbutton.which = (Uint8) event20->jbutton.which;
-            event12.jbutton.button = event20->jbutton.button;
-            event12.jbutton.state = event20->jbutton.state;
+        case SDL_CONTROLLERAXISMOTION:
+            if (JoysticksAreGameControllers) {
+                const int which = FindJoystick12IndexByInstanceId(event20->caxis.which);
+                if (which != -1) {
+                    event12.type = SDL12_JOYAXISMOTION;
+                    event12.jaxis.which = (Uint8) which;
+                    event12.jaxis.axis = event20->caxis.axis;
+                    event12.jaxis.value = event20->caxis.value;
+                }
+            }
             break;
+
+        case SDL_CONTROLLERBUTTONDOWN:
+        case SDL_CONTROLLERBUTTONUP:
+            if (JoysticksAreGameControllers) {
+                const int which = FindJoystick12IndexByInstanceId(event20->cbutton.which);
+                if (which != -1) {
+                    event12.type = (event20->cbutton.state) ? SDL12_JOYBUTTONDOWN : SDL12_JOYBUTTONUP;
+                    event12.jbutton.which = (Uint8) which;
+                    event12.jbutton.button = event20->cbutton.button;
+                    event12.jbutton.state = event20->cbutton.state;
+                }
+            }
+            break;
+
 
         /*
         case SDL_JOYDEVICEADDED:
         case SDL_JOYDEVICEREMOVED:
-        case SDL_CONTROLLERAXISMOTION:
-        case SDL_CONTROLLERBUTTONDOWN:
-        case SDL_CONTROLLERBUTTONUP:
         case SDL_CONTROLLERDEVICEADDED:
         case SDL_CONTROLLERDEVICEREMOVED:
         case SDL_CONTROLLERDEVICEREMAPPED:

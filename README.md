@@ -196,6 +196,18 @@ The available options are:
   (in most applications) will take the keyboard layout into account
   regardless of this option.
 
+- SDL12COMPAT_USE_GAME_CONTROLLERS:
+  Use SDL2's higher-level Game Controller API to expose joysticks instead of
+  its lower-level joystick API. The benefit of this is that you can exert
+  more control over arbitrary hardware (deadzones, button mapping, device
+  name, etc), and button and axes layouts are consistent (what is physically
+  located where an Xbox360's "A" button is will always be SDL 1.2 joystick
+  button 0, "B" will be 1, etc). The downside is it might not expose all of
+  a given piece of hardware's functionality, or simply not make sense in
+  general...if you need to use a flight stick, for example, you should not
+  use this hint. If there is no known game controller mapping for a joystick,
+  and this hint is in use, it will not be listed as an availble device.
+
 - SDL_MOUSE_RELATIVE_SCALING:
   If enabled, relative mouse motion is scaled when the application is
   running at a non-native resolution.  This may be required with some

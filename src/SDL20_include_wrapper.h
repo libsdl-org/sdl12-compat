@@ -83,7 +83,22 @@
 #define SDL_WriteBE64 IGNORE_THIS_VERSION_OF_SDL_WriteBE64
 #define SDL_GetThreadID IGNORE_THIS_VERSION_OF_SDL_GetThreadID
 #define SDL_ThreadID IGNORE_THIS_VERSION_OF_SDL_ThreadID
+#define SDL_NumJoysticks IGNORE_THIS_VERSION_OF_SDL_NumJoysticks
+#define SDL_JoystickNumAxes IGNORE_THIS_VERSION_OF_SDL_JoystickNumAxes
+#define SDL_JoystickNumBalls IGNORE_THIS_VERSION_OF_SDL_JoystickNumBalls
+#define SDL_JoystickNumHats IGNORE_THIS_VERSION_OF_SDL_JoystickNumHats
+#define SDL_JoystickNumButtons IGNORE_THIS_VERSION_OF_SDL_JoystickNumButtons
+#define SDL_JoystickUpdate IGNORE_THIS_VERSION_OF_SDL_JoystickUpdate
+#define SDL_JoystickEventState IGNORE_THIS_VERSION_OF_SDL_JoystickEventState
+#define SDL_JoystickGetAxis IGNORE_THIS_VERSION_OF_SDL_JoystickGetAxis
+#define SDL_JoystickGetHat IGNORE_THIS_VERSION_OF_SDL_JoystickGetHat
+#define SDL_JoystickGetBall IGNORE_THIS_VERSION_OF_SDL_JoystickGetBall
+#define SDL_JoystickGetButton IGNORE_THIS_VERSION_OF_SDL_JoystickGetButton
+#define SDL_JoystickOpen IGNORE_THIS_VERSION_OF_SDL_JoystickOpen
+#define SDL_JoystickClose IGNORE_THIS_VERSION_OF_SDL_JoystickClose
 #define SDL_JoystickName IGNORE_THIS_VERSION_OF_SDL_JoystickName
+#define SDL_JoystickIndex IGNORE_THIS_VERSION_OF_SDL_JoystickIndex
+#define SDL_JoystickOpened IGNORE_THIS_VERSION_OF_SDL_JoystickOpened
 #define SDL_LoadBMP_RW IGNORE_THIS_VERSION_OF_SDL_LoadBMP_RW
 #define SDL_SaveBMP_RW IGNORE_THIS_VERSION_OF_SDL_SaveBMP_RW
 #define SDL_LoadWAV_RW IGNORE_THIS_VERSION_OF_SDL_LoadWAV_RW
@@ -197,7 +212,22 @@ typedef void (__cdecl *pfnSDL_CurrentEndThread) (unsigned);
 #undef SDL_WriteBE64
 #undef SDL_GetThreadID
 #undef SDL_ThreadID
+#undef SDL_NumJoysticks
+#undef SDL_JoystickNumAxes
+#undef SDL_JoystickNumBalls
+#undef SDL_JoystickNumHats
+#undef SDL_JoystickNumButtons
+#undef SDL_JoystickUpdate
+#undef SDL_JoystickEventState
+#undef SDL_JoystickGetAxis
+#undef SDL_JoystickGetHat
+#undef SDL_JoystickGetBall
+#undef SDL_JoystickGetButton
+#undef SDL_JoystickOpen
+#undef SDL_JoystickClose
 #undef SDL_JoystickName
+#undef SDL_JoystickIndex
+#undef SDL_JoystickOpened
 #undef SDL_LoadBMP_RW
 #undef SDL_SaveBMP_RW
 #undef SDL_LoadWAV_RW
@@ -214,6 +244,7 @@ typedef void (__cdecl *pfnSDL_CurrentEndThread) (unsigned);
 #undef SDL_ConvertAudio
 #undef SDL_RegisterApp
 #undef SDL_UnregisterApp
+
 
 #ifdef SDL_mutexP
 #undef SDL_mutexP
