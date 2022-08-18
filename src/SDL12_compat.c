@@ -5639,9 +5639,9 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
     #endif
     switch (bpp) {
         case  8: appfmt = SDL_PIXELFORMAT_INDEX8; break;
-        case 16: appfmt = SDL_PIXELFORMAT_RGB565; FIXME("bgr instead of rgb?"); break;
-        case 24: appfmt = SDL_PIXELFORMAT_RGB888; FIXME("bgr instead of rgb?"); break;
-        case 32: appfmt = SDL_PIXELFORMAT_XRGB8888; FIXME("bgr instead of rgb?"); break;
+        case 16: appfmt = SDL_PIXELFORMAT_RGB565; break;
+        case 24: appfmt = SDL_PIXELFORMAT_RGB888; break;
+        case 32: appfmt = SDL_PIXELFORMAT_XRGB8888; break;
         default: SDL20_SetError("Unsupported bits-per-pixel"); return NULL;
     }
 
@@ -6222,7 +6222,7 @@ SDL_DisplayFormatAlpha(SDL12_Surface *surface12)
     }
 
     /* we only allow a few formats for the screen surface, and this is the appropriate alpha format for all of them. */
-    fmt20 = SDL20_AllocFormat(SDL_PIXELFORMAT_ARGB8888); FIXME("bgr instead of rgb?");
+    fmt20 = SDL20_AllocFormat(SDL_PIXELFORMAT_ARGB8888);
     if (!fmt20) {
         return NULL;
     }
