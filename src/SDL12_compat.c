@@ -5443,6 +5443,8 @@ static SDL_bool
 InitializeOpenGLScaling(const int w, const int h)
 {
     int alpha_size = 0;
+    int depth_size = 0;
+    int stencil_size = 0;
 
     SDL_assert(VideoWindow20 != NULL);
 
@@ -5457,8 +5459,9 @@ InitializeOpenGLScaling(const int w, const int h)
     OpenGLFuncs.glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     SDL20_GL_SwapWindow(VideoWindow20);
 
-    FIXME("This should check if app requested a depth buffer, etc, too.");
     SDL20_GL_GetAttribute(SDL_GL_ALPHA_SIZE, &alpha_size);
+    SDL20_GL_GetAttribute(SDL_GL_DEPTH_SIZE, &depth_size);
+    SDL20_GL_GetAttribute(SDL_GL_STENCIL_SIZE, &stencil_size);
 
     if (!OpenGLLogicalScalingFBO) {
         OpenGLFuncs.glGenFramebuffers(1, &OpenGLLogicalScalingFBO);
@@ -5476,10 +5479,18 @@ InitializeOpenGLScaling(const int w, const int h)
     OpenGLFuncs.glBindRenderbuffer(GL_RENDERBUFFER, OpenGLLogicalScalingColor);
     OpenGLFuncs.glRenderbufferStorageMultisample(GL_RENDERBUFFER, OpenGLLogicalScalingSamples, (alpha_size > 0) ? GL_RGBA8 : GL_RGB8, w, h);
     OpenGLFuncs.glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, OpenGLLogicalScalingColor);
-    OpenGLFuncs.glBindRenderbuffer(GL_RENDERBUFFER, OpenGLLogicalScalingDepth);
-    OpenGLFuncs.glRenderbufferStorageMultisample(GL_RENDERBUFFER, OpenGLLogicalScalingSamples, GL_DEPTH24_STENCIL8, w, h);
-    OpenGLFuncs.glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, OpenGLLogicalScalingDepth);
-    OpenGLFuncs.glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, OpenGLLogicalScalingDepth);
+
+    if (depth_size || stencil_size) {
+        OpenGLFuncs.glBindRenderbuffer(GL_RENDERBUFFER, OpenGLLogicalScalingDepth);
+        OpenGLFuncs.glRenderbufferStorageMultisample(GL_RENDERBUFFER, OpenGLLogicalScalingSamples, GL_DEPTH24_STENCIL8, w, h);
+        if (depth_size) {
+            OpenGLFuncs.glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, OpenGLLogicalScalingDepth);
+        }
+        if (stencil_size) {
+            OpenGLFuncs.glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, OpenGLLogicalScalingDepth);
+        }
+    }
+
     OpenGLFuncs.glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
     if ((OpenGLFuncs.glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) || OpenGLFuncs.glGetError()) {
@@ -5506,10 +5517,18 @@ InitializeOpenGLScaling(const int w, const int h)
         OpenGLFuncs.glBindRenderbuffer(GL_RENDERBUFFER, OpenGLLogicalScalingMultisampleColor);
         OpenGLFuncs.glRenderbufferStorage(GL_RENDERBUFFER, (alpha_size > 0) ? GL_RGBA8 : GL_RGB8, w, h);
         OpenGLFuncs.glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, OpenGLLogicalScalingMultisampleColor);
-        OpenGLFuncs.glBindRenderbuffer(GL_RENDERBUFFER, OpenGLLogicalScalingMultisampleDepth);
-        OpenGLFuncs.glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, w, h);
-        OpenGLFuncs.glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, OpenGLLogicalScalingMultisampleDepth);
-        OpenGLFuncs.glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, OpenGLLogicalScalingMultisampleDepth);
+
+        if (depth_size || stencil_size) {
+            OpenGLFuncs.glBindRenderbuffer(GL_RENDERBUFFER, OpenGLLogicalScalingMultisampleDepth);
+            OpenGLFuncs.glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, w, h);
+            if (depth_size) {
+                OpenGLFuncs.glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, OpenGLLogicalScalingMultisampleDepth);
+            }
+            if (stencil_size) {
+                OpenGLFuncs.glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, OpenGLLogicalScalingMultisampleDepth);
+            }
+        }
+
         OpenGLFuncs.glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
         if ((OpenGLFuncs.glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) || OpenGLFuncs.glGetError()) {
