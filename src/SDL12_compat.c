@@ -931,8 +931,6 @@ typedef struct OpenGLEntryPoints
     #include "SDL20_syms.h"
 } OpenGLEntryPoints;
 
-
-/* !!! FIXME: grep for VideoWindow20 places that might care if it's NULL */
 /* !!! FIXME: go through all of these. */
 static Uint32 LinkedSDL2VersionInt = 0;
 static SDL_bool IsDummyVideo = SDL_FALSE;
@@ -2702,7 +2700,7 @@ AdjustOpenGLLogicalScalingPoint(int *x, int *y)
     int adjusted_x, adjusted_y;
 
     /* Don't adjust anything if we're not using Logical Scaling */
-    if (!OpenGLLogicalScalingFBO) {
+    if (!OpenGLLogicalScalingFBO || !VideoWindow20) {
         return;
     }
 
@@ -2732,7 +2730,7 @@ AdjustOpenGLLogicalScalingVector(int *x, int *y, float *rx, float *ry)
     float trunc_x, trunc_y;
 
     /* Don't adjust anything if we're not using Logical Scaling */
-    if (!OpenGLLogicalScalingFBO) {
+    if (!OpenGLLogicalScalingFBO || !VideoWindow20) {
         return;
     }
 
@@ -4115,6 +4113,10 @@ EventFilter20to12(void *data, SDL_Event *event20)
             break;
 
         case SDL_WINDOWEVENT:
+            if (!VideoWindow20) {
+                break;  /* no window? No event. */
+            }
+
             switch (event20->window.event) {
                 /* don't send an SDL12_QUIT event for SDL_WINDOWEVENT_CLOSE;
                    we only ever have a single window, so an SDL_QUIT will be
@@ -4125,7 +4127,7 @@ EventFilter20to12(void *data, SDL_Event *event20)
                     event12.type = SDL12_VIDEOEXPOSE;
                     break;
 
-                case SDL_WINDOWEVENT_RESIZED:
+                case SDL_WINDOWEVENT_RESIZED: {
                     /* don't generate a VIDEORESIZE event based on SIZE_CHANGED
                        events: the recommended way to handle VIDEORESIZE is
                        with a new SDL_SetVideoMode() call, and creating a new
@@ -4135,20 +4137,16 @@ EventFilter20to12(void *data, SDL_Event *event20)
                     /* don't report VIDEORESIZE if we're fullscreen-desktop;
                        we're doing logical scaling and as far as the app is
                        concerned the window doesn't change. */
-                    if (!VideoWindow20) {
-                        FIXME("we should probably drop a lot of these events.");
-                        break;  /* there's no window? Drop this event. */
-                    } else {
-                        const Uint32 flags = SDL20_GetWindowFlags(VideoWindow20);
-                        if ((flags & SDL_WINDOW_FULLSCREEN_DESKTOP) == SDL_WINDOW_FULLSCREEN_DESKTOP) {
-                            break;
-                        }
+                    const Uint32 flags = SDL20_GetWindowFlags(VideoWindow20);
+                    if ((flags & SDL_WINDOW_FULLSCREEN_DESKTOP) == SDL_WINDOW_FULLSCREEN_DESKTOP) {
+                        break;
                     }
 
                     event12.type = SDL12_VIDEORESIZE;
                     event12.resize.w = event20->window.data1;
                     event12.resize.h = event20->window.data2;
                     break;
+                }
 
                 case SDL_WINDOWEVENT_MINIMIZED:
                     event12.type = SDL12_ACTIVEEVENT;
@@ -5332,6 +5330,8 @@ InitializeOpenGLScaling(const int w, const int h)
 {
     int alpha_size = 0;
 
+    SDL_assert(VideoWindow20 != NULL);
+
     /* Support the MOUSE_RELATIVE_SCALING hint from SDL 2.0 for OpenGL scaling. */
     UseMouseRelativeScaling = SDL12Compat_GetHintBoolean("SDL_MOUSE_RELATIVE_SCALING", SDL_TRUE);
 
@@ -6149,6 +6149,7 @@ GetDesiredMillisecondsPerFrame()
 {
     SDL_DisplayMode mode;
     if (VideoSurface12->flags & SDL12_FULLSCREEN) {
+       SDL_assert(VideoWindow20 != NULL);
        if (SDL20_GetWindowDisplayMode(VideoWindow20, &mode) == 0) {
            if (mode.refresh_rate) {
                return 1000 / mode.refresh_rate;
@@ -6493,7 +6494,9 @@ SDL_WM_SetIcon(SDL12_Surface *icon12, Uint8 *mask)
 DECLSPEC int SDLCALL
 SDL_WM_IconifyWindow(void)
 {
-    SDL20_MinimizeWindow(VideoWindow20);
+    if (VideoWindow20) {
+        SDL20_MinimizeWindow(VideoWindow20);
+    }
     return 0;
 }
 
@@ -6569,7 +6572,9 @@ HandleInputGrab(SDL12_GrabMode mode)
     const SDL_bool isfullscreen = (VideoSurface12 && (VideoSurface12->flags & SDL12_FULLSCREEN)) ? SDL_TRUE : SDL_FALSE;
     const SDL_bool wantgrab = (isfullscreen || (mode == SDL12_GRAB_ON)) ? SDL_TRUE : SDL_FALSE;
     if (VideoWindowGrabbed != wantgrab) {
-        SDL20_SetWindowGrab(VideoWindow20, wantgrab);
+        if (VideoWindow20) {
+            SDL20_SetWindowGrab(VideoWindow20, wantgrab);
+        }
         VideoWindowGrabbed = wantgrab;
         UpdateRelativeMouseMode();
     }
@@ -6591,7 +6596,9 @@ SDL_WarpMouse(Uint16 x, Uint16 y)
         MousePosition.x = (int) x;
         MousePosition.y = (int) y;
     } else {
-        SDL20_WarpMouseInWindow(VideoWindow20, x, y);
+        if (VideoWindow20) {
+            SDL20_WarpMouseInWindow(VideoWindow20, x, y);
+        }
     }
 }
 
@@ -6599,17 +6606,17 @@ DECLSPEC Uint8 SDLCALL
 SDL_GetAppState(void)
 {
     Uint8 state12 = 0;
-    Uint32 flags20 = 0;
-
-    flags20 = SDL20_GetWindowFlags(VideoWindow20);
-    if ((flags20 & SDL_WINDOW_SHOWN) && !(flags20 & SDL_WINDOW_MINIMIZED)) {
-        state12 |= SDL12_APPACTIVE;
-    }
-    if (flags20 & SDL_WINDOW_INPUT_FOCUS) {
-        state12 |= SDL12_APPINPUTFOCUS;
-    }
-    if (flags20 & SDL_WINDOW_MOUSE_FOCUS) {
-        state12 |= SDL12_APPMOUSEFOCUS;
+    if (VideoWindow20) {
+        const Uint32 flags20 = SDL20_GetWindowFlags(VideoWindow20);
+        if ((flags20 & SDL_WINDOW_SHOWN) && !(flags20 & SDL_WINDOW_MINIMIZED)) {
+            state12 |= SDL12_APPACTIVE;
+        }
+        if (flags20 & SDL_WINDOW_INPUT_FOCUS) {
+            state12 |= SDL12_APPINPUTFOCUS;
+        }
+        if (flags20 & SDL_WINDOW_MOUSE_FOCUS) {
+            state12 |= SDL12_APPMOUSEFOCUS;
+        }
     }
     return state12;
 }
@@ -7267,6 +7274,7 @@ SDL_SetGamma(float red, float green, float blue)
     } else {
         SDL20_CalculateGammaRamp(blue, blue_ramp);
     }
+
     return SDL20_SetWindowGammaRamp(VideoWindow20, red_ramp, green_ramp, blue_ramp);
 }
 
@@ -8781,7 +8789,7 @@ SDL_GL_DisableContext(void)
 DECLSPEC void SDLCALL
 SDL_GL_EnableContext_Thread(void)
 {
-    const SDL_bool enable = (VideoGLContext20 && VideoWindow20)? SDL_TRUE : SDL_FALSE;
+    const SDL_bool enable = (VideoGLContext20 && VideoWindow20) ? SDL_TRUE : SDL_FALSE;
     SDL20_GL_MakeCurrent(enable ? VideoWindow20 : NULL, enable ? VideoGLContext20 : NULL);
 }
 
