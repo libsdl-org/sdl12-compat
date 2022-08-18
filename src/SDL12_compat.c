@@ -2132,6 +2132,41 @@ Init12VidModes(void)
 DECLSPEC void SDLCALL SDL_FreeCursor(SDL12_Cursor *);
 
 static int
+HasWmAvailable(const char *driver)
+{
+    /* This is not perfect, but this emcompasses everything that SDL 2.22.0
+       offers. Most things are console or framebuffer targets, so it's
+       easier to list things that are actual GUI user interfaces here. */
+    static const char * const gui_targets[] = {
+        #ifdef _WIN32
+        "windows", "winrt",
+        #endif
+        #ifdef __APPLE__
+        "cocoa",
+        #endif
+        #ifdef __OS2__
+        "DIVE", "VMAN",
+        #endif
+        #ifdef __HAIKU__
+        "haiku",
+        #endif
+        #ifdef __QNX__
+        "qnx",  /* I _think_ this has a window manager... */
+        #endif
+        "x11", "wayland"  /* just assume anything can MAYBE have these, even if they wouldn't. */
+    };
+    int i;
+
+    for (i = 0; i < SDL_arraysize(gui_targets); i++) {
+        if (SDL20_strcasecmp(driver, gui_targets[i]) == 0) {
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+static int
 Init12Video(void)
 {
     const char *driver = SDL20_GetCurrentVideoDriver();
@@ -2192,7 +2227,7 @@ Init12Video(void)
         VideoInfo12.vfmt = PixelFormat20to12(&VideoInfoVfmt12, &VideoInfoPalette12, VideoInfoVfmt20);
         VideoInfo12.current_w = mode.w;
         VideoInfo12.current_h = mode.h;
-        VideoInfo12.wm_available = 1;  /* FIXME ? */
+        VideoInfo12.wm_available = HasWmAvailable(driver);
         VideoInfo12.video_mem = 1024 * 256;  /* good enough. */
     }
 
