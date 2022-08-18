@@ -1005,7 +1005,6 @@ static GLuint OpenGLCurrentReadFBO = 0;
 static GLuint OpenGLCurrentDrawFBO = 0;
 static SDL_bool ForceGLSwapBufferContext = SDL_FALSE;
 
-/* !!! FIXME: need a mutex for the event queue. */
 #define SDL12_MAXEVENTS 128
 typedef struct EventQueueType
 {
@@ -1014,6 +1013,7 @@ typedef struct EventQueueType
     struct EventQueueType *next;
 } EventQueueType;
 
+static SDL_mutex *EventQueueMutex = NULL;
 static EventQueueType EventQueuePool[SDL12_MAXEVENTS];
 static EventQueueType *EventQueueHead = NULL;
 static EventQueueType *EventQueueTail = NULL;
@@ -2143,8 +2143,14 @@ Init12Video(void)
 
     IsDummyVideo = ((driver != NULL) && (SDL20_strcmp(driver, "dummy") == 0)) ? SDL_TRUE : SDL_FALSE;
 
-    for (i = 0; i < SDL12_MAXEVENTS-1; i++)
+    EventQueueMutex = SDL20_CreateMutex();
+    if (EventQueueMutex == NULL) {
+        return -1;
+    }
+
+    for (i = 0; i < SDL12_MAXEVENTS-1; i++) {
         EventQueuePool[i].next = &EventQueuePool[i+1];
+    }
     EventQueuePool[SDL12_MAXEVENTS-1].next = NULL;
 
     EventQueueHead = EventQueueTail = NULL;
@@ -2365,6 +2371,11 @@ Quit12Video(void)
     SDL_FreeCursor(CurrentCursor12);
     VideoModes = NULL;
     VideoModesCount = 0;
+
+    if (EventQueueMutex) {
+        SDL20_DestroyMutex(EventQueueMutex);
+        EventQueueMutex = NULL;
+    }
 }
 
 DECLSPEC void SDLCALL
@@ -2481,8 +2492,9 @@ SDL_VideoDriverName(char *namebuf, int maxlen)
 }
 
 
-DECLSPEC int SDLCALL
-SDL_PollEvent(SDL12_Event *event12)
+/* you MUST hold EventQueueMutex before calling this! */
+static int
+SDL_PollEvent_locked(SDL12_Event *event12)
 {
     EventQueueType *next;
 
@@ -2507,7 +2519,24 @@ SDL_PollEvent(SDL12_Event *event12)
 }
 
 DECLSPEC int SDLCALL
-SDL_PushEvent(SDL12_Event *event12)
+SDL_PollEvent(SDL12_Event *event12)
+{
+    int retval;
+
+    if (!EventQueueMutex) {
+        return 0;
+    }
+
+    SDL20_LockMutex(EventQueueMutex);
+    retval = SDL_PollEvent_locked(event12);
+    SDL20_UnlockMutex(EventQueueMutex);
+
+    return retval;
+}
+
+/* you MUST hold EventQueueMutex before calling this! */
+static int
+SDL_PushEvent_locked(SDL12_Event *event12)
 {
     EventQueueType *item = EventQueueAvailable;
     if (item == NULL) {
@@ -2534,7 +2563,25 @@ SDL_PushEvent(SDL12_Event *event12)
 }
 
 DECLSPEC int SDLCALL
-SDL_PeepEvents(SDL12_Event *events12, int numevents, SDL_eventaction action, Uint32 mask)
+SDL_PushEvent(SDL12_Event *event12)
+{
+    int retval;
+
+    if (!EventQueueMutex) {
+        return SDL20_SetError("SDL not initialized");
+    }
+
+    SDL20_LockMutex(EventQueueMutex);
+    retval = SDL_PushEvent_locked(event12);
+    SDL20_UnlockMutex(EventQueueMutex);
+
+    return retval;
+}
+
+
+/* you MUST hold EventQueueMutex before calling this! */
+static int
+SDL_PeepEvents_locked(SDL12_Event *events12, int numevents, SDL_eventaction action, Uint32 mask)
 {
     SDL12_Event dummy_event;
 
@@ -2609,45 +2656,77 @@ SDL_PeepEvents(SDL12_Event *events12, int numevents, SDL_eventaction action, Uin
 }
 
 DECLSPEC int SDLCALL
+SDL_PeepEvents(SDL12_Event *events12, int numevents, SDL_eventaction action, Uint32 mask)
+{
+    int retval;
+
+    if (!EventQueueMutex) {
+        return SDL20_SetError("SDL not initialized");
+    }
+
+    SDL20_LockMutex(EventQueueMutex);
+    retval = SDL_PeepEvents_locked(events12, numevents, action, mask);
+    SDL20_UnlockMutex(EventQueueMutex);
+
+    return retval;
+}
+
+DECLSPEC int SDLCALL
 SDL_WaitEvent(SDL12_Event *event12)
 {
-    FIXME("In 1.2, this only fails (-1) if you haven't SDL_Init()'d.");
+    if (!EventQueueMutex) {
+        return SDL20_SetError("SDL not initialized");
+    }
+
+    /* the 1.2 entry point for PollEvent will grab/release the EventQueueMutex */
     while (!SDL_PollEvent(event12)) {
         SDL20_Delay(10);
     }
+
     return 1;
 }
 
 static SDL_bool
 PushEventIfNotFiltered(SDL12_Event *event12)
 {
+    SDL_bool retval = SDL_FALSE;
     if (event12->type != SDL12_NOEVENT) {
+        SDL_assert(EventQueueMutex != NULL);
+        SDL20_LockMutex(EventQueueMutex);
         if (EventStates[event12->type] != SDL_IGNORE) {
             if ((!EventFilter12) || (EventFilter12(event12))) {
-                return (SDL_PushEvent(event12) == 0)? SDL_TRUE : SDL_FALSE;
+                retval = (SDL_PushEvent(event12) == 0)? SDL_TRUE : SDL_FALSE;
             }
         }
+        SDL20_UnlockMutex(EventQueueMutex);
     }
-    return SDL_FALSE;
+    return retval;
 }
 
 DECLSPEC Uint8 SDLCALL
 SDL_EventState(Uint8 type, int state)
 {
+    Uint8 retval = 0;
     /* the values of "state" match between 1.2 and 2.0 */
-    const Uint8 retval = EventStates[type];
-    SDL12_Event e;
+    if (EventQueueMutex) {
+        SDL12_Event e;
 
-    if (state != SDL_QUERY) {
-        EventStates[type] = state;
-        if ((type == SDL12_SYSWMEVENT) && SupportSysWM) {  /* we only enable syswm in SDL2 if it makes sense. */
-            SDL20_EventState(SDL_SYSWMEVENT, state);
+        SDL20_LockMutex(EventQueueMutex);
+
+        retval = EventStates[type];
+        if (state != SDL_QUERY) {
+            EventStates[type] = state;
+            if ((type == SDL12_SYSWMEVENT) && SupportSysWM) {  /* we only enable syswm in SDL2 if it makes sense. */
+                SDL20_EventState(SDL_SYSWMEVENT, state);
+            }
         }
-    }
-    if (state == SDL_IGNORE) {  /* drop existing events of this type. */
-        while (SDL_PeepEvents(&e, 1, SDL_GETEVENT, (1<<type))) {
-          /* nothing */ ;
+        if (state == SDL_IGNORE) {  /* drop existing events of this type. */
+            while (SDL_PeepEvents(&e, 1, SDL_GETEVENT, (1<<type))) {
+              /* nothing */ ;
+            }
         }
+
+        SDL20_UnlockMutex(EventQueueMutex);
     }
 
     return retval;
@@ -4092,7 +4171,7 @@ static int FlushPendingKeydownEvent(Uint32 unicode)
     PendingKeydownEvent.key.keysym.unicode = unicode;
     PushEventIfNotFiltered(&PendingKeydownEvent);
     /* Reset the event. */
-    SDL20_memset(&PendingKeydownEvent, 0, sizeof(SDL12_Event));
+    SDL20_memset(&PendingKeydownEvent, 0, sizeof (SDL12_Event));
 
     return 1;
 }
@@ -6394,6 +6473,11 @@ SDL_PumpEvents(void)
     if (VideoSurfacePresentTicks && SDL_TICKS_PASSED(SDL20_GetTicks(), VideoSurfacePresentTicks)) {
         PresentScreen();
     }
+
+    if (EventQueueMutex) {
+        SDL20_LockMutex(EventQueueMutex);
+    }
+
     while (SDL20_PollEvent(&e)) {  /* spin to drain the SDL2 event queue. */ }
 
     /* If there's a pending KEYDOWN event, and we haven't got a TEXTINPUT
@@ -6401,6 +6485,11 @@ SDL_PumpEvents(void)
     if (PendingKeydownEvent.type == SDL12_KEYDOWN) {
         FlushPendingKeydownEvent(0);
     }
+
+    if (EventQueueMutex) {
+        SDL20_UnlockMutex(EventQueueMutex);
+    }
+
 }
 
 DECLSPEC void SDLCALL
