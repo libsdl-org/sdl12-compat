@@ -6019,7 +6019,7 @@ SaveDestAlpha(SDL12_Surface *src12, SDL12_Surface *dst12, const SDL12_Rect *dstr
                 sptr = (Uint32 *) (((Uint8 *) sptr) + pitch);
             }
         } else {
-            FIXME("Unhandled dest alpha");
+            SDL_assert(!"Unhandled dest alpha");
         }
     }
 
@@ -6059,7 +6059,7 @@ RestoreDestAlpha(SDL12_Surface *dst12, Uint8 *dstalpha, const SDL12_Rect *dstrec
                 dptr = (Uint32 *) (((Uint8 *) dptr) + pitch);
             }
         } else {
-            FIXME("Unhandled dest alpha");
+            SDL_assert(!"Unhandled dest alpha");
         }
         SDL20_free(dstalpha);
     }
