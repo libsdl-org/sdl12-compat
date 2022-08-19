@@ -5969,7 +5969,7 @@ SDL_GetVideoSurface(void)
 }
 
 static int
-SaveDestAlpha(SDL12_Surface *src12, SDL12_Surface *dst12, Uint8 **retval)
+SaveDestAlpha(SDL12_Surface *src12, SDL12_Surface *dst12, const SDL12_Rect *dstrect12, Uint8 **retval)
 {
     /* The 1.2 docs say this:
      * RGBA->RGBA:
@@ -5982,14 +5982,12 @@ SaveDestAlpha(SDL12_Surface *src12, SDL12_Surface *dst12, Uint8 **retval)
     Uint8 *dstalpha = NULL;
     const SDL_bool save_dstalpha = ((src12->flags & SDL12_SRCALPHA) && dst12->format->Amask && ((src12->format->alpha != 255) || src12->format->Amask)) ? SDL_TRUE : SDL_FALSE;
 
-    FIXME("This should only save the dst rect in use");
-
     if (save_dstalpha) {
         Uint8 *dptr;
         int x, y;
 
-        const int w = dst12->w;
-        const int h = dst12->h;
+        const int w = dstrect12->w;
+        const int h = dstrect12->h;
 
         const Uint32 amask = dst12->format->Amask;
         const Uint32 ashift = dst12->format->Ashift;
@@ -6004,6 +6002,7 @@ SaveDestAlpha(SDL12_Surface *src12, SDL12_Surface *dst12, Uint8 **retval)
 
         if (dst12->format->BytesPerPixel == 2) {
             const Uint16 *sptr = (const Uint16 *) dst12->pixels;
+            sptr += ((dst12->pitch / 2) * dstrect12->y) + dstrect12->x;
             for (y = 0; y < h; y++) {
                 for (x = 0; x < w; x++) {
                     *(dptr++) = (Uint8) ((sptr[x] & amask) >> ashift);
@@ -6012,6 +6011,7 @@ SaveDestAlpha(SDL12_Surface *src12, SDL12_Surface *dst12, Uint8 **retval)
             }
         } else if (dst12->format->BytesPerPixel == 4) {
             const Uint32 *sptr = (const Uint32 *) dst12->pixels;
+            sptr += ((dst12->pitch / 4) * dstrect12->y) + dstrect12->x;
             for (y = 0; y < h; y++) {
                 for (x = 0; x < w; x++) {
                     *(dptr++) = (Uint8) ((sptr[x] & amask) >> ashift);
@@ -6028,7 +6028,7 @@ SaveDestAlpha(SDL12_Surface *src12, SDL12_Surface *dst12, Uint8 **retval)
 }
 
 static void
-RestoreDestAlpha(SDL12_Surface *dst12, Uint8 *dstalpha)
+RestoreDestAlpha(SDL12_Surface *dst12, Uint8 *dstalpha, const SDL12_Rect *dstrect12)
 {
     if (dstalpha) {
         int x, y;
@@ -6042,6 +6042,7 @@ RestoreDestAlpha(SDL12_Surface *dst12, Uint8 *dstalpha)
 
         if (dst12->format->BytesPerPixel == 2) {
             Uint16 *dptr = (Uint16 *) dst12->pixels;
+            dptr += ((dst12->pitch / 2) * dstrect12->y) + dstrect12->x;
             for (y = 0; y < h; y++) {
                 for (x = 0; x < w; x++) {
                     dptr[x] = (Uint16) ((dptr[x] & ~amask) | ((((Uint16) *(sptr++)) << ashift) & amask));
@@ -6050,6 +6051,7 @@ RestoreDestAlpha(SDL12_Surface *dst12, Uint8 *dstalpha)
             }
         } else if (dst12->format->BytesPerPixel == 4) {
             Uint32 *dptr = (Uint32 *) dst12->pixels;
+            dptr += ((dst12->pitch / 4) * dstrect12->y) + dstrect12->x;
             for (y = 0; y < h; y++) {
                 for (x = 0; x < w; x++) {
                     dptr[x] = (dptr[x] & ~amask) | ((((Uint32) *(sptr++)) << ashift) & amask);
@@ -6072,7 +6074,7 @@ SDL_UpperBlit(SDL12_Surface *src12, SDL12_Rect *srcrect12, SDL12_Surface *dst12,
 
     if ((src12 == NULL) || (dst12 == NULL)) {
         return SDL20_SetError("SDL_UpperBlit: passed a NULL surface");
-    } else if (SaveDestAlpha(src12, dst12, &dstalpha) < 0) {
+    } else if (SaveDestAlpha(src12, dst12, dstrect12, &dstalpha) < 0) {
         return -1;
     }
 
@@ -6081,7 +6083,7 @@ SDL_UpperBlit(SDL12_Surface *src12, SDL12_Rect *srcrect12, SDL12_Surface *dst12,
                              dst12->surface20,
                              dstrect12 ? Rect12to20(dstrect12, &dstrect20) : NULL);
 
-    RestoreDestAlpha(dst12, dstalpha);
+    RestoreDestAlpha(dst12, dstalpha, dstrect12);
 
     if (dstrect12) {
         Rect20to12(&dstrect20, dstrect12);
@@ -6097,7 +6099,7 @@ SDL_LowerBlit(SDL12_Surface *src12, SDL12_Rect *srcrect12, SDL12_Surface *dst12,
     SDL_Rect srcrect20, dstrect20;
     int retval;
 
-    if (SaveDestAlpha(src12, dst12, &dstalpha) < 0) {
+    if (SaveDestAlpha(src12, dst12, dstrect12, &dstalpha) < 0) {
         return -1;
     }
 
@@ -6106,7 +6108,7 @@ SDL_LowerBlit(SDL12_Surface *src12, SDL12_Rect *srcrect12, SDL12_Surface *dst12,
                              dst12->surface20,
                              dstrect12 ? Rect12to20(dstrect12, &dstrect20) : NULL);
 
-    RestoreDestAlpha(dst12, dstalpha);
+    RestoreDestAlpha(dst12, dstalpha, dstrect12);
 
     if (srcrect12) {
         Rect20to12(&srcrect20, srcrect12);
