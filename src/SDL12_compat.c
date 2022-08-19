@@ -7980,7 +7980,7 @@ mp3_sdlrwops_seek(void *data, int offset, drmp3_seek_origin origin)
 
 
 static int OpenSDL2AudioDevice(SDL_AudioSpec *);
-static void CloseSDL2AudioDevice(void);
+static int CloseSDL2AudioDevice(void);
 static SDL_bool ResetAudioStream(SDL_AudioStream **_stream, SDL_AudioSpec *spec, const SDL_AudioSpec *to, const SDL_AudioFormat fromfmt, const Uint8 fromchannels, const int fromfreq);
 
 typedef struct
@@ -8737,13 +8737,13 @@ OpenSDL2AudioDevice(SDL_AudioSpec *want)
     return retval;
 }
 
-static void
+static int
 CloseSDL2AudioDevice(void)
 {
-    int close_sdl2_device;
+    SDL_bool close_sdl2_device;
 
     SDL20_LockAudio();
-    close_sdl2_device = (audio_cbdata && !audio_cbdata->app_callback_opened && !audio_cbdata->cdrom_opened);
+    close_sdl2_device = (audio_cbdata && !audio_cbdata->app_callback_opened && !audio_cbdata->cdrom_opened) ? SDL_TRUE : SDL_FALSE;
     SDL20_UnlockAudio();
 
     if (close_sdl2_device) {
@@ -8754,13 +8754,15 @@ CloseSDL2AudioDevice(void)
         SDL20_free(audio_cbdata);
         audio_cbdata = NULL;
     }
+
+    return -1;
 }
 
 
 DECLSPEC int SDLCALL
 SDL_OpenAudio(SDL_AudioSpec *want, SDL_AudioSpec *obtained)
 {
-    int already_opened;
+    SDL_bool already_opened;
 
     /* SDL2 uses a NULL callback to mean "we plan to use SDL_QueueAudio()" */
     if (want && (want->callback == NULL)) {
@@ -8768,7 +8770,7 @@ SDL_OpenAudio(SDL_AudioSpec *want, SDL_AudioSpec *obtained)
     }
 
     SDL20_LockAudio();
-    already_opened = audio_cbdata && audio_cbdata->app_callback_opened;
+    already_opened = (audio_cbdata && audio_cbdata->app_callback_opened) ? SDL_TRUE : SDL_FALSE;
     SDL20_UnlockAudio();
     if (already_opened) {
         return SDL20_SetError("Audio device already opened");
@@ -8807,16 +8809,15 @@ SDL_OpenAudio(SDL_AudioSpec *want, SDL_AudioSpec *obtained)
     }
 
     SDL20_memcpy(&audio_cbdata->app_callback_format, want, sizeof (SDL_AudioSpec));
-    audio_cbdata->app_callback_opened = SDL_TRUE;
     SDL20_AtomicSet(&audio_callback_paused, SDL_TRUE);  /* app callback always starts paused after open. */
 
-    FIXME("Cleanup from failures in here");
     SDL_assert(audio_cbdata->app_callback_stream == NULL);
-
     if (!ResetAudioStream(&audio_cbdata->app_callback_stream, &audio_cbdata->app_callback_format, &audio_cbdata->device_format, want->format, want->channels, want->freq)) {
-        FIXME("Close audio device if nothing else was using it");
-        return -1;
+        SDL20_UnlockAudio();  /* make sure CD audio doesn't hang if it's playing. */
+        return CloseSDL2AudioDevice();  /* will stay open if CD audio is still playing, cleans up otherwise. */
     }
+
+    audio_cbdata->app_callback_opened = SDL_TRUE;
 
     SDL20_UnlockAudio();  /* we're off and going. */
 
