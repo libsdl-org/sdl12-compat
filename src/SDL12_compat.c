@@ -931,7 +931,7 @@ typedef struct OpenGLEntryPoints
     #include "SDL20_syms.h"
 } OpenGLEntryPoints;
 
-/* !!! FIXME: go through all of these. */
+
 static Uint32 LinkedSDL2VersionInt = 0;
 static SDL_bool IsDummyVideo = SDL_FALSE;
 static VideoModeList *VideoModes = NULL;
