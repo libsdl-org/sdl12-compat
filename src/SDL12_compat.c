@@ -8784,22 +8784,60 @@ SDL_OpenAudio(SDL_AudioSpec *want, SDL_AudioSpec *obtained)
         return SDL20_SetError("Audio device already opened");
     }
 
-    FIXME("Respect 1.2 environment variables for defining format here.");
     if (!want->format) {
-        want->format = AUDIO_S16SYS;
+        const char *env = SDL20_getenv("SDL_AUDIO_FORMAT");  /* SDL 1.2 checks this. */
+        if (env != NULL) {
+            if (0) {}
+            else if (SDL20_strcmp(env, "U8") == 0) { want->format = AUDIO_U8; }
+            else if (SDL20_strcmp(env, "S8") == 0) { want->format = AUDIO_S8; }
+            else if (SDL20_strcmp(env, "U16") == 0) { want->format = AUDIO_U16SYS; }
+            else if (SDL20_strcmp(env, "S16") == 0) { want->format = AUDIO_S16SYS; }
+            else if (SDL20_strcmp(env, "U16LSB") == 0) { want->format = AUDIO_U16LSB; }
+            else if (SDL20_strcmp(env, "S16LSB") == 0) { want->format = AUDIO_S16LSB; }
+            else if (SDL20_strcmp(env, "U16MSB") == 0) { want->format = AUDIO_U16MSB; }
+            else if (SDL20_strcmp(env, "S16MSB") == 0) { want->format = AUDIO_S16MSB; }
+            else if (SDL20_strcmp(env, "U16SYS") == 0) { want->format = AUDIO_U16SYS; }
+            else if (SDL20_strcmp(env, "S16SYS") == 0) { want->format = AUDIO_S16SYS; }
+        }
+        if (!want->format) {
+            want->format = AUDIO_S16SYS;
+        }
     }
+
     if (!want->freq) {
-        want->freq = 22050;
+        const char *env = SDL20_getenv("SDL_AUDIO_FREQUENCY");  /* SDL 1.2 checks this. */
+        if (env != NULL) {
+            want->freq = SDL20_atoi(env);
+        }
+        if (!want->freq) {
+            want->freq = 22050;
+        }
         want->samples = 0;
     }
+
     if (!want->channels) {
-        want->channels = 2;
+        const char *env = SDL20_getenv("SDL_AUDIO_CHANNELS");  /* SDL 1.2 checks this. */
+        if (env != NULL) {
+            want->channels = SDL20_atoi(env);
+        }
+        if (!want->channels) {
+            want->channels = 2;
+        }
     }
+
     if (!want->samples) {
-        Uint32 samp = (want->freq / 1000) * 46;  /* ~46 ms */
-        Uint32 pow2 = 1;
-        while (pow2 < samp) pow2 <<= 1;
-        want->samples = pow2;
+        const char *env = SDL20_getenv("SDL_AUDIO_SAMPLES");  /* SDL 1.2 checks this. */
+        if (env != NULL) {
+            want->samples = SDL20_atoi(env);
+        }
+        if (!want->samples) {
+            const Uint32 samp = (want->freq / 1000) * 46;  /* ~46 ms */
+            Uint32 pow2 = 1;
+            while (pow2 < samp) {
+                pow2 <<= 1;
+            }
+            want->samples = pow2;
+        }
     }
 
     /* the app always passes callback data through an SDL_AudioStream, since it
