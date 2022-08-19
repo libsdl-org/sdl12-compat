@@ -5621,8 +5621,6 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
         }
     }
 
-    FIXME("handle SDL_ANYFORMAT");
-
     if ((width < 0) || (height < 0)) {
         SDL20_SetError("Invalid width or height");
         return NULL;
@@ -5641,7 +5639,17 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
     }
 
     if (bpp == 0) {
+        flags12 |= SDL12_ANYFORMAT;
         bpp = SDL_BITSPERPIXEL(dmode.format);
+    }
+
+    if ((bpp != 8) && (bpp != 16) && (bpp != 24) && (bpp != 32)) {
+        if (flags12 & SDL12_ANYFORMAT) {
+            bpp = 32;
+        } else {
+            SDL20_SetError("Unsupported bits-per-pixel");
+            return NULL;
+        }
     }
 
     #if !SDL_VERSION_ATLEAST(2,0,14)
