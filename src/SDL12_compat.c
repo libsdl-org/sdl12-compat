@@ -5657,9 +5657,6 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
 
     SDL_assert((VideoSurface12 != NULL) == (VideoWindow20 != NULL));
 
-    FIXME("don't do anything if the window's dimensions, etc haven't changed.");
-    FIXME("we need to preserve VideoSurface12 (but not its pixels), I think...");
-
     if (VideoSurface12 && ((VideoSurface12->flags & SDL12_OPENGL) != (flags12 & SDL12_OPENGL))) {
         EndVidModeCreate();  /* rebuild the window if moving to/from a GL context */
     } else if (VideoSurface12 && (VideoSurface12->surface20->format->format != appfmt)) {
