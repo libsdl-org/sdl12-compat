@@ -5578,17 +5578,19 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
 
     FIXME("Should we offer scaling for windowed modes, too?");
     if (flags12 & SDL12_OPENGL) {
-        /* !!! FIXME: the reason we have a toggle to prevent this is because an app might use
+        /* For now we default GL scaling to ENABLED. If an app breaks or is linked directly
+           to glBindFramebuffer, they'll need to turn it off with this environment variable.
+
+           The reason we have a toggle to prevent this is because an app might use
            FBOs directly, and will cause this to break if they bind Framebuffer 0 instead
            of our render target. If we can fool them into calling a fake glBindFramebuffer
            that binds our logical FBO instead of the window framebuffer, we can probably
            work with these apps, too. That's easy from SDL_GL_GetProcAddress, but we
-           maybe need to export the symbol from here too, for those that link against
-           OpenGL directly. UT2004 is known to use FBOs with SDL 1.2, and I assume
-           idTech 4 games (Doom 3, Quake 4, Prey) do as well. */
+           would need to export the symbol from here too, for those that link against
+           OpenGL directly, and we don't want to risk that.
 
-        /* for now we default GL scaling to ENABLED. If an app breaks or is linked directly
-           to glBindFramebuffer, they'll need to turn it off with this environment variable */
+           UT2004 is known to use FBOs with SDL 1.2, and I assume idTech 4 games (Doom 3,
+           Quake 4, Prey) do as well. */
         use_gl_scaling = SDL12Compat_GetHintBoolean("SDL12COMPAT_OPENGL_SCALING", SDL_TRUE);
 
         /* default use_highdpi to false for OpenGL windows when not using
