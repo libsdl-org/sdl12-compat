@@ -5989,9 +5989,6 @@ SaveDestAlpha(SDL12_Surface *src12, SDL12_Surface *dst12, Uint8 **retval)
         }
         dptr = dstalpha;
 
-        if ((amask == 0xFF) || (amask == 0xFF00) || (amask == 0xFF0000) ||(amask == 0xFF000000)) {
-            FIXME("this could be SIMD'd");
-        }
         if (dst12->format->BytesPerPixel == 2) {
             const Uint16 *sptr = (const Uint16 *) dst12->pixels;
             for (y = 0; y < h; y++) {
@@ -6030,9 +6027,6 @@ RestoreDestAlpha(SDL12_Surface *dst12, Uint8 *dstalpha)
         const Uint32 ashift = dst12->format->Ashift;
         const Uint16 pitch = dst12->pitch;
 
-        if ((amask == 0xFF) || (amask == 0xFF00) || (amask == 0xFF0000) ||(amask == 0xFF000000)) {
-            FIXME("this could be SIMD'd");
-        }
         if (dst12->format->BytesPerPixel == 2) {
             Uint16 *dptr = (Uint16 *) dst12->pixels;
             for (y = 0; y < h; y++) {
