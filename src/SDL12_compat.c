@@ -5807,8 +5807,6 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
         SDL_assert(!VideoTexture20);  /* either a new window or we destroyed all this */
         SDL_assert(!VideoRenderer20);
 
-        FIXME("If we're using logical scaling, we can turn off depth buffer, alpha, etc, since we'll make our own and only need an RGB color buffer for the window.");
-
         if (!VideoGLContext20) {
             VideoGLContext20 = SDL20_GL_CreateContext(VideoWindow20);
             if (!VideoGLContext20) {
