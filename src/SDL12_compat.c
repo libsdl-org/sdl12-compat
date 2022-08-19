@@ -2285,6 +2285,15 @@ SDL_InitSubSystem(Uint32 sdl12flags)
         SDL20_setenv("SDL_VIDEODRIVER", forcevideodrv, 1);
     }
 
+    /* note that currently we ignore SDL12_INIT_NOPARACHUTE, since
+       there _isn't_ a parachute in SDL2, and mostly it was meant to deal
+       with X11's XVidMode leaving the display resolution busted if the app
+       didn't call SDL_Quit() before leaving...but most sdl12-compat cases
+       (except OpenGL rendering without logical scaling) use
+       FULLSCREEN_DESKTOP for fullscreen modes, and modern X11 doesn't
+       have this problem, so we're ignoring the parachute until a reasonable
+       need arises. */
+
     #define SETFLAG(flag) if (sdl12flags & SDL12_INIT_##flag) sdl20flags |= SDL_INIT_##flag
     SETFLAG(TIMER);
     SETFLAG(AUDIO);
@@ -2325,7 +2334,6 @@ SDL_InitSubSystem(Uint32 sdl12flags)
 DECLSPEC int SDLCALL
 SDL_Init(Uint32 sdl12flags)
 {
-    FIXME("there is never a parachute in SDL2, should we catch segfaults ourselves?");
     return SDL_InitSubSystem(sdl12flags);   /* there's no difference betwee Init and InitSubSystem in SDL2. */
 }
 
