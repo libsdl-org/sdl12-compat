@@ -932,6 +932,13 @@ typedef struct OpenGLEntryPoints
 } OpenGLEntryPoints;
 
 
+typedef struct QueuedOverlayItem
+{
+    SDL12_Overlay *overlay12;
+    SDL12_Rect dstrect12;
+    struct QueuedOverlayItem *next;
+} QueuedOverlayItem;
+
 static Uint32 LinkedSDL2VersionInt = 0;
 static SDL_bool IsDummyVideo = SDL_FALSE;
 static VideoModeList *VideoModes = NULL;
@@ -951,8 +958,8 @@ static Uint32 VideoSurfacePresentTicks = 0;
 static Uint32 VideoSurfaceLastPresentTicks = 0;
 static SDL_Surface *VideoConvertSurface20 = NULL;
 static SDL_GLContext VideoGLContext20 = NULL;
-static SDL12_Overlay *QueuedDisplayOverlay12 = NULL;
-static SDL12_Rect QueuedDisplayOverlayDstRect12;
+static QueuedOverlayItem QueuedDisplayOverlays;  /* the head node */
+static QueuedOverlayItem *QueuedDisplayOverlaysTail = &QueuedDisplayOverlays;
 static char *WindowTitle = NULL;
 static char *WindowIconTitle = NULL;
 static SDL_Surface *VideoIcon20 = NULL;
@@ -2123,6 +2130,9 @@ Init12VidModes(void)
             vmode->modes12[j] = &vmode->modeslist12[j];
         }
     }
+
+    QueuedDisplayOverlays.next = NULL;
+    QueuedDisplayOverlaysTail = &QueuedDisplayOverlays;
 
     return 0;
 }
@@ -5217,6 +5227,8 @@ GetEnvironmentWindowPosition(int *x, int *y)
 static SDL12_Surface *
 EndVidModeCreate(void)
 {
+    QueuedOverlayItem *overlay;
+
     if (OpenGLBlitTexture) {
         OpenGLFuncs.glDeleteTextures(1, &OpenGLBlitTexture);
         OpenGLBlitTexture = 0;
@@ -5264,6 +5276,15 @@ EndVidModeCreate(void)
     MouseInputIsRelative = SDL_FALSE;
     MousePosition.x = 0;
     MousePosition.y = 0;
+
+    overlay = QueuedDisplayOverlays.next;
+    while (overlay != NULL) {
+        QueuedOverlayItem *next = overlay->next;
+        SDL_free(overlay);
+        overlay = next;
+    }
+    QueuedDisplayOverlays.next = NULL;
+    QueuedDisplayOverlaysTail = &QueuedDisplayOverlays;
 
     return NULL;
 }
@@ -6244,6 +6265,8 @@ SDL_DisplayFormatAlpha(SDL12_Surface *surface12)
 static void
 PresentScreen(void)
 {
+    QueuedOverlayItem *overlay;
+
     if (!VideoRenderer20) {
         return;
     }
@@ -6252,11 +6275,20 @@ PresentScreen(void)
     SDL20_RenderCopy(VideoRenderer20, VideoTexture20, NULL, NULL);
 
     /* Render any pending YUV overlay over the surface texture. */
-    if (QueuedDisplayOverlay12) {
-        SDL12_YUVData *hwdata = (SDL12_YUVData *) QueuedDisplayOverlay12->hwdata;
-        SDL_Rect dstrect20;
-        SDL20_RenderCopy(VideoRenderer20, hwdata->texture20, NULL, Rect12to20(&QueuedDisplayOverlayDstRect12, &dstrect20));
-        QueuedDisplayOverlay12 = NULL;
+    overlay = QueuedDisplayOverlays.next;
+    if (overlay) {
+        while (overlay != NULL) {
+            QueuedOverlayItem *next = overlay->next;
+            if (overlay->overlay12) {
+                SDL12_YUVData *hwdata = (SDL12_YUVData *) overlay->overlay12->hwdata;
+                SDL_Rect dstrect20;
+                SDL20_RenderCopy(VideoRenderer20, hwdata->texture20, NULL, Rect12to20(&overlay->dstrect12, &dstrect20));
+            }
+            SDL_free(overlay);
+            overlay = next;
+        }
+        QueuedDisplayOverlays.next = NULL;
+        QueuedDisplayOverlaysTail = &QueuedDisplayOverlays;
     }
 
     SDL20_RenderPresent(VideoRenderer20);
@@ -7154,6 +7186,7 @@ SDL_LockYUVOverlay(SDL12_Overlay *overlay12)
 DECLSPEC int SDLCALL
 SDL_DisplayYUVOverlay(SDL12_Overlay *overlay12, SDL12_Rect *dstrect12)
 {
+    QueuedOverlayItem *overlay;
     SDL12_YUVData *hwdata;
 
     if (!overlay12) {
@@ -7162,6 +7195,8 @@ SDL_DisplayYUVOverlay(SDL12_Overlay *overlay12, SDL12_Rect *dstrect12)
         return SDL20_InvalidParamError("dstrect");
     } else if (!VideoRenderer20) {
         return SDL20_SetError("No software screen surface available");
+    } else if ((overlay = (QueuedOverlayItem *) SDL_malloc(sizeof (QueuedOverlayItem))) == NULL) {
+        return SDL20_OutOfMemory();
     }
 
     hwdata = (SDL12_YUVData *) overlay12->hwdata;
@@ -7194,10 +7229,19 @@ SDL_DisplayYUVOverlay(SDL12_Overlay *overlay12, SDL12_Rect *dstrect12)
 
     /* The app may or may not SDL_Flip() after this...queue this to render on the next present,
        and start a timer going to force a present, in case they don't. */
-    FIXME("is it legal to display multiple yuv overlays?");  /* if so, this will need to be a list instead of a single pointer. */
-    QueuedDisplayOverlay12 = overlay12;
-    SDL20_memcpy(&QueuedDisplayOverlayDstRect12, dstrect12, sizeof (SDL12_Rect));
-    VideoSurfacePresentTicks = VideoSurfaceLastPresentTicks + GetDesiredMillisecondsPerFrame();  /* flip it later. */
+
+    overlay->overlay12 = overlay12;
+    SDL20_memcpy(&overlay->dstrect12, dstrect12, sizeof (SDL12_Rect));
+    overlay->next = NULL;
+
+    SDL_assert(QueuedDisplayOverlaysTail != NULL);
+    SDL_assert(QueuedDisplayOverlaysTail->next == NULL);
+    QueuedDisplayOverlaysTail->next = overlay;
+    QueuedDisplayOverlaysTail = overlay;
+
+    if (!VideoSurfacePresentTicks) {
+        VideoSurfacePresentTicks = VideoSurfaceLastPresentTicks + GetDesiredMillisecondsPerFrame();  /* flip it later. */
+    }
 
     return 0;
 }
@@ -7214,11 +7258,14 @@ DECLSPEC void SDLCALL
 SDL_FreeYUVOverlay(SDL12_Overlay *overlay12)
 {
     if (overlay12) {
-        SDL12_YUVData *hwdata;
-        if (QueuedDisplayOverlay12 == overlay12) {
-            QueuedDisplayOverlay12 = NULL;
+        SDL12_YUVData *hwdata = (SDL12_YUVData *) overlay12->hwdata;
+        QueuedOverlayItem *overlay = QueuedDisplayOverlays.next;
+        while (overlay != NULL) {
+            if (overlay->overlay12 == overlay12) {
+                overlay->overlay12 = NULL;  /* don't try to draw this later. */
+            }
         }
-        hwdata = (SDL12_YUVData *) overlay12->hwdata;
+
         SDL20_DestroyTexture(hwdata->texture20);
         SDL20_free(hwdata->pixelbuf);
         SDL20_free(overlay12);
