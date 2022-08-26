@@ -931,13 +931,33 @@ typedef struct OpenGLEntryPoints
     #include "SDL20_syms.h"
 } OpenGLEntryPoints;
 
-
 typedef struct QueuedOverlayItem
 {
     SDL12_Overlay *overlay12;
     SDL12_Rect dstrect12;
     struct QueuedOverlayItem *next;
 } QueuedOverlayItem;
+
+typedef struct SDL12_TimerID_Data
+{
+    SDL_TimerID timer_id;
+    SDL12_NewTimerCallback callback;
+    void *param;
+    struct SDL12_TimerID_Data *next;
+    struct SDL12_TimerID_Data *prev;
+} SDL12_TimerID_Data;
+
+/* This changed from an opaque pointer to an int in 2.0. */
+typedef SDL12_TimerID_Data *SDL12_TimerID;
+
+#define SDL12_MAXEVENTS 128
+typedef struct EventQueueType
+{
+    SDL12_SysWMmsg syswm_msg;  /* save space for a copy of this in case we use it. */
+    SDL12_Event event12;
+    struct EventQueueType *next;
+} EventQueueType;
+
 
 static Uint32 LinkedSDL2VersionInt = 0;
 static SDL_bool IsDummyVideo = SDL_FALSE;
@@ -1011,15 +1031,7 @@ static GLuint OpenGLLogicalScalingMultisampleDepth = 0;
 static GLuint OpenGLCurrentReadFBO = 0;
 static GLuint OpenGLCurrentDrawFBO = 0;
 static SDL_bool ForceGLSwapBufferContext = SDL_FALSE;
-
-#define SDL12_MAXEVENTS 128
-typedef struct EventQueueType
-{
-    SDL12_SysWMmsg syswm_msg;  /* save space for a copy of this in case we use it. */
-    SDL12_Event event12;
-    struct EventQueueType *next;
-} EventQueueType;
-
+static SDL12_TimerID AddedTimers = NULL;  /* we'll protect this with EventQueueMutex for laziness/convenience. */
 static SDL_mutex *EventQueueMutex = NULL;
 static EventQueueType EventQueuePool[SDL12_MAXEVENTS];
 static EventQueueType *EventQueueHead = NULL;
@@ -7648,18 +7660,6 @@ SDL_KillThread(SDL_Thread *thread)
               "This program should be fixed. No thread was actually harmed.\n");
 }
 
-typedef struct SDL12_TimerID_Data
-{
-    SDL_TimerID timer_id;
-    SDL12_NewTimerCallback callback;
-    void *param;
-} SDL12_TimerID_Data;
-
-/* This changed from an opaque pointer to an int in 2.0. */
-typedef SDL12_TimerID_Data *SDL12_TimerID;
-SDL_COMPILE_TIME_ASSERT(timer, sizeof(SDL12_TimerID) >= sizeof(SDL_TimerID));
-
-
 static Uint32 SDLCALL
 AddTimerCallback12(Uint32 interval, void *param)
 {
@@ -7686,18 +7686,65 @@ SDL_AddTimer(Uint32 interval, SDL12_NewTimerCallback callback, void *param)
         return NULL;
     }
 
+    if (EventQueueMutex) {
+        SDL20_LockMutex(EventQueueMutex);
+    }
+
+    data->prev = NULL;
+    data->next = AddedTimers;
+    if (AddedTimers) {
+        AddedTimers->prev = data;
+    }
+    AddedTimers = data;
+
+    if (EventQueueMutex) {
+        SDL20_UnlockMutex(EventQueueMutex);
+    }
+
     return data;
 }
 
 DECLSPEC SDL_bool SDLCALL
 SDL_RemoveTimer(SDL12_TimerID data)
 {
-    /* !!! FIXME:  1.2 will safely return SDL_FALSE if this is a
-     * bogus timer. This code will dereference a bogus pointer, though it handles NULL. */
-    const SDL_bool retval = data ? SDL20_RemoveTimer(data->timer_id) : SDL_FALSE;
-    if (retval) {
-        SDL20_free(data);
+    SDL_bool retval = SDL_FALSE;
+    if (data) {
+        /* SDL 1.2 would make sure the pointer was valid and return false instead of crashing, so we check that too. */
+        SDL12_TimerID i;
+
+        if (EventQueueMutex) {
+            SDL20_LockMutex(EventQueueMutex);
+        }
+
+        for (i = AddedTimers; i != NULL; i = i->next) {
+            if (i == data) {
+                break;
+            }
+        }
+
+        if (i != NULL) {  /* this is valid. */
+            if (data->prev) {
+                data->prev->next = data->next;
+            }
+            if (data->next) {
+                data->next->prev = data->prev;
+            }
+            if (data == AddedTimers) {
+                AddedTimers = data->next;
+            }
+            retval = SDL_TRUE;
+            SDL20_RemoveTimer(data->timer_id);
+        }
+
+        if (EventQueueMutex) {
+            SDL20_UnlockMutex(EventQueueMutex);
+        }
+
+        if (retval) {
+            SDL20_free(data);
+        }
     }
+
     return retval;
 }
 
