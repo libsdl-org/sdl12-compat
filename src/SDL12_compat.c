@@ -8613,7 +8613,7 @@ FakeCdRomAudioCallback(AudioCallbackWrapperData *data, Uint8 *stream, int len, c
             if (data->cdrom_status == SDL12_CD_PLAYING) {  /* go on to next track? */
                 const SDL_bool loaded = LoadCDTrack(++data->cdrom_cur_track, &data->cdrom_mp3);
                 if (!loaded) {
-                    data->cdrom_status = SDL12_CD_TRAYEMPTY;  FIXME("Maybe just mark it stopped?");
+                    data->cdrom_status = SDL12_CD_STOPPED;
                 } else {  /* let new track fill out rest of callback. */
                     if (available < ((Uint32) len)) {
                         FakeCdRomAudioCallback(data, stream + available, len - available, must_mix);
