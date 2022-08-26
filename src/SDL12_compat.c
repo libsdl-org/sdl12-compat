@@ -7210,7 +7210,16 @@ SDL_DisplayYUVOverlay(SDL12_Overlay *overlay12, SDL12_Rect *dstrect12)
         return SDL20_InvalidParamError("dstrect");
     } else if (!VideoRenderer20) {
         return SDL20_SetError("No software screen surface available");
-    } else if ((overlay = (QueuedOverlayItem *) SDL_malloc(sizeof (QueuedOverlayItem))) == NULL) {
+    }
+
+    for (overlay = QueuedDisplayOverlays.next; overlay != NULL; overlay = overlay->next) {
+        if (overlay->overlay12 == overlay12) {   /* trying to draw the same overlay twice in one frame? Dump the current surface and overlays to the screen now. */
+            SDL_Flip(VideoSurface12);
+            break;
+        }
+    }
+
+    if ((overlay = (QueuedOverlayItem *) SDL_malloc(sizeof (QueuedOverlayItem))) == NULL) {
         return SDL20_OutOfMemory();
     }
 
