@@ -7097,6 +7097,7 @@ SDL_CreateYUVOverlay(int w, int h, Uint32 format12, SDL12_Surface *display12)
        rendering anyhow, we always make an SDL_Texture in here and draw over the screen pixels, in hopes that the GPU
        gives us a boost here. */
 
+    const char *old_scale_quality = SDL20_GetHint(SDL_HINT_RENDER_SCALE_QUALITY);
     SDL12_Overlay *retval = NULL;
     SDL12_YUVData *hwdata = NULL;
     Uint32 format20 = 0;
@@ -7150,7 +7151,9 @@ SDL_CreateYUVOverlay(int w, int h, Uint32 format12, SDL12_Surface *display12)
         hwdata->pitches[0] = w * 2;
     }
 
+    SDL20_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
     hwdata->texture20 = SDL20_CreateTexture(VideoRenderer20, format20, SDL_TEXTUREACCESS_STREAMING, w, h);
+    SDL20_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, old_scale_quality);
     if (!hwdata->texture20) {
         SDL20_free(hwdata->pixelbuf);
         SDL20_free(retval);
