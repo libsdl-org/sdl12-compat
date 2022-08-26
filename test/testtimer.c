@@ -84,10 +84,10 @@ int main(int argc, char *argv[])
 
 	printf("Removing bogus timer...");
 	if (SDL_RemoveTimer(t1)) {
-        printf("UHOH, SHOULD HAVE FAILED\n");
-    } else {
-        printf("OK!\n");
-    }
+		printf("UHOH, SHOULD HAVE FAILED\n");
+	} else {
+		printf("OK!\n");
+	}
 
 	SDL_Quit();
 	return(0);
