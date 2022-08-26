@@ -6635,11 +6635,6 @@ SDL_WM_SetIcon(SDL12_Surface *icon12, Uint8 *mask)
     int bpp;
     int ret;
 
-    if (VideoWindow20) {
-        SDL20_SetWindowIcon(VideoWindow20, icon12->surface20);
-        return;
-    }
-
     /* take the mask and zero out those alpha values. */
     oldmode = SDL_BLENDMODE_NONE;
     if (SDL20_GetSurfaceBlendMode(icon12->surface20, &oldmode) < 0) {
@@ -6662,7 +6657,6 @@ SDL_WM_SetIcon(SDL12_Surface *icon12, Uint8 *mask)
             const int h = icon12->h;
             const int mpitch = (w + 7) / 8;
             Uint32 *ptr = (Uint32 *) icon20->pixels;
-
             int x, y;
 
             SDL_assert(icon20->format->BytesPerPixel == 4);
@@ -6684,6 +6678,10 @@ SDL_WM_SetIcon(SDL12_Surface *icon12, Uint8 *mask)
         }
         SDL20_FreeSurface(VideoIcon20);
         VideoIcon20 = icon20;
+    }
+
+    if (VideoWindow20) {
+        SDL20_SetWindowIcon(VideoWindow20, VideoIcon20);
     }
 }
 
