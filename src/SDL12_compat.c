@@ -5623,6 +5623,7 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
     SDL_bool fix_bordless_fs_win = SDL_TRUE;
     int scaled_width = width;
     int scaled_height = height;
+    const char *fromwin_env = NULL;
 
     if (flags12 & SDL12_OPENGL) {
         /* For now we default GL scaling to ENABLED. If an app breaks or is linked directly
@@ -5653,8 +5654,6 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
     fix_bordless_fs_win = SDL12Compat_GetHintBoolean("SDL12COMPAT_FIX_BORDERLESS_FS_WIN", fix_bordless_fs_win);
 
     ForceGLSwapBufferContext = SDL12Compat_GetHintBoolean("SDL12COMPAT_FORCE_GL_SWAPBUFFER_CONTEXT", SDL_FALSE);
-
-    FIXME("currently ignores SDL_WINDOWID, which we could use with SDL_CreateWindowFrom ...?");
 
     flags12 &= ~SDL12_HWACCEL; /* just in case - https://github.com/libsdl-org/SDL-1.2/issues/817 */
 
@@ -5792,7 +5791,11 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
         fullscreen_flags20 |= SDL_WINDOW_FULLSCREEN_DESKTOP;
     }
 
-    if (window_size_scaling <= 0.0f) {
+    fromwin_env = SDL20_getenv("SDL_WINDOWID");
+
+    if (fromwin_env) {
+        window_size_scaling = 1.0f;  /* don't scale for external windows */
+    } else if (window_+size_scaling <= 0.0f) {
         window_size_scaling = 1.0f;  /* bogus value, reset to default */
     } else if (flags12 & SDL12_RESIZABLE) {
         window_size_scaling = 1.0f;  /* assume that resizable windows are already prepared to handle whatever without scaling. */
@@ -5805,7 +5808,20 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
         scaled_height = (int) (window_size_scaling * height);
     }
 
-    if (!VideoWindow20) {  /* create it */
+    if (fromwin_env) {
+        char *endp = NULL;
+        const Uint64 windowid = SDL_strtoull(fromwin_env, &endp, 0);
+        if ((*fromwin_env == '\0') || (*endp != '\0')) {
+            SDL20_SetError("Invalid SDL_WINDOWID");
+            return EndVidModeCreate();
+        } else {
+            EndVidModeCreate();
+            VideoWindow20 = SDL20_CreateWindowFrom((void *) (size_t) (windowid));
+            if (!VideoWindow20) {
+                return EndVidModeCreate();
+            }
+        }
+    } else if (!VideoWindow20) {  /* create it */
         int x = SDL_WINDOWPOS_UNDEFINED, y = SDL_WINDOWPOS_UNDEFINED;
         Uint32 flags20 = fullscreen_flags20;
         if (flags12 & SDL12_OPENGL) { flags20 |= SDL_WINDOW_OPENGL; }

@@ -85,6 +85,7 @@ SDL20_SYM(void,EnableScreenSaver,(void),(),)
 SDL20_SYM(void,DisableScreenSaver,(void),(),)
 
 SDL20_SYM(SDL_Window *,CreateWindow,(const char *a, int b, int c, int d, int e, Uint32 f),(a,b,c,d,e,f),return)
+SDL20_SYM(SDL_Window *,CreateWindowFrom,(const void *a),(a),return)
 SDL20_SYM(void,DestroyWindow,(SDL_Window *a),(a),)
 SDL20_SYM(void,SetWindowIcon,(SDL_Window *a,SDL_Surface *b),(a,b),)
 SDL20_SYM(int,UpdateWindowSurface,(SDL_Window *a),(a),return)
