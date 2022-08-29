@@ -5629,7 +5629,7 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
         /* default use_highdpi to false for OpenGL windows when not using
            OpenGL scaling as legacy OpenGL applications are unlikely to support
            high-DPI setups properly. (They often use the window size to determine
-           the resolute in some or all parts of their code.) Because OpenGL scaling
+           the resolution in some or all parts of their code.) Because OpenGL scaling
            is never used for windows, it is always false there. */
         use_highdpi = (flags12 & SDL12_FULLSCREEN) ? use_gl_scaling : SDL_FALSE;
     }
