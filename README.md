@@ -208,6 +208,19 @@ The available options are:
   use this hint. If there is no known game controller mapping for a joystick,
   and this hint is in use, it will not be listed as an availble device.
 
+- SDL12COMPAT_WINDOW_SCALING:
+  When creating non-fullscreen, non-resizable windows, use this variable to
+  size the window differently. If, for example, you have a 4K monitor and the
+  game is running in a window the size of a postage stamp, you might set this
+  to 2 to double the size of the window. Fractional values work, so "1.5"
+  might be a more-pleasing value on your hardware. You can even shrink the
+  window with values less than 1.0! When scaling a window like this,
+  sdl12-compat will use all the usual scaling options
+  (SDL12COMPAT_OPENGL_SCALING, SDL12COMPAT_SCALE_METHOD, etc). If sdl12-compat
+  can't scale the contents of the window for various technical reasons, it
+  will create the window at the originally-requested size. If this variable
+  isn't specified, it defaults to 1.0 (no scaling).
+
 - SDL_MOUSE_RELATIVE_SCALING:
   If enabled, relative mouse motion is scaled when the application is
   running at a non-native resolution.  This may be required with some

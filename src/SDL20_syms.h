@@ -275,6 +275,7 @@ SDL20_SYM_PASSTHROUGH(void,qsort,(void *a, size_t b, size_t c, int (SDLCALL *d)(
 SDL20_SYM_PASSTHROUGH(void *,memset,(void *a, int b, size_t c),(a,b,c),return)
 SDL20_SYM_PASSTHROUGH(void *,memcpy,(void *a, const void *b, size_t c),(a,b,c),return)
 SDL20_SYM(void *,memmove,(void *a, const void *b, size_t c),(a,b,c),return)
+SDL20_SYM(double,atof,(const char *a),(a),return)
 
 SDL20_SYM_PASSTHROUGH(int,memcmp,(const void *a, const void *b, size_t c),(a,b,c),return)
 SDL20_SYM_PASSTHROUGH(size_t,strlen,(const char *a),(a),return)

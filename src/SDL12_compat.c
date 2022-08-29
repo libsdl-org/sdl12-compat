@@ -1301,6 +1301,18 @@ SDL12Compat_GetHintBoolean(const char *name, SDL_bool default_value)
     return (SDL20_atoi(val) != 0) ? SDL_TRUE : SDL_FALSE;
 }
 
+static float
+SDL12Compat_GetHintFloat(const char *name, float default_value)
+{
+    const char *val = SDL12Compat_GetHint(name);
+
+    if (!val) {
+        return default_value;
+    }
+
+    return (float) SDL20_atof(val);
+}
+
 static void
 SDL12Compat_PrintQuirks(void)
 {
@@ -5605,11 +5617,13 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
     SDL_DisplayMode dmode;
     Uint32 fullscreen_flags20 = 0;
     Uint32 appfmt;
+    float window_size_scaling = SDL12Compat_GetHintFloat("SDL12COMPAT_WINDOW_SCALING", 1.0f);
     SDL_bool use_gl_scaling = SDL_FALSE;
     SDL_bool use_highdpi = SDL_TRUE;
     SDL_bool fix_bordless_fs_win = SDL_TRUE;
+    int scaled_width = width;
+    int scaled_height = height;
 
-    FIXME("Should we offer scaling for windowed modes, too?");
     if (flags12 & SDL12_OPENGL) {
         /* For now we default GL scaling to ENABLED. If an app breaks or is linked directly
            to glBindFramebuffer, they'll need to turn it off with this environment variable.
@@ -5778,6 +5792,19 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
         fullscreen_flags20 |= SDL_WINDOW_FULLSCREEN_DESKTOP;
     }
 
+    if (window_size_scaling <= 0.0f) {
+        window_size_scaling = 1.0f;  /* bogus value, reset to default */
+    } else if (flags12 & SDL12_RESIZABLE) {
+        window_size_scaling = 1.0f;  /* assume that resizable windows are already prepared to handle whatever without scaling. */
+    } else if ((fullscreen_flags20 & SDL_WINDOW_FULLSCREEN_DESKTOP) != 0) {
+        window_size_scaling = 1.0f;  /* setting the window to fullscreen or fullscreen_desktop? Don't scale it. */
+    } else if ((flags12 & SDL12_OPENGL) && !use_gl_scaling) {
+        window_size_scaling = 1.0f;  /* OpenGL but not doing GL scaling? Don't allow window size scaling. */
+    } else {
+        scaled_width = (int) (window_size_scaling * width);
+        scaled_height = (int) (window_size_scaling * height);
+    }
+
     if (!VideoWindow20) {  /* create it */
         int x = SDL_WINDOWPOS_UNDEFINED, y = SDL_WINDOWPOS_UNDEFINED;
         Uint32 flags20 = fullscreen_flags20;
@@ -5796,7 +5823,7 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
             SDL20_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, OpenGLLogicalScalingSamples);
         }
 
-        VideoWindow20 = SDL20_CreateWindow(WindowTitle, x, y, width, height, flags20);
+        VideoWindow20 = SDL20_CreateWindow(WindowTitle, x, y, scaled_width, scaled_height, flags20);
         if (!VideoWindow20) {
             return EndVidModeCreate();
         }
@@ -5804,10 +5831,10 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
             SDL20_SetWindowIcon(VideoWindow20, VideoIcon20);
         }
     } else {  /* resize it */
-        SDL20_SetWindowSize(VideoWindow20, width, height);
+        SDL20_SetWindowSize(VideoWindow20, scaled_width, scaled_height);
         SDL20_SetWindowFullscreen(VideoWindow20, fullscreen_flags20);
         /* This second SetWindowSize is a workaround for an SDL2 bug, see https://github.com/libsdl-org/sdl12-compat/issues/148 */
-        SDL20_SetWindowSize(VideoWindow20, width, height);
+        SDL20_SetWindowSize(VideoWindow20, scaled_width, scaled_height);
         SDL20_SetWindowBordered(VideoWindow20, (flags12 & SDL12_NOFRAME) ? SDL_FALSE : SDL_TRUE);
         SDL20_SetWindowResizable(VideoWindow20, (flags12 & SDL12_RESIZABLE) ? SDL_TRUE : SDL_FALSE);
     }
@@ -5853,12 +5880,16 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
         /* Try to set up a logical scaling */
         if (use_gl_scaling) {
             if (!InitializeOpenGLScaling(width, height)) {
+                const SDL_bool was_fullscreen = ((fullscreen_flags20 & SDL_WINDOW_FULLSCREEN_DESKTOP) != 0) ? SDL_TRUE : SDL_FALSE;
+                window_size_scaling = 1.0f;
                 use_gl_scaling = SDL_FALSE;
                 fullscreen_flags20 &= ~SDL_WINDOW_FULLSCREEN_DESKTOP;
                 SDL20_SetWindowFullscreen(VideoWindow20, fullscreen_flags20);
-                SDL20_SetWindowSize(VideoWindow20, width, height);
-                fullscreen_flags20 |= SDL_WINDOW_FULLSCREEN;
-                SDL20_SetWindowFullscreen(VideoWindow20, fullscreen_flags20);
+                SDL20_SetWindowSize(VideoWindow20, width, height);  /* not scaled_width, scaled_height */
+                if (was_fullscreen) {
+                    fullscreen_flags20 |= SDL_WINDOW_FULLSCREEN;
+                    SDL20_SetWindowFullscreen(VideoWindow20, fullscreen_flags20);
+                }
             }
         }
 
