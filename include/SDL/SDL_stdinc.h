@@ -83,10 +83,9 @@ SDL_COMPILE_TIME_ASSERT(enum, sizeof(SDL_DUMMY_ENUM) == sizeof(int));
 #ifdef HAVE_STDIO_H
 #include <stdio.h>
 #endif
-#ifdef HAVE_STDLIB_H
+#if defined(HAVE_STDLIB_H)
 #include <stdlib.h>
-#endif
-#ifdef HAVE_MALLOC_H
+#elif defined(HAVE_MALLOC_H)
 #include <malloc.h>
 #endif
 #ifdef HAVE_STDDEF_H
@@ -101,10 +100,9 @@ SDL_COMPILE_TIME_ASSERT(enum, sizeof(SDL_DUMMY_ENUM) == sizeof(int));
 #ifdef HAVE_STRINGS_H
 #include <strings.h>
 #endif
-#ifdef HAVE_INTTYPES_H
+#if defined(HAVE_INTTYPES_H)
 #include <inttypes.h>
-#endif
-#ifdef HAVE_STDINT_H
+#elif defined(HAVE_STDINT_H)
 #include <stdint.h>
 #endif
 #ifdef HAVE_CTYPE_H
