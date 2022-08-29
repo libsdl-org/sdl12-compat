@@ -5795,7 +5795,7 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
 
     if (fromwin_env) {
         window_size_scaling = 1.0f;  /* don't scale for external windows */
-    } else if (window_+size_scaling <= 0.0f) {
+    } else if (window_size_scaling <= 0.0f) {
         window_size_scaling = 1.0f;  /* bogus value, reset to default */
     } else if (flags12 & SDL12_RESIZABLE) {
         window_size_scaling = 1.0f;  /* assume that resizable windows are already prepared to handle whatever without scaling. */
