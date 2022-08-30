@@ -959,6 +959,7 @@ typedef struct EventQueueType
 } EventQueueType;
 
 
+static Uint32 InitializedSubsystems20 = 0;
 static Uint32 LinkedSDL2VersionInt = 0;
 static SDL_bool IsDummyVideo = SDL_FALSE;
 static VideoModeList *VideoModes = NULL;
@@ -2335,7 +2336,14 @@ SDL_InitSubSystem(Uint32 sdl12flags)
        have this problem, so we're ignoring the parachute until a reasonable
        need arises. */
 
-    #define SETFLAG(flag) if (sdl12flags & SDL12_INIT_##flag) sdl20flags |= SDL_INIT_##flag
+    #define SETFLAG(flag) { \
+        const Uint32 f12 = SDL12_INIT_##flag; \
+        const Uint32 f20 = SDL_INIT_##flag; \
+        if ((sdl12flags & f12) && ((InitializedSubsystems20 & f20) == 0)) { \
+            sdl20flags |= f20; \
+        } \
+    }
+
     SETFLAG(TIMER);
     SETFLAG(AUDIO);
     SETFLAG(VIDEO);
@@ -2368,6 +2376,8 @@ SDL_InitSubSystem(Uint32 sdl12flags)
     if ((rc == 0) && (sdl20flags & SDL_INIT_JOYSTICK)) {
         Init12Joystick();  /* if this fails, we just won't report any sticks. */
     }
+
+    InitializedSubsystems20 |= sdl20flags;
 
     return rc;
 }
@@ -2462,6 +2472,9 @@ Quit12Video(void)
         SDL20_DestroyMutex(EventQueueMutex);
         EventQueueMutex = NULL;
     }
+
+    /* Shutdown the fake event thread. */
+    EventThreadEnabled = SDL_FALSE;
 }
 
 DECLSPEC void SDLCALL
@@ -2488,9 +2501,6 @@ SDL_QuitSubSystem(Uint32 sdl12flags)
 
     if (sdl12flags & SDL12_INIT_VIDEO) {
         Quit12Video();
-
-        /* Shutdown the fake event thread. */
-        EventThreadEnabled = SDL_FALSE;
     }
 
     if (sdl12flags & SDL12_INIT_JOYSTICK) {
@@ -2502,12 +2512,15 @@ SDL_QuitSubSystem(Uint32 sdl12flags)
     if ((SDL20_WasInit(0) == 0) && (!CDRomInit)) {
         SDL20_Quit();
     }
+
+    InitializedSubsystems20 &= ~sdl20flags;
 }
 
 DECLSPEC void SDLCALL
 SDL_Quit(void)
 {
     SDL_QuitSubSystem(SDL_WasInit(0) | SDL12_INIT_CDROM);
+    SDL_assert(InitializedSubsystems20 == 0);
 }
 
 DECLSPEC void SDLCALL
@@ -8226,7 +8239,6 @@ InitializeCDSubsystem(void)
 {
     const char *cdpath;
 
-    FIXME("Is subsystem init reference counted in SDL 1.2?");  /* it is in SDL2, but I don't know for 1.2. */
     if (CDRomInit) {
         return;
     }
