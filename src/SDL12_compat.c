@@ -984,7 +984,10 @@ static char *WindowTitle = NULL;
 static char *WindowIconTitle = NULL;
 static SDL_Surface *VideoIcon20 = NULL;
 static int EnabledUnicode = 0;
-static SDL_bool EnabledKeyRepeat = SDL_TRUE;
+static Uint32 KeyRepeatNextTicks = 0;
+static Uint32 KeyRepeatDelay = 0;
+static Uint32 KeyRepeatInterval = 0;
+static SDL12_Event KeyRepeatEvent;
 /* Windows SDL1.2 never uses translated keyboard layouts for compatibility with
 DirectInput, which didn't support them. Other platforms (MacOS, Linux) seem to,
 but with varying levels of bugginess. So default to Translated Layouts on
@@ -2200,6 +2203,8 @@ HasWmAvailable(const char *driver)
     return 0;
 }
 
+DECLSPEC int SDLCALL SDL_EnableKeyRepeat(int delay, int interval);
+
 static int
 Init12Video(void)
 {
@@ -2239,6 +2244,8 @@ Init12Video(void)
 #else
     SupportSysWM = SDL_FALSE;
 #endif
+
+    SDL_EnableKeyRepeat(0, 0);
 
     SDL20_DelEventWatch(EventFilter20to12, NULL);
     SDL20_AddEventWatch(EventFilter20to12, NULL);
@@ -2426,6 +2433,8 @@ static void
 Quit12Video(void)
 {
     int i;
+
+    SDL_EnableKeyRepeat(0, 0);
 
     SDL20_FreeSurface(VideoIcon20);
     VideoIcon20 = NULL;
@@ -4247,6 +4256,12 @@ static int FlushPendingKeydownEvent(Uint32 unicode)
 
     PendingKeydownEvent.key.keysym.unicode = unicode;
     PushEventIfNotFiltered(&PendingKeydownEvent);
+
+    if (KeyRepeatDelay) {
+        SDL20_memcpy(&KeyRepeatEvent, &PendingKeydownEvent, sizeof (SDL12_Event));
+        KeyRepeatNextTicks = SDL20_GetTicks() + KeyRepeatDelay;
+    }
+
     /* Reset the event. */
     SDL20_memset(&PendingKeydownEvent, 0, sizeof (SDL12_Event));
 
@@ -4377,9 +4392,16 @@ EventFilter20to12(void *data, SDL_Event *event20)
                 event12.key.keysym.sym = Scancode20toKeysym12(event20->key.keysym.scancode);
             }
 
+            if (KeyRepeatNextTicks) {
+                SDL_assert(KeyRepeatEvent.type == SDL12_KEYDOWN);
+                if (KeyRepeatEvent.key.keysym.sym == event12.key.keysym.sym) {
+                    KeyRepeatNextTicks = 0;
+                }
+            }
+
             KeyState[event12.key.keysym.sym] = event20->key.state;
 
-            event12.type = (event20->type == SDL_KEYDOWN) ? SDL12_KEYDOWN : SDL12_KEYUP;
+            event12.type = SDL12_KEYUP;
             event12.key.which = 0;
             event12.key.state = event20->key.state;
             /* turns out that some apps actually made use of the hardware scancodes (checking for platform beforehand) */
@@ -4393,7 +4415,7 @@ EventFilter20to12(void *data, SDL_Event *event20)
 
         case SDL_KEYDOWN:
             FlushPendingKeydownEvent(0);
-            if (event20->key.repeat && !EnabledKeyRepeat) {
+            if (event20->key.repeat) {
                 return 1;  /* ignore 2.0-style key repeat events */
             }
 
@@ -6590,6 +6612,25 @@ SDL_Flip(SDL12_Surface *surface12)
     return 0;
 }
 
+static void
+HandleKeyRepeat(void)
+{
+    /* SDL 1.2 is a little weird about key repeat; it manages it itself
+       (so we can't use SDL2's key repeat), it only runs during PumpEvents
+       (so no AddTimer or separate thread to manage it), and it cares about
+       the last key pressed (so if a key is repeating and you press a new
+       one down, it stops repeating the first key). */
+    if (KeyRepeatNextTicks) {
+        const Uint32 now = SDL20_GetTicks();
+        SDL_assert(KeyRepeatEvent.type == SDL12_KEYDOWN);
+        if (SDL_TICKS_PASSED(now, KeyRepeatNextTicks)) {
+            /* these repeat from the current time in SDL 1.2, not consistently! */
+            KeyRepeatNextTicks = now + KeyRepeatInterval;
+            PushEventIfNotFiltered(&KeyRepeatEvent);
+        }
+    }
+}
+
 DECLSPEC void SDLCALL
 SDL_PumpEvents(void)
 {
@@ -6614,6 +6655,8 @@ SDL_PumpEvents(void)
     if (PendingKeydownEvent.type == SDL12_KEYDOWN) {
         FlushPendingKeydownEvent(0);
     }
+
+    HandleKeyRepeat();  /* deal with SDL 1.2-style key repeat... */
 
     if (EventQueueMutex) {
         SDL20_UnlockMutex(EventQueueMutex);
@@ -7536,11 +7579,14 @@ SDL_GetGammaRamp(Uint16 *red, Uint16 *green, Uint16 *blue)
 DECLSPEC int SDLCALL
 SDL_EnableKeyRepeat(int delay, int interval)
 {
-    FIXME("Support non-default delay and interval for Key Repeat");
-    (void) interval;
+    if ((delay < 0) || (interval < 0)) {
+        return SDL20_SetError("Invalid key repeat values");
+    }
 
-    EnabledKeyRepeat = (delay != 0) ? SDL_TRUE : SDL_FALSE;
-
+    KeyRepeatEvent.type = SDL12_NOEVENT;
+    KeyRepeatNextTicks = 0;
+    KeyRepeatDelay = (Uint32) delay;
+    KeyRepeatInterval = (Uint32) interval;
     return 0;
 }
 
@@ -7548,10 +7594,10 @@ DECLSPEC void SDLCALL
 SDL_GetKeyRepeat(int *delay, int *interval)
 {
     if (delay) {
-        *delay = EnabledKeyRepeat ? SDL12_DEFAULT_REPEAT_DELAY : 0;
+        *delay = (int) KeyRepeatDelay;
     }
     if (interval) {
-        *interval = EnabledKeyRepeat ? SDL12_DEFAULT_REPEAT_INTERVAL : 0;
+        *interval = (int) KeyRepeatInterval;
     }
 }
 
