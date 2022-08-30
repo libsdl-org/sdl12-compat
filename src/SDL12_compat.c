@@ -4458,35 +4458,10 @@ EventFilter20to12(void *data, SDL_Event *event20)
         case SDL_TEXTEDITING: return 1;
         case SDL_TEXTINPUT: {
             char *text = event20->text.text;
-            int codePoint;
-            while ((codePoint = DecodeUTF8Char(&text)) != 0) {
-                if (codePoint > 0xFFFF) {
-                    /* We need to send a UTF-16 surrogate pair. */
-                    Uint16 firstChar = ((codePoint - 0x10000) >> 10) + 0xD800;
-                    Uint16 secondChar = ((codePoint - 0x10000) & 0x3FF) + 0xDC00;
-                    event12.type = SDL12_KEYDOWN;
-                    event12.key.state = SDL12_PRESSED;
-                    event12.key.keysym.scancode = 0;
-                    event12.key.keysym.sym = SDLK12_UNKNOWN;
-                    event12.key.keysym.unicode = firstChar;
-                    if (!FlushPendingKeydownEvent(firstChar)) {
-                         PushEventIfNotFiltered(&event12);
-                    }
-                    event12.key.keysym.unicode = secondChar;
-                    PushEventIfNotFiltered(&event12);
-                } else {
-                    if (!FlushPendingKeydownEvent(codePoint)) {
-                        event12.type = SDL12_KEYDOWN;
-                        event12.key.state = SDL12_PRESSED;
-                        event12.key.keysym.scancode = 0;
-                        event12.key.keysym.sym = SDLK12_UNKNOWN;
-                        event12.key.keysym.unicode = codePoint;
-                        PushEventIfNotFiltered(&event12);
-                    }
-                }
-            }
-          }
-          return 1;
+            const int codePoint = DecodeUTF8Char(&text);
+            FlushPendingKeydownEvent(codePoint);
+            return 1;
+        }
 
         case SDL_MOUSEMOTION:
             event12.type = SDL12_MOUSEMOTION;
