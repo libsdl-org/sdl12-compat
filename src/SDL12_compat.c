@@ -4093,7 +4093,6 @@ Scancode20toKeysym12(const SDL_Scancode scancode20)
     default: break;
     }
 
-    FIXME("map some of the SDLK12_WORLD keys");
     return SDLK12_UNKNOWN;
 }
 
