@@ -8336,13 +8336,12 @@ SDL_CDOpen(int drive)
         return NULL;
     }
 
-    /* We should probably do a proper enumeration of this directory,
-       but that needs platform-specific code that SDL2 doesn't offer.
+    /* We would do a proper enumeration of this directory, but that
+       would need platform-specific code that SDL2 doesn't offer.
        readdir() is surprisingly hard to do without a bunch of different
        platform backends! We just open files until we fail to do so,
        and then stop. */
-    FIXME("Can we do something more robust than this for directory enumeration?");
-    for (;;) {
+    while (SDL_TRUE) {
         SDL_RWops *rw;
         drmp3_uint64 pcmframes;
         drmp3_uint32 samplerate;
