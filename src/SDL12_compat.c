@@ -3951,7 +3951,6 @@ Keysym20to12(const SDL_Keycode keysym20)
     default: break;
     }
 
-    FIXME("nothing maps to SDLK12_COMPOSE, SDLK12_BREAK, or SDLK12_EURO ...?");
     return SDLK12_UNKNOWN;
 }
 static SDL12Key
