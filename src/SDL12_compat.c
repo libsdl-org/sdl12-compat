@@ -8309,6 +8309,7 @@ SDL_CDOpen(int drive)
     char *fullpath;
     drmp3 *mp3 = NULL;
     Uint32 total_track_offset = 0;
+    SDL_bool has_audio = SDL_FALSE;
 
     if (!ValidCDDriveIndex(drive)) {
         return NULL;
@@ -8346,36 +8347,62 @@ SDL_CDOpen(int drive)
         drmp3_uint64 pcmframes;
         drmp3_uint32 samplerate;
         SDL12_CDtrack *track;
-        int c;   char c0, c1;
+        SDL_bool fake_data_track = SDL_FALSE;
+        int c;
+        char c0, c1;
 
         /* we only report audio tracks, starting at 1... */
         FIXME("Let there be fake data tracks");
         c = retval->numtracks + 1;
         c0 = c / 10 + '0';
         c1 = c % 10 + '0';
-        SDL20_snprintf(fullpath, alloclen, "%s%strack%c%c.mp3", CDRomPath, DIRSEP, c0, c1);
+
+        /* note that fake data track files just need to exist, they can be empty files. */
+        SDL20_snprintf(fullpath, alloclen, "%s%strack%c%c.dat", CDRomPath, DIRSEP, c0, c1);
         rw = SDL20_RWFromFile(fullpath, "rb");
-        if (!rw && c > 1) {
-            break;  /* ok, we're done looking for more. */
+        if (rw) {  /* fake data track. */
+            fake_data_track = SDL_TRUE;
+            SDL20_RWclose(rw);
+            rw = NULL;
+        } else {
+            SDL20_snprintf(fullpath, alloclen, "%s%strack%c%c.mp3", CDRomPath, DIRSEP, c0, c1);
+            rw = SDL20_RWFromFile(fullpath, "rb");
+            /* if there isn't a track 1 specified, pretend it's a data track, which matches most games' needs. */
+            if (!rw && (c == 0)) {
+                fake_data_track = SDL_TRUE;
+            }
         }
 
+        if (!rw && !fake_data_track) {
+            break;  /* ok, we're done looking for more. */
+        }
         track = &retval->track[retval->numtracks];
-        if (!rw) {
-            track->type = 4; /* data track. E.g.: quake's audio starts at track 2. */
-        } else {
+        if (!fake_data_track) {
+            SDL_assert(rw != NULL);
             if (!drmp3_init(mp3, mp3_sdlrwops_read, mp3_sdlrwops_seek, rw, NULL)) {
                 SDL20_RWclose(rw);
-                break;  /* ok, we're done looking for more. */
-            }
-            pcmframes = drmp3_get_pcm_frame_count(mp3);
-            samplerate = mp3->sampleRate;
-            FreeMp3(mp3);
+                rw = NULL;
+                fake_data_track = SDL_TRUE; /* congratulations, bogus or unsupported MP3, you just became data! */
+            } else {
+                pcmframes = drmp3_get_pcm_frame_count(mp3);
+                samplerate = mp3->sampleRate;
+                FreeMp3(mp3);
+                rw = NULL;
 
-            track->id = retval->numtracks;
-            track->type = 0;  /* audio track. Data tracks are 4. */
-            track->length = (Uint32) ((((double) pcmframes) / ((double) samplerate)) * CDAUDIO_FPS);
-            track->offset = total_track_offset;
-            total_track_offset += track->length;
+                track->id = retval->numtracks;
+                track->type = 0;  /* audio track. Data tracks are 4. */
+                track->length = (Uint32) ((((double) pcmframes) / ((double) samplerate)) * CDAUDIO_FPS);
+                track->offset = total_track_offset;
+                total_track_offset += track->length;
+
+                has_audio = SDL_TRUE;
+            }
+        }
+
+        SDL_assert(rw == NULL);  /* we should have dealt with this in all paths. */
+
+        if (fake_data_track) {
+            track->type = 4; /* data track. E.g.: quake's audio starts at track 2. */
         }
 
         retval->numtracks++;
@@ -8384,7 +8411,7 @@ SDL_CDOpen(int drive)
             break;  /* max tracks you can have on an audio CD. */
         }
     }
-    if (retval->numtracks == 1 && retval->track[0].type != 0) {
+    if (!has_audio) {
         retval->numtracks = 0; /* data-only */
     }
     SDL20_free(mp3);
