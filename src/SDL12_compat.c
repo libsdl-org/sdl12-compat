@@ -8351,8 +8351,6 @@ SDL_CDOpen(int drive)
         int c;
         char c0, c1;
 
-        /* we only report audio tracks, starting at 1... */
-        FIXME("Let there be fake data tracks");
         c = retval->numtracks + 1;
         c0 = c / 10 + '0';
         c1 = c % 10 + '0';
