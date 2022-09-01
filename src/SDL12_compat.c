@@ -1184,6 +1184,13 @@ static QuirkEntryType quirks[] = {
     {"dosbox_i686", "SDL12COMPAT_USE_KEYBOARD_LAYOUT", "0"},
     {"dosbox_x86_64", "SDL12COMPAT_USE_KEYBOARD_LAYOUT", "0"},
 
+    /* Tucnak's 1.2 target wants to render and run its event loop from
+       background threads, which upsets OpenGL. Force software renderer and
+       x11. If you want Wayland, etc, use tuknak's existing SDL2 target. */
+    {"tucnak", "SDL_VIDEODRIVER", "x11"},
+    {"tucnak", "SDL_RENDER_DRIVER", "software"},
+    {"tucnak", "SDL_FRAMEBUFFER_ACCELERATION", "false"},
+
     /* The 32-bit Steam build only of Multiwinia Quits but doesn't re-Init */
     {"multiwinia.bin.x86", "SDL12COMPAT_NO_QUIT_VIDEO", "1"}
 #else

@@ -47,3 +47,16 @@ directly, so this does not prevent the game from working on Wayland. No
 XWayland needed!
 
 
+## Tucnak (Linux)
+
+There is an SDL2 target for libzia (which tucnak uses for rendering), and you
+should use that in modern times. But if you're on the SDL 1.2 target,
+tucnak tries to render from a background thread, and does its event loop on
+another, so we can't cleanly hook in to make it draw from the main thread.
+
+sdl12-compat will force SDL2 to use X11, software rendering, and no texture
+framebuffer, to avoid using OpenGL, to avoid the threading problems this
+will cause. The app is perfectly usable in this configuration (and largely
+matches how they expected you to use it with SDL 1.2 anyhow).
+
+
