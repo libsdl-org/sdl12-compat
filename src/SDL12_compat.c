@@ -1242,32 +1242,7 @@ SDL12Compat_GetExeName(void)
 static const char *
 SDL12Compat_GetHint(const char *name)
 {
-    const char *value;
-    const char *exe_name;
-    int i;
-
-    /* First, check if there's an environment variable override. */
-    value = SDL20_getenv(name);
-    if (value) {
-        return value;
-    }
-
-    /* Else, look up the quirks table. */
-    exe_name = SDL12Compat_GetExeName();
-    if (*exe_name == '\0') {
-        return NULL;
-    }
-
-    for (i = 0; i < SDL_arraysize(quirks); i++) {
-        if (!SDL20_strcmp(exe_name, quirks[i].exe_name)) {
-            if (!SDL20_strcmp(name, quirks[i].hint_name)) {
-                return quirks[i].hint_value;
-            }
-        }
-    }
-
-    /* No value was found, NULL by default. */
-    return NULL;
+    return SDL20_getenv(name);
 }
 
 static SDL_bool
@@ -1295,10 +1270,11 @@ SDL12Compat_GetHintFloat(const char *name, float default_value)
 }
 
 static void
-SDL12Compat_PrintQuirks(void)
+SDL12Compat_ApplyQuirks(void)
 {
-    int i;
+    const SDL_bool debug_logging = SDL12Compat_GetHintBoolean("SDL12COMPAT_DEBUG_LOGGING", SDL_FALSE);
     const char *exe_name = SDL12Compat_GetExeName();
+    int i;
 
     if (*exe_name == '\0') {
         return;
@@ -1306,10 +1282,15 @@ SDL12Compat_PrintQuirks(void)
     for (i = 0; i < SDL_arraysize(quirks); i++) {
         if (!SDL20_strcmp(exe_name, quirks[i].exe_name)) {
             if (!SDL20_getenv(quirks[i].hint_name)) {
-                SDL20_Log("Applying compatibility quirk %s=\"%s\" for \"%s\"", quirks[i].hint_name, quirks[i].hint_value, exe_name);
+                if (debug_logging) {
+                    SDL20_Log("Applying compatibility quirk %s=\"%s\" for \"%s\"", quirks[i].hint_name, quirks[i].hint_value, exe_name);
+                }
+                SDL20_setenv(quirks[i].hint_name, quirks[i].hint_value, 1);
             } else {
-                SDL20_Log("Not applying compatibility quirk %s=\"%s\" for \"%s\" due to environment variable override (\"%s\")\n",
-                          quirks[i].hint_name, quirks[i].hint_value, exe_name, SDL20_getenv(quirks[i].hint_name));
+                if (debug_logging) {
+                    SDL20_Log("Not applying compatibility quirk %s=\"%s\" for \"%s\" due to environment variable override (\"%s\")\n",
+                            quirks[i].hint_name, quirks[i].hint_value, exe_name, SDL20_getenv(quirks[i].hint_name));
+                }
             }
         }
     }
@@ -1341,8 +1322,7 @@ LoadSDL20(void)
                         #else
                         SDL20_Log("sdl12-compat, talking to SDL2 %d.%d.%d", v.major, v.minor, v.patch);
                         #endif
-                        /* Print a list of any enabled quirks. */
-                        SDL12Compat_PrintQuirks();
+                        SDL12Compat_ApplyQuirks();  /* Apply and maybe print a list of any enabled quirks. */
                     }
                 }
             }
