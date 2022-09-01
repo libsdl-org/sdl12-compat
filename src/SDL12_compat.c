@@ -6585,10 +6585,6 @@ SDL_UpdateRect(SDL12_Surface *screen12, Sint32 x, Sint32 y, Uint32 w, Uint32 h)
 DECLSPEC int SDLCALL
 SDL_Flip(SDL12_Surface *surface12)
 {
-    if (surface12->flags & SDL12_OPENGL) {
-        return SDL20_SetError("Use SDL_GL_SwapBuffers() on OpenGL surfaces");
-    }
-
     if (surface12 == VideoSurface12) {
         SDL_UpdateRect(surface12, 0, 0, 0, 0);  /* update the whole screen and present now. */
     }
