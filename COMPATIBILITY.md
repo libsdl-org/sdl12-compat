@@ -20,6 +20,10 @@ on X11 if you turn off OpenGL Scaling
 Note that this game calls glXGetProcAddress() directly and likely will not
 work as a native Wayland app (XWayland works fine, however).
 
+You have to set this environment variable yourself. Dynamic Jack's binary
+is called "main" so we can't reasonably set up an automatic entry for it in
+our quirks table.
+
 
 ## Hammerfight (Linux)
 
