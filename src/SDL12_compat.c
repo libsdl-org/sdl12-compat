@@ -5578,6 +5578,26 @@ InitializeOpenGLScaling(const int w, const int h)
 }
 
 
+/* The idea here is that SDL's OpenGL-based renderers always notice if
+   they aren't using the correct context and attempt to set the correct
+   context before doing any work, but (at least for X11, and probably
+   other platforms), the current context is thread-local, and _it's an
+   error to set a context current if it's already current on another thread_.
+   So we try to catch every place we call into the renderer and end that
+   work with a call to this function, which will reset the GL context to NULL,
+   so if an app tries to render from a background thread, the GL renderer
+   will be able to set the context, do it's work, and then we reset it right
+   after. Without this, we either need all apps to render exclusively on
+   the main thread or fail to draw at all.
+
+   This feels risky, but it's better than the alternative! */
+static void ResetVideoRendererForThreading(void)
+{
+    if ((VideoRenderer20 != NULL) && (SDL20_GL_GetCurrentContext() != NULL)) {
+        SDL20_GL_MakeCurrent(NULL, NULL);
+    }
+}
+
 static void HandleInputGrab(SDL12_GrabMode mode);
 
 DECLSPEC SDL12_Surface * SDLCALL
@@ -6008,6 +6028,10 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
     VideoSurfacePresentTicks = 0;
     VideoSurfaceLastPresentTicks = 0;
 
+    if ((flags12 & SDL12_OPENGL) == 0) {
+        ResetVideoRendererForThreading();
+    }
+
     return VideoSurface12;
 }
 
@@ -6322,6 +6346,8 @@ PresentScreen(void)
     SDL20_RenderPresent(VideoRenderer20);
     VideoSurfaceLastPresentTicks = SDL20_GetTicks();
     VideoSurfacePresentTicks = 0;
+
+    ResetVideoRendererForThreading();
 }
 
 static void
@@ -6752,6 +6778,7 @@ SDL_WM_ToggleFullScreen(SDL12_Surface *surface)
         }
         if (retval && VideoRenderer20) {
             SDL20_RenderSetLogicalSize(VideoRenderer20, VideoSurface12->w, VideoSurface12->h);
+            ResetVideoRendererForThreading();
         }
     }
     return retval;
@@ -7203,6 +7230,8 @@ SDL_CreateYUVOverlay(int w, int h, Uint32 format12, SDL12_Surface *display12)
     retval->pixels = hwdata->pixels;
     hwdata->dirty = SDL_TRUE;
 
+    ResetVideoRendererForThreading();
+
     return retval;
 }
 
@@ -7297,6 +7326,8 @@ SDL_DisplayYUVOverlay(SDL12_Overlay *overlay12, SDL12_Rect *dstrect12)
     if (!VideoSurfacePresentTicks) {
         VideoSurfacePresentTicks = VideoSurfaceLastPresentTicks + GetDesiredMillisecondsPerFrame();  /* flip it later. */
     }
+
+    ResetVideoRendererForThreading();
 
     return 0;
 }
