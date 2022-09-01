@@ -144,6 +144,13 @@ SDL12COMPAT_HIGHDPI=1 SDL12COMPAT_OPENGL_SCALING=0 %command%
 will run `%command%` with high-dpi monitor support enabled, but OpenGL
 scaling support disabled.
 
+(While these environment variables are checked at various times throughout
+the lifetime of the app, sdl12-compat expects these to be set before the
+process starts and not change during the life of the process, and any
+places where changing it later might affect operation is purely accidental
+and might change. That is to say: don't write an SDL 1.2-based app with
+plans to tweak these values on the fly!)
+
 The available options are:
 
 - SDL12COMPAT_DEBUG_LOGGING:
