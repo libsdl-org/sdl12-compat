@@ -13,7 +13,7 @@ https://docs.google.com/spreadsheets/d/1u8Rq3LVQYYgu28sBuxrZ371QolbiZu5z_LjENc4d
 ## Dynamite Jack (Linux)
 
 More modern builds are ported to SDL2, but the older 1.2 binaries will work
-on X11 if you turn off OpenGL Scaling
+on X11 if you turn off OpenGL Scaling.
 
     export SDL12COMPAT_OPENGL_SCALING=0
 
@@ -63,4 +63,49 @@ framebuffer, to avoid using OpenGL, to avoid the threading problems this
 will cause. The app is perfectly usable in this configuration (and largely
 matches how they expected you to use it with SDL 1.2 anyhow).
 
+
+## Awesomenauts (Linux)
+
+Awesomenauts requires X11 because it talks directly to glX, can't use our
+scaling code because it uses framebuffer objects without going through
+SDL_GL_GetProcAddress() to get entry points, and does something weird with
+OpenGL contexts on multiple threads. sdl12-compat detects this and forces
+on the correct hints to make this work, but it limits how one can use the
+game.
+
+This game will work in a Wayland environment, but only as an X11 app through
+XWayland.
+
+
+## Braid (Linux)
+
+Braid requires X11 because it talks directly to glX, and can't use our
+scaling code because it uses framebuffer objects without going through
+SDL_GL_GetProcAddress() to get entry points. sdl12-compat detects this
+and forces on the correct hints to make this work, but it limits how
+one can use the game.
+
+This game will work in a Wayland environment, but only as an X11 app through
+XWayland.
+
+
+## DOSBox (Linux)
+
+DOSBox has some pretty strict requirements for keyboard input. We detect
+some common names for DOSBox binaries ("dosbox", "dosbox_i686", etc), and
+force the correct hints to make it work, but if you have an uncommon binary
+name and keyboard input isn't working as you expect, try exporting this
+environment variable:
+
+    export SDL12COMPAT_USE_KEYBOARD_LAYOUT=0
+
+
+## Multiwinia (Linux)
+
+Multiwinia calls SDL_Quit() when changing video modes but doesn't
+reinitialize SDL before using it further. We detect this binary and force
+the correct hints to make it work, but if you have an uncommon binary
+name and the game isn't working, try this environment variable:
+
+    export SDL12COMPAT_NO_QUIT_VIDEO=1
 
