@@ -74,7 +74,6 @@ if(UNIX AND NOT APPLE)
     target_link_libraries(SDL PRIVATE ${CMAKE_DL_LIBS})
 endif()
 if(APPLE)
-    set_target_properties(SDL PROPERTIES INSTALL_NAME_DIR "")
     set_target_properties(SDL PROPERTIES COMPILE_DEFINITIONS "_THREAD_SAFE")
     set_target_properties(SDL PROPERTIES LINK_FLAGS
             "-Wl,-compatibility_version,${DYLIB_COMPAT_VERSION} -Wl,-current_version,${DYLIB_CURRENT_VERSION}")
