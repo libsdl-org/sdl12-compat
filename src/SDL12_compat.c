@@ -8908,6 +8908,7 @@ OpenSDL2AudioDevice(SDL_AudioSpec *want)
 {
     void (SDLCALL *orig_callback)(void *userdata, Uint8 *stream, int len) = want->callback;
     void *orig_userdata = want->userdata;
+    AudioCallbackWrapperData *allocated_cbdata = NULL;
     int retval;
 
     /* Two things use the audio device: the app, through 1.2's SDL_OpenAudio,
@@ -8928,17 +8929,35 @@ OpenSDL2AudioDevice(SDL_AudioSpec *want)
             return SDL_TRUE;
         }
     } else {
-        audio_cbdata = (AudioCallbackWrapperData *) SDL20_calloc(1, sizeof (AudioCallbackWrapperData));
+        allocated_cbdata = audio_cbdata = (AudioCallbackWrapperData *) SDL20_calloc(1, sizeof (AudioCallbackWrapperData));
         if (!audio_cbdata) {
             SDL20_OutOfMemory();
             return SDL_FALSE;
         }
     }
 
-    FIXME("if this fails, we need to deal with app callback or cd-rom no longer working");
     want->callback = AudioCallbackWrapper;
     want->userdata = audio_cbdata;
     retval = (SDL20_OpenAudio(want, &audio_cbdata->device_format) == 0);
+    if (retval == -1) {
+        if (audio_cbdata->app_callback_opened || audio_cbdata->cdrom_opened) {
+            SDL20_Log("sdl12-compat: Uhoh, reopening the SDL2 audio device failed: %s", SDL20_GetError());
+            if (audio_cbdata->app_callback_opened) {
+                /* we aren't going to bother to fake the audio callback for this case. */
+                SDL20_Log("sdl12-compat: More audio won't play and app might crash!");
+            }
+            if (audio_cbdata->cdrom_opened) {
+                SDL20_Log("sdl12-compat: CD-ROM audio will stop now!");
+                audio_cbdata->cdrom_status = SDL12_CD_TRAYEMPTY;
+            }
+        }
+        if (allocated_cbdata) {
+            audio_cbdata = NULL;
+            SDL_free(allocated_cbdata);
+        }
+        return SDL_FALSE;
+    }
+
     want->callback = orig_callback;
     want->userdata = orig_userdata;
     want->size = want->samples * want->channels * (SDL_AUDIO_BITSIZE(want->format) / 8);
@@ -8947,9 +8966,18 @@ OpenSDL2AudioDevice(SDL_AudioSpec *want)
     want->silence = SDL_AUDIO_ISSIGNED(want->format) ? 0x00 : 0x80;
 
     /* reset audiostreams if device format changed. */
-    FIXME("deal with failure in here");
-    ResetAudioStreamForDeviceChange(&audio_cbdata->app_callback_stream, &audio_cbdata->app_callback_format);
-    ResetAudioStreamForDeviceChange(&audio_cbdata->cdrom_stream, &audio_cbdata->cdrom_format);
+    if (!ResetAudioStreamForDeviceChange(&audio_cbdata->app_callback_stream, &audio_cbdata->app_callback_format)) {
+        SDL20_Log("sdl12-compat: Uhoh, failed to prepare audio stream for audio device reopen: %s", SDL20_GetError());
+        SDL20_Log("sdl12-compat: More audio won't play and app might crash!");
+        audio_cbdata->app_callback_opened = SDL_FALSE;
+    }
+
+    if (!ResetAudioStreamForDeviceChange(&audio_cbdata->cdrom_stream, &audio_cbdata->cdrom_format)) {
+        SDL20_Log("sdl12-compat: Uhoh, failed to prepare audio stream for audio device reopen: %s", SDL20_GetError());
+        SDL20_Log("sdl12-compat: CD-ROM audio will stop now!");
+        audio_cbdata->cdrom_opened = SDL_FALSE;
+        audio_cbdata->cdrom_status = SDL12_CD_TRAYEMPTY;
+    }
 
     SDL20_LockAudio();
     SDL20_PauseAudio(0);  /* always unpause, but caller will unlock after finalizing setup. */
