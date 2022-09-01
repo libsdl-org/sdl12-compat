@@ -1235,7 +1235,8 @@ static void OS_GetExeName(char *buf, const unsigned maxpath) {
     buf[0] = '\0';
     DosQueryModuleName(pib->pib_hmte, maxpath, buf);
 }
-#else /* FIXME */
+#else
+#warning Please implement this for your platform.
 static void OS_GetExeName(char *buf, const unsigned maxpath) {
     buf[0] = '\0';
     (void)maxpath;
