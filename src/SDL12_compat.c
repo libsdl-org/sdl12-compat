@@ -8165,7 +8165,7 @@ mp3_sdlrwops_seek(void *data, int offset, drmp3_seek_origin origin)
 }
 
 
-static int OpenSDL2AudioDevice(SDL_AudioSpec *);
+static SDL_bool OpenSDL2AudioDevice(SDL_AudioSpec *want);
 static int CloseSDL2AudioDevice(void);
 static SDL_bool ResetAudioStream(SDL_AudioStream **_stream, SDL_AudioSpec *spec, const SDL_AudioSpec *to, const SDL_AudioFormat fromfmt, const Uint8 fromchannels, const int fromfreq);
 
@@ -8882,96 +8882,63 @@ ResetAudioStream(SDL_AudioStream **_stream, SDL_AudioSpec *spec, const SDL_Audio
 }
 
 static SDL_bool
-ResetAudioStreamForDeviceChange(SDL_AudioStream **_stream, SDL_AudioSpec *spec)
+OpenSDL2AudioDevice(SDL_AudioSpec *appwant)
 {
-    if (*_stream == NULL) {
-        return SDL_TRUE;  /* no stream, no need to reset it. */
-    }
-    SDL20_FreeAudioStream(*_stream);  /* force it to rebuild because destination format changed. */
-    *_stream = NULL;
-    return ResetAudioStream(_stream, spec, &audio_cbdata->device_format, spec->format, spec->channels, spec->freq);
-}
+    SDL_AudioSpec devwant;
 
-static int
-OpenSDL2AudioDevice(SDL_AudioSpec *want)
-{
-    void (SDLCALL *orig_callback)(void *userdata, Uint8 *stream, int len) = want->callback;
-    void *orig_userdata = want->userdata;
-    AudioCallbackWrapperData *allocated_cbdata = NULL;
-    int retval;
+    /* note that 0x80 isn't perfect silence for U16 formats, but we only have one byte that is used for memset() calls, so it has to do. SDL2 has the same bug. */
+    appwant->silence = SDL_AUDIO_ISSIGNED(appwant->format) ? 0x00 : 0x80;
+    appwant->size = appwant->samples * appwant->channels * (SDL_AUDIO_BITSIZE(appwant->format) / 8);
 
-    /* Two things use the audio device: the app, through 1.2's SDL_OpenAudio,
-       and the fake CD-ROM device. Either can open the device, and both write
-       to SDL_AudioStreams to buffer and convert data. We try to open the device
-       in a format that accommodates both inputs, but we might close the device
-       and reopen it if we need more channels, etc. */
     if (audio_cbdata != NULL) {  /* device is already open. */
-        SDL_AudioSpec *have = &audio_cbdata->device_format;
-        if ( (want->freq > have->freq) ||
-             (want->channels > have->channels) ||
-             (want->samples > have->samples) ||
-             (SDL_AUDIO_ISFLOAT(want->format) && !SDL_AUDIO_ISFLOAT(have->format)) ||
-             (SDL_AUDIO_BITSIZE(want->format) > SDL_AUDIO_BITSIZE(have->format)) ) {
-            SDL20_CloseAudio();
-        } else {
-            SDL20_LockAudio();  /* Device is already at acceptable parameters, just pause it for further setup by caller. */
-            return SDL_TRUE;
-        }
-    } else {
-        allocated_cbdata = audio_cbdata = (AudioCallbackWrapperData *) SDL20_calloc(1, sizeof (AudioCallbackWrapperData));
-        if (!audio_cbdata) {
-            SDL20_OutOfMemory();
-            return SDL_FALSE;
-        }
+        SDL20_LockAudio();  /* Device is already at acceptable parameters, just pause it for further setup by caller. */
+        return SDL_TRUE;
     }
 
-    want->callback = AudioCallbackWrapper;
-    want->userdata = audio_cbdata;
-    retval = (SDL20_OpenAudio(want, &audio_cbdata->device_format) == 0);
-    if (retval == -1) {
-        if (audio_cbdata->app_callback_opened || audio_cbdata->cdrom_opened) {
-            SDL20_Log("sdl12-compat: Uhoh, reopening the SDL2 audio device failed: %s", SDL20_GetError());
-            if (audio_cbdata->app_callback_opened) {
-                /* we aren't going to bother to fake the audio callback for this case. */
-                SDL20_Log("sdl12-compat: More audio won't play and app might crash!");
-            }
-            if (audio_cbdata->cdrom_opened) {
-                SDL20_Log("sdl12-compat: CD-ROM audio will stop now!");
-                audio_cbdata->cdrom_status = SDL12_CD_TRAYEMPTY;
-            }
-        }
-        if (allocated_cbdata) {
-            audio_cbdata = NULL;
-            SDL_free(allocated_cbdata);
-        }
+    audio_cbdata = (AudioCallbackWrapperData *) SDL20_calloc(1, sizeof (AudioCallbackWrapperData));
+    if (!audio_cbdata) {
+        SDL20_OutOfMemory();
         return SDL_FALSE;
     }
 
-    want->callback = orig_callback;
-    want->userdata = orig_userdata;
-    want->size = want->samples * want->channels * (SDL_AUDIO_BITSIZE(want->format) / 8);
+    /* Two things use the audio device: the app, through 1.2's SDL_OpenAudio,
+       and the fake CD-ROM device. Either can open the device, and both write
+       to SDL_AudioStreams to buffer and convert data. We open the device
+       in a format that accommodates both inputs.
 
-    /* note that 0x80 isn't perfect silence for U16 formats, but we only have one byte that is used for memset() calls, so it has to do. SDL2 has the same bug. */
-    want->silence = SDL_AUDIO_ISSIGNED(want->format) ? 0x00 : 0x80;
+       In case the app asks for something really low-quality--an old game
+       playing 8-bit mono audio at 8000Hz or whatever--we force the audio
+       hardware to something better, in case the app _also_ wants to play
+       CD audio, so we can get good quality out of that without reopening
+       the device. We have to be able to buffer and convert between the
+       app's needs and SDL2's anyhow, so this isn't a big deal. If they
+       ask for better than CD quality, we'll allow it and upsample any
+       CD audio that is played.
 
-    /* reset audiostreams if device format changed. */
-    if (!ResetAudioStreamForDeviceChange(&audio_cbdata->app_callback_stream, &audio_cbdata->app_callback_format)) {
-        SDL20_Log("sdl12-compat: Uhoh, failed to prepare audio stream for audio device reopen: %s", SDL20_GetError());
-        SDL20_Log("sdl12-compat: More audio won't play and app might crash!");
-        audio_cbdata->app_callback_opened = SDL_FALSE;
+       If the CD-ROM is opened first, and the app wants better-than-CD
+       quality later, there's not much we can do, it'll have to
+       downsample, but I suspect this is rare, and the audio will
+       still be good enough. */
+
+    SDL20_memcpy(&devwant, appwant, sizeof (SDL_AudioSpec));
+    devwant.callback = AudioCallbackWrapper;
+    devwant.userdata = audio_cbdata;
+    devwant.freq = SDL_max(devwant.freq, 44100);
+    devwant.channels = SDL_max(devwant.channels, 2);
+    if (SDL_AUDIO_BITSIZE(devwant.format) < 16) {
+        devwant.format = AUDIO_S16SYS;
     }
 
-    if (!ResetAudioStreamForDeviceChange(&audio_cbdata->cdrom_stream, &audio_cbdata->cdrom_format)) {
-        SDL20_Log("sdl12-compat: Uhoh, failed to prepare audio stream for audio device reopen: %s", SDL20_GetError());
-        SDL20_Log("sdl12-compat: CD-ROM audio will stop now!");
-        audio_cbdata->cdrom_opened = SDL_FALSE;
-        audio_cbdata->cdrom_status = SDL12_CD_TRAYEMPTY;
+    if (SDL20_OpenAudio(&devwant, &audio_cbdata->device_format) == -1) {
+        SDL_free(audio_cbdata);
+        audio_cbdata = NULL;
+        return SDL_FALSE;
     }
 
     SDL20_LockAudio();
     SDL20_PauseAudio(0);  /* always unpause, but caller will unlock after finalizing setup. */
 
-    return retval;
+    return SDL_TRUE;
 }
 
 static int
