@@ -82,6 +82,9 @@ If testing a Steam game, you'll want to launch the game outside of the Steam
 Client, so that Steam doesn't overwrite files you replaced and so you can
 easily control environment variables.
 
+Since you'll be using the Steam Runtime, you don't have to find your own copy
+of SDL2, as Steam provides it.
+
 On Linux, Steam stores games in ~/.local/share/Steam/steamapps/common, each
 in its own usually-well-named subdirectory.
 
