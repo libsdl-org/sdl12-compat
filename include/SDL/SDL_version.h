@@ -49,7 +49,7 @@ typedef struct SDL_version
 }
 
 #define SDL_VERSIONNUM(X, Y, Z) ((X)*1000 + (Y)*100 + (Z))
-#define SDL_COMPILEDVERSION SDL_VERSIONNUM(1, 2, 50)
+#define SDL_COMPILEDVERSION SDL_VERSIONNUM(1, 2, 54)
 #define SDL_VERSION_ATLEAST(X, Y, Z) (SDL_COMPILEDVERSION >= SDL_VERSIONNUM(X, Y, Z))
 
 extern DECLSPEC const SDL_version * SDLCALL SDL_Linked_Version(void);
