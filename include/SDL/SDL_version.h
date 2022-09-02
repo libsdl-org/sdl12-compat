@@ -45,7 +45,7 @@ typedef struct SDL_version
 #define SDL_VERSION(X) { \
     (X)->major = 1; \
     (X)->minor = 2; \
-    (X)->patch = 50; \
+    (X)->patch = 54; \
 }
 
 #define SDL_VERSIONNUM(X, Y, Z) ((X)*1000 + (Y)*100 + (Z))
