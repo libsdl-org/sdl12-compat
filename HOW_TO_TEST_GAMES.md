@@ -116,7 +116,7 @@ system/Steam Runtime build:
 export LD_LIBRARY_PATH=/where/i/installed/sdl12-compat
 ```
 
-Putting this all together, you might run [BIT.TRIP Runner2](https://store.steampowered.com/app/218060/)\
+Putting this all together, you might run [BIT.TRIP Runner2](https://store.steampowered.com/app/218060/)
 like this:
 
 ```bash
