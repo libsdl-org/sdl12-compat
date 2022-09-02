@@ -240,8 +240,8 @@ SDL20_SYM(SDL_GameController *,GameControllerOpen,(int a),(a),return)
 SDL20_SYM(void,GameControllerClose,(SDL_GameController *a),(a),)
 SDL20_SYM(int,GameControllerEventState,(int a),(a),return)
 SDL20_SYM(void,GameControllerUpdate,(void),(),)
-SDL20_SYM(Sint16,GameControllerGetAxis,(SDL_GameController *a, SDL_GameControllerAxis b),(a,b),return)
-SDL20_SYM(Uint8,GameControllerGetButton,(SDL_GameController *a, SDL_GameControllerButton b),(a,b),return)
+SDL20_SYM(Sint16,GameControllerGetAxis,(SDL_GameController *a, int b),(a,b),return)  /* SDL_GameControllerAxis b   */
+SDL20_SYM(Uint8,GameControllerGetButton,(SDL_GameController *a, int b),(a,b),return) /* SDL_GameControllerButton b */
 
 SDL20_SYM(int,NumJoysticks,(void),(),return)
 SDL20_SYM(const char *,JoystickNameForIndex,(int a),(a),return)

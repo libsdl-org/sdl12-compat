@@ -1638,10 +1638,10 @@ Init12Joystick(void)
 
             if (JoysticksAreGameControllers) {
                 JoystickList[NumJoysticks].dev.controller = SDL20_GameControllerOpen(i);
-                opened = JoystickList[NumJoysticks].dev.controller != NULL;
+                opened = JoystickList[NumJoysticks].dev.controller != NULL ? SDL_TRUE : SDL_FALSE;
             } else {
                 JoystickList[NumJoysticks].dev.joystick = SDL20_JoystickOpen(i);
-                opened = JoystickList[NumJoysticks].dev.joystick != NULL;
+                opened = JoystickList[NumJoysticks].dev.joystick != NULL ? SDL_TRUE : SDL_FALSE;
             }
 
             if (!opened) {
@@ -8331,7 +8331,7 @@ SDL_CDOpen(int drive)
        readdir() is surprisingly hard to do without a bunch of different
        platform backends! We just open files until we fail to do so,
        and then stop. */
-    while (SDL_TRUE) {
+    for (;;) {
         SDL_RWops *rw;
         drmp3_uint64 pcmframes;
         drmp3_uint32 samplerate;
@@ -8398,6 +8398,7 @@ SDL_CDOpen(int drive)
             break;  /* max tracks you can have on an audio CD. */
         }
     }
+
     if (!has_audio) {
         retval->numtracks = 0; /* data-only */
     }
@@ -8983,8 +8984,7 @@ SDL_OpenAudio(SDL_AudioSpec *want, SDL_AudioSpec *obtained)
     if (!want->format) {
         const char *env = SDL20_getenv("SDL_AUDIO_FORMAT");  /* SDL 1.2 checks this. */
         if (env != NULL) {
-            if (0) {}
-            else if (SDL20_strcmp(env, "U8") == 0) { want->format = AUDIO_U8; }
+            if      (SDL20_strcmp(env, "U8") == 0) { want->format = AUDIO_U8; }
             else if (SDL20_strcmp(env, "S8") == 0) { want->format = AUDIO_S8; }
             else if (SDL20_strcmp(env, "U16") == 0) { want->format = AUDIO_U16SYS; }
             else if (SDL20_strcmp(env, "S16") == 0) { want->format = AUDIO_S16SYS; }
