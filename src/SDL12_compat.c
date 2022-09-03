@@ -988,7 +988,7 @@ static Uint8 EventStates[SDL12_NUMEVENTS];
 static int SwapInterval = 0;
 static SDL_bool JoysticksAreGameControllers = SDL_FALSE;
 static SDL12_Joystick *JoystickList = NULL;
-static Uint32 NumJoysticks = 0;
+static int NumJoysticks = 0;
 static Uint8 KeyState[SDLK12_LAST];
 static SDL_bool MouseInputIsRelative = SDL_FALSE;
 static SDL_Point MousePosition = { 0, 0 };
@@ -1092,7 +1092,7 @@ static char loaderror[256];
         };
 
         int i;
-        for (i = 0; i < SDL_arraysize(dylib_locations); i++) {
+        for (i = 0; i < (int) SDL_arraysize(dylib_locations); i++) {
             const char *location = dylib_locations[i];
             if (location) {
                 Loaded_SDL20 = dlopen(location, RTLD_LOCAL|RTLD_NOW);
@@ -1108,7 +1108,7 @@ static char loaderror[256];
                 if (homedir) {
                     char framework[512];
                     const int rc = snprintf(framework, sizeof (framework), "%s/Library/Frameworks/" SDL20_FRAMEWORK, homedir);
-                    if ((rc > 0) && (rc < sizeof (framework))) {
+                    if ((rc > 0) && (rc < (int) sizeof(framework))) {
                         Loaded_SDL20 = dlopen(framework, RTLD_LOCAL|RTLD_NOW);
                     }
                 }
@@ -1286,7 +1286,7 @@ SDL12Compat_ApplyQuirks(void)
     if (*exe_name == '\0') {
         return;
     }
-    for (i = 0; i < SDL_arraysize(quirks); i++) {
+    for (i = 0; i < (int) SDL_arraysize(quirks); i++) {
         if (!SDL20_strcmp(exe_name, quirks[i].exe_name)) {
             if (!SDL20_getenv(quirks[i].hint_name)) {
                 if (debug_logging) {
@@ -2080,7 +2080,7 @@ Init12VidModes(void)
 
         /* Attempt to add all of the fake modes. */
         if (use_fake_modes) {
-            for (j = 0; j < SDL_arraysize(fake_modes); ++j) {
+            for (j = 0; j < (int) SDL_arraysize(fake_modes); ++j) {
                 if (VidModeSizeGreater(&prev_mode, &fake_modes[j]) && VidModeSizeGreater(&fake_modes[j], &current_mode)) {
                     if (AddVidModeToList(vmode, &fake_modes[j])) {
                         return SDL20_OutOfMemory();
@@ -2099,7 +2099,7 @@ Init12VidModes(void)
 
     /* we need to try to add fake modes to the end of the list once there are no more real modes */
     if (use_fake_modes) {
-        for (i = 0; i < SDL_arraysize(fake_modes); ++i) {
+        for (i = 0; i < (int) SDL_arraysize(fake_modes); ++i) {
             if (VidModeSizeGreater(&prev_mode, &fake_modes[i])) {
                 if (AddVidModeToList(vmode, &fake_modes[i])) {
                     return SDL20_OutOfMemory();
@@ -2156,7 +2156,7 @@ HasWmAvailable(const char *driver)
     };
     int i;
 
-    for (i = 0; i < SDL_arraysize(gui_targets); i++) {
+    for (i = 0; i < (int) SDL_arraysize(gui_targets); i++) {
         if (SDL20_strcasecmp(driver, gui_targets[i]) == 0) {
             return 1;
         }
