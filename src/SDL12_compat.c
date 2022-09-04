@@ -87,7 +87,7 @@ extern "C" {
 #if defined(__linux__) && defined(__i386__) && (defined(__GNUC__) || defined(__clang__))
 #define FORCEALIGNATTR __attribute__((force_align_arg_pointer))
 #else
-#define FORCEALIGNATTR __attribute__((force_align_arg_pointer))
+#define FORCEALIGNATTR
 #endif
 
 #define DECLSPEC12 DECLSPEC FORCEALIGNATTR
