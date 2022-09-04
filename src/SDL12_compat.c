@@ -83,8 +83,15 @@ extern "C" {
 /* on x86 Linux builds, we have the public entry points force stack alignment to 16 bytes
    on entry. This won't be a massive performance hit, but it might help extremely old
    binaries that want to call into SDL to not crash in hard-to-diagnose ways. It's not a
-   panacea to the stack alignment problem, but it might help a little. */
-#if defined(__linux__) && defined(__i386__) && (defined(__GNUC__) || defined(__clang__))
+   panacea to the stack alignment problem, but it might help a little.
+
+   The force_align_arg_pointer attribute requires gcc >= 4.2.x. */
+#if defined(__clang__)
+#define HAVE_FORCE_ALIGN_ARG_POINTER
+#elif defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 2))
+#define HAVE_FORCE_ALIGN_ARG_POINTER
+#endif
+#if defined(__linux__) && defined(__i386__) && defined(HAVE_FORCE_ALIGN_ARG_POINTER)
 #define FORCEALIGNATTR __attribute__((force_align_arg_pointer))
 #else
 #define FORCEALIGNATTR
