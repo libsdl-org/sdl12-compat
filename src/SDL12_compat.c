@@ -2309,12 +2309,6 @@ SDL_InitSubSystem(Uint32 sdl12flags)
     sdl12_compat_macos_init();
 #endif
 
-    /* Some applications need to force a specific videodriver. */
-    forcevideodrv = SDL12Compat_GetHint("SDL_VIDEODRIVER");
-    if (forcevideodrv) {
-        SDL20_setenv("SDL_VIDEODRIVER", forcevideodrv, 1);
-    }
-
     /* note that currently we ignore SDL12_INIT_NOPARACHUTE, since
        there _isn't_ a parachute in SDL2, and mostly it was meant to deal
        with X11's XVidMode leaving the display resolution busted if the app
