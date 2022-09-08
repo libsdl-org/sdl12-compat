@@ -153,24 +153,24 @@ plans to tweak these values on the fly!)
 
 The available options are:
 
-- SDL12COMPAT_DEBUG_LOGGING:
+- SDL12COMPAT_DEBUG_LOGGING: (checked at startup)
   If enabled, print debugging messages to stderr.  These messages are
   mostly useful to developers, or when trying to track down a specific
   bug.
 
-- SDL12COMPAT_FAKE_CDROM_PATH:
+- SDL12COMPAT_FAKE_CDROM_PATH: (checked during SDL_Init)
   A path to a directory containing MP3 files (named trackXX.mp3, where
   XX is a two-digit track number) to be used by applications which play
   CD audio.  Using an absolute path is recommended: relative paths are
   not guaranteed to work correctly.
 
-- SDL12COMPAT_OPENGL_SCALING:
+- SDL12COMPAT_OPENGL_SCALING: (checked during SDL_Init)
   Enables scaling of OpenGL applications to the current desktop resolution.
   If disabled, applications can change the real screen resolution.  This
   option is enabled by default, but not all applications are compatible
   with it: try changing this if you can only see a black screen.
 
-- SDL12COMPAT_FIX_BORDERLESS_FS_WIN:
+- SDL12COMPAT_FIX_BORDERLESS_FS_WIN: (checked during SDL_SetVideoMode)
   Enables turning borderless windows at the desktop resolution into actual
   fullscreen windows (so they'll go into a separate space on macOS and
   properly hide dock windows on other desktop environments, etc).
@@ -179,23 +179,23 @@ The available options are:
   so it can be manually disabled, in case this causes some negative result
   we haven't anticipated.
 
-- SDL12COMPAT_SCALE_METHOD:
+- SDL12COMPAT_SCALE_METHOD: (checked during SDL_Init)
   Choose the scaling method used when applications render at a non-native
   resolution.  The options are `nearest`, for nearest-neighbour sampling
   (more pixelated) and `linear` for bilinear sampling (blurrier).
 
-- SDL12COMPAT_HIGHDPI:
+- SDL12COMPAT_HIGHDPI: (checked during SDL_SetVideoMode)
   Advertise the application as supporting high-DPI displays.  Enabling
   this will usually result in sharper graphics, but on some applications
   text and other elements may become very small.
 
-- SDL12COMPAT_SYNC_TO_VBLANK:
+- SDL12COMPAT_SYNC_TO_VBLANK: (checked during SDL_SetVideoMode)
   Force the application to sync (or not sync) to the vertical blanking
   interval (VSync).  When enabled, this will cap the application's
   framerate to the screen's refresh rate (and may resolve issues with
   screen tearing).
 
-- SDL12COMPAT_USE_KEYBOARD_LAYOUT:
+- SDL12COMPAT_USE_KEYBOARD_LAYOUT: (checked during SDL_Init)
   Make all keyboard input take the current keyboard layout into account.
   This may need to be disabled for applications which provide their own
   keyboard layout support, or if the position of the keys on the keyboard
@@ -203,7 +203,7 @@ The available options are:
   (in most applications) will take the keyboard layout into account
   regardless of this option.
 
-- SDL12COMPAT_USE_GAME_CONTROLLERS:
+- SDL12COMPAT_USE_GAME_CONTROLLERS: (checked during SDL_Init)
   Use SDL2's higher-level Game Controller API to expose joysticks instead of
   its lower-level joystick API. The benefit of this is that you can exert
   more control over arbitrary hardware (deadzones, button mapping, device
@@ -215,7 +215,7 @@ The available options are:
   use this hint. If there is no known game controller mapping for a joystick,
   and this hint is in use, it will not be listed as an availble device.
 
-- SDL12COMPAT_WINDOW_SCALING:
+- SDL12COMPAT_WINDOW_SCALING: (checked during SDL_SetVideoMode)
   When creating non-fullscreen, non-resizable windows, use this variable to
   size the window differently. If, for example, you have a 4K monitor and the
   game is running in a window the size of a postage stamp, you might set this
@@ -228,7 +228,7 @@ The available options are:
   will create the window at the originally-requested size. If this variable
   isn't specified, it defaults to 1.0 (no scaling).
 
-- SDL_MOUSE_RELATIVE_SCALING:
+- SDL_MOUSE_RELATIVE_SCALING: (checked during SDL_SetVideoMode)
   If enabled, relative mouse motion is scaled when the application is
   running at a non-native resolution.  This may be required with some
   applications which use their own mouse cursors. See also:
