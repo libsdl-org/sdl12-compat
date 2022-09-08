@@ -109,7 +109,7 @@ real SDL-1.2 available to you. */
         typedef struct SDL_SysWMinfo
         {
             SDL_version version;
-            int data;
+            void *data;
         } SDL_SysWMinfo;
 
 #       include "close_code.h"
