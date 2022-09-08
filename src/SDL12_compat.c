@@ -7020,26 +7020,34 @@ SDL_GetWMInfo(SDL12_SysWMinfo *info12)
         return 0;  /* some programs only test against 0, not -1 */
     }
 
-#if defined(SDL_VIDEO_DRIVER_WINDOWS)
-    SDL_assert(info20.subsystem == SDL_SYSWM_WINDOWS);
-    info12->window = temp_window ? 0 : info20.info.win.window;
-    if (SDL_VERSIONNUM(info12->version.major, info12->version.minor, info12->version.patch) >= SDL_VERSIONNUM(1, 2, 5)) {
-        info12->hglrc = (HGLRC) VideoGLContext20;
+#if defined(_WIN32)
+    if (info20.subsystem == SDL_SYSWM_WINDOWS) {
+        info12->window = temp_window ? 0 : info20.info.win.window;
+        if (SDL_VERSIONNUM(info12->version.major, info12->version.minor, info12->version.patch) >= SDL_VERSIONNUM(1, 2, 5)) {
+            info12->hglrc = (HGLRC) VideoGLContext20;
+        }
+    } else {
+        SDL20_SetError("No SysWM information available");
+        return 0;  /* some programs only test against 0, not -1 */
     }
 #elif defined(SDL_VIDEO_DRIVER_X11)
-    SDL_assert(info20.subsystem == SDL_SYSWM_X11);
-    info12->subsystem = SDL12_SYSWM_X11;
-    info12->info.x11.display = info20.info.x11.display;
-    info12->info.x11.window = temp_window ? 0 : info20.info.x11.window;
-    if (SDL_VERSIONNUM(info12->version.major, info12->version.minor, info12->version.patch) >= SDL_VERSIONNUM(1, 0, 2)) {
-        info12->info.x11.fswindow = 0;  /* these don't exist in SDL2. */
-        info12->info.x11.wmwindow = 0;
+    if (info20.subsystem == SDL_SYSWM_X11) {
+        info12->subsystem = SDL12_SYSWM_X11;
+        info12->info.x11.display = info20.info.x11.display;
+        info12->info.x11.window = temp_window ? 0 : info20.info.x11.window;
+        if (SDL_VERSIONNUM(info12->version.major, info12->version.minor, info12->version.patch) >= SDL_VERSIONNUM(1, 0, 2)) {
+            info12->info.x11.fswindow = 0;  /* these don't exist in SDL2. */
+            info12->info.x11.wmwindow = 0;
+        }
+        if (SDL_VERSIONNUM(info12->version.major, info12->version.minor, info12->version.patch) >= SDL_VERSIONNUM(1, 2, 12)) {
+            info12->info.x11.gfxdisplay = info20.info.x11.display;  /* shrug */
+        }
+        info12->info.x11.lock_func = x11_lock_display;  /* just no-ops for now */
+        info12->info.x11.unlock_func = x11_unlock_display;
+    } else {
+        SDL20_SetError("No SysWM information available");
+        return 0;  /* some programs only test against 0, not -1 */
     }
-    if (SDL_VERSIONNUM(info12->version.major, info12->version.minor, info12->version.patch) >= SDL_VERSIONNUM(1, 2, 12)) {
-        info12->info.x11.gfxdisplay = info20.info.x11.display;  /* shrug */
-    }
-    info12->info.x11.lock_func = x11_lock_display;  /* just no-ops for now */
-    info12->info.x11.unlock_func = x11_unlock_display;
 #else
     info12->data = 0;  /* shrug */
 #endif
