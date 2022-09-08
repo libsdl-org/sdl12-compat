@@ -105,7 +105,6 @@ int main(int argc, char **argv)
         printf("data6: %p\n", syswm_info.data6);
         printf("data7: %p\n", syswm_info.data7);
         printf("data8: %p\n", syswm_info.data8);
-        printf("sdl2_window: %p\n", syswm_info.sdl2_window);
     }
 
     SDL_Quit();
