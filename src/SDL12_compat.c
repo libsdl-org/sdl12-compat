@@ -6981,16 +6981,6 @@ SDL_GetWMInfo(SDL12_SysWMinfo *info12)
     int rc;
 
     if (info12->version.major > 1) {
-        if (info12->version.major == 2) {
-#if defined(SDL_VIDEO_DRIVER_WINDOWS)
-            info12->window = (HWND)VideoWindow20;
-#elif defined(SDL_VIDEO_DRIVER_X11)
-            info12->info.x11.gfxdisplay = (Display *)VideoWindow20;
-#else
-            info12->data = (void *)VideoWindow20;
-#endif
-            return 1;
-        }
         SDL20_SetError("Requested version is unsupported");
         return 0;  /* some programs only test against 0, not -1 */
     } else if (!SupportSysWM) {
