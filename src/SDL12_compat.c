@@ -7019,7 +7019,18 @@ SDL_GetWMInfo(SDL12_SysWMinfo *info12)
     }
 
     SDL_zero(info20);
-    SDL_VERSION(&info20.version);
+
+    /* SDL2, before the version scheme change, would fail if the requested version wasn't
+       2.0.x, so if the SDL2 is from before this was fixed, we need to lie about the
+       version, and assume it will work out. */
+    if (LinkedSDL2VersionInt >= SDL_VERSIONNUM(2,24,0)) {
+        SDL_VERSION(&info20.version);
+    } else {
+        info20.version.major = 2;
+        info20.version.minor = 0;
+        info20.version.patch = 22;
+    }
+
     rc = SDL20_GetWindowWMInfo(win20, &info20);
 
     if (temp_window) {
