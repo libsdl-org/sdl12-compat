@@ -634,7 +634,6 @@ typedef struct SDL12_SysWMinfo
 #else
     int data;  /* unused at the moment. */
 #endif
-    SDL_Window *sdl2_window;
 } SDL12_SysWMinfo;
 
 typedef enum
@@ -6983,7 +6982,13 @@ SDL_GetWMInfo(SDL12_SysWMinfo *info12)
 
     if (info12->version.major > 1) {
         if (info12->version.major == 2) {
-            info12->sdl2_window = VideoWindow20;
+#if defined(SDL_VIDEO_DRIVER_WINDOWS)
+            info12->window = (HWND)VideoWindow20;
+#elif defined(SDL_VIDEO_DRIVER_X11)
+            info12->info.x11.gfxdisplay = (Display *)VideoWindow20;
+#else
+            info12->data = (void *)VideoWindow20;
+#endif
             return 1;
         }
         SDL20_SetError("Requested version is unsupported");

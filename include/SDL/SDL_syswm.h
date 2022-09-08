@@ -32,8 +32,6 @@ real SDL-1.2 available to you. */
 
 #ifndef SDL_PROTOTYPES_ONLY
 
-typedef struct SDL_Window SDL_Window;
-
 #   if defined(__WIN32__)
 #       ifndef WIN32_LEAN_AND_MEAN
 #           define WIN32_LEAN_AND_MEAN
@@ -55,7 +53,6 @@ typedef struct SDL_Window SDL_Window;
             SDL_version version;
             HWND window;
             HGLRC hglrc;
-            SDL_Window *sdl2_window;
         } SDL_SysWMinfo;
 
 #       include "close_code.h"
@@ -95,7 +92,6 @@ typedef struct SDL_Window SDL_Window;
                     Display *gfxdisplay;
                 } x11;
             } info;
-            SDL_Window *sdl2_window;
         } SDL_SysWMinfo;
 
 #       include "close_code.h"
@@ -113,8 +109,7 @@ typedef struct SDL_Window SDL_Window;
         typedef struct SDL_SysWMinfo
         {
             SDL_version version;
-            int data;
-            SDL_Window *sdl2_window;
+            void *data;
         } SDL_SysWMinfo;
 
 #       include "close_code.h"
