@@ -636,23 +636,6 @@ typedef struct SDL12_SysWMinfo
 #endif
 } SDL12_SysWMinfo;
 
-/* SPECIAL CASE FOR SDL12-COMPAT: if version.major == 2, we'll fill in this struct with the native window handle. */
-/* This is not part of the real 1.2 API! */
-typedef struct SDL12_SysWMinfo2on12
-{
-    SDL_version version;
-    Uint32 subsystem;
-    void *data1;
-    void *data2;
-    void *data3;
-    void *data4;
-    void *data5;
-    void *data6;
-    void *data7;
-    void *data8;
-} SDL12_SysWMinfo2on12;
-
-
 typedef enum
 {
     SDL12_NOEVENT = 0,
@@ -6995,10 +6978,9 @@ SDL_GetWMInfo(SDL12_SysWMinfo *info12)
     SDL_SysWMinfo info20;
     SDL_bool temp_window = SDL_FALSE;
     SDL_Window *win20 = VideoWindow20;
-    const int do_2on12 = ((info12->version.major == 2) && (info12->version.minor == 0) && (info12->version.major == 2) && (info12->version.patch == 0));
     int rc;
 
-    if ((info12->version.major > 1) && !do_2on12) {
+    if (info12->version.major > 1) {
         SDL20_SetError("Requested version is unsupported");
         return 0;  /* some programs only test against 0, not -1 */
     } else if (!SupportSysWM) {
@@ -7036,114 +7018,6 @@ SDL_GetWMInfo(SDL12_SysWMinfo *info12)
 
     if (!rc) {
         return 0;  /* some programs only test against 0, not -1 */
-    }
-
-    /* SPECIAL CASE FOR SDL12-COMPAT: if version.major == 2, we'll fill in this struct with the native window handle. */
-    if (do_2on12) {
-        SDL12_SysWMinfo2on12 *wminfo2 = (SDL12_SysWMinfo2on12 *) info12;
-        SDL_zerop(wminfo2);
-        SDL20_memcpy(&wminfo2->version, &info20.version, sizeof (wminfo2->version));
-        wminfo2->subsystem = (Uint32) info20.subsystem;  /* these do not map to SDL 1.2 values! You're on your own! */
-
-        switch (info20.subsystem) {
-            #if defined(SDL_VIDEO_DRIVER_WINDOWS)
-            case SDL_SYSWM_WINDOWS:
-                wminfo2->data1 = (void *) info20.info.win.window;
-                wminfo2->data2 = (void *) info20.info.win.hdc;
-                wminfo2->data3 = (void *) info20.info.win.hinstance;
-                break;
-            #endif
-
-            #if defined(SDL_VIDEO_DRIVER_WINRT)
-            case SDL_SYSWM_WINRT:
-                wminfo2->data1 = (void *) info20.info.winrt.window;
-                break;
-            #endif
-
-            #if defined(SDL_VIDEO_DRIVER_X11)
-            case SDL_SYSWM_X11:
-                wminfo2->data1 = (void *) info20.info.x11.display;
-                wminfo2->data2 = (void *) info20.info.x11.window;
-                break;
-            #endif
-
-            #if defined(SDL_VIDEO_DRIVER_DIRECTFB)
-            case SDL_SYSWM_DIRECTFB:
-                wminfo2->data1 = (void *) info20.info.dfb.dfb;
-                wminfo2->data2 = (void *) info20.info.dfb.window;
-                wminfo2->data3 = (void *) info20.info.dfb.surface;
-                break;
-            #endif
-
-            #if defined(SDL_VIDEO_DRIVER_COCOA)
-            case SDL_SYSWM_COCOA:
-                wminfo2->data1 = (void *) info20.info.cocoa.window;
-                break;
-            #endif
-
-            #if defined(SDL_VIDEO_DRIVER_UIKIT)
-            case SDL_SYSWM_UIKIT:
-                wminfo2->data1 = (void *) info20.info.uikit.window;
-                wminfo2->data2 = (void *) info20.info.uikit.framebuffer;
-                wminfo2->data3 = (void *) info20.info.uikit.colorbuffer;
-                wminfo2->data4 = (void *) info20.info.uikit.resolveFramebuffer;
-                break;
-            #endif
-
-            #if defined(SDL_VIDEO_DRIVER_WAYLAND)
-            case SDL_SYSWM_WAYLAND:
-                wminfo2->data1 = (void *) info20.info.wl.display;
-                wminfo2->data2 = (void *) info20.info.wl.surface;
-                wminfo2->data3 = (void *) info20.info.wl.shell_surface;
-                wminfo2->data4 = (void *) info20.info.wl.egl_window;
-                wminfo2->data5 = (void *) info20.info.wl.xdg_surface;
-                wminfo2->data6 = (void *) info20.info.wl.xdg_toplevel;
-                wminfo2->data7 = (void *) info20.info.wl.xdg_popup;
-                wminfo2->data8 = (void *) info20.info.wl.xdg_positioner;
-                break;
-            #endif
-
-            #if defined(SDL_VIDEO_DRIVER_MIR)  /* no longer available, left for API/ABI compatibility. Remove in 2.1! */
-            case SDL_SYSWM_MIR:
-                wminfo2->data1 = (void *) info20.info.mir.connection;
-                wminfo2->data2 = (void *) info20.info.mir.surface;
-                break;
-            #endif
-
-            #if defined(SDL_VIDEO_DRIVER_ANDROID)
-            case SDL_SYSWM_ANDROID:
-                wminfo2->data1 = (void *) info20.info.android.window;
-                wminfo2->data2 = (void *) info20.info.android.surface;
-                break;
-            #endif
-
-            #if defined(SDL_VIDEO_DRIVER_OS2)
-            case SDL_SYSWM_OS2:
-                wminfo2->data1 = (void *) info20.info.os2.hwnd;
-                wminfo2->data2 = (void *) info20.info.os2.hwndFrame;
-                break;
-            #endif
-
-            #if defined(SDL_VIDEO_DRIVER_VIVANTE)
-            case SDL_SYSWM_VIVANTE:
-                wminfo2->data1 = (void *) info20.info.vivante.display;
-                wminfo2->data2 = (void *) info20.info.vivante.window;
-                break;
-            #endif
-
-            #if defined(SDL_VIDEO_DRIVER_KMSDRM)
-            case SDL_SYSWM_KMSDRM:
-                wminfo2->data1 = (void *) (size_t) info20.info.kmsdrm.dev_index;
-                wminfo2->data2 = (void *) (size_t) info20.info.kmsdrm.drm_fd;
-                wminfo2->data3 = (void *) (size_t) info20.info.kmsdrm.gbm_dev;
-                break;
-            #endif
-
-            default:
-                return 0;
-        }
-
-        return 1;
     }
 
 #if defined(SDL_VIDEO_DRIVER_WINDOWS)
