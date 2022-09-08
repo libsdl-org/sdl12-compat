@@ -1351,8 +1351,8 @@ LoadSDL20(void)
                         #else
                         SDL20_Log("sdl12-compat, talking to SDL2 %d.%d.%d", v.major, v.minor, v.patch);
                         #endif
-                        SDL12Compat_ApplyQuirks();  /* Apply and maybe print a list of any enabled quirks. */
                     }
+                    SDL12Compat_ApplyQuirks();  /* Apply and maybe print a list of any enabled quirks. */
                 }
             }
             if (!okay) {
