@@ -1019,6 +1019,9 @@ static SDL_bool UseMouseRelativeScaling = SDL_FALSE;
 static OpenGLEntryPoints OpenGLFuncs;
 static int OpenGLBlitLockCount = 0;
 static GLuint OpenGLBlitTexture = 0;
+static SDL_bool WantDebugLogging = SDL_FALSE;
+static SDL_bool WantScaleMethodNearest = SDL_FALSE;
+static SDL_bool WantOpenGLScaling = SDL_FALSE;
 static int OpenGLLogicalScalingWidth = 0;
 static int OpenGLLogicalScalingHeight = 0;
 static GLuint OpenGLLogicalScalingFBO = 0;
@@ -1299,7 +1302,6 @@ SDL12Compat_GetHintFloat(const char *name, float default_value)
 static void
 SDL12Compat_ApplyQuirks(void)
 {
-    const SDL_bool debug_logging = SDL12Compat_GetHintBoolean("SDL12COMPAT_DEBUG_LOGGING", SDL_FALSE);
     const char *exe_name = SDL12Compat_GetExeName();
     int i;
 
@@ -1309,12 +1311,12 @@ SDL12Compat_ApplyQuirks(void)
     for (i = 0; i < (int) SDL_arraysize(quirks); i++) {
         if (!SDL20_strcmp(exe_name, quirks[i].exe_name)) {
             if (!SDL20_getenv(quirks[i].hint_name)) {
-                if (debug_logging) {
+                if (WantDebugLogging) {
                     SDL20_Log("Applying compatibility quirk %s=\"%s\" for \"%s\"", quirks[i].hint_name, quirks[i].hint_value, exe_name);
                 }
                 SDL20_setenv(quirks[i].hint_name, quirks[i].hint_value, 1);
             } else {
-                if (debug_logging) {
+                if (WantDebugLogging) {
                     SDL20_Log("Not applying compatibility quirk %s=\"%s\" for \"%s\" due to environment variable override (\"%s\")\n",
                             quirks[i].hint_name, quirks[i].hint_value, exe_name, SDL20_getenv(quirks[i].hint_name));
                 }
@@ -1342,8 +1344,8 @@ LoadSDL20(void)
                 if (!okay) {
                     sprintf_fn(loaderror, "SDL2 %d.%d.%d library is too old.", v.major, v.minor, v.patch);
                 } else {
-                    const SDL_bool debug_logging = SDL12Compat_GetHintBoolean("SDL12COMPAT_DEBUG_LOGGING", SDL_FALSE);
-                    if (debug_logging) {
+                    WantDebugLogging = SDL12Compat_GetHintBoolean("SDL12COMPAT_DEBUG_LOGGING", SDL_FALSE);
+                    if (WantDebugLogging) {
                         #if defined(__DATE__) && defined(__TIME__)
                         SDL20_Log("sdl12-compat, built on " __DATE__ " at " __TIME__ ", talking to SDL2 %d.%d.%d", v.major, v.minor, v.patch);
                         #else
@@ -2049,7 +2051,9 @@ Init12VidModes(void)
     int i, j;
     SDL12_Rect prev_mode = { 0, 0, 0, 0 }, current_mode = { 0, 0, 0, 0 };
     /* We only want to enable fake modes if OpenGL Logical Scaling is enabled. */
-    SDL_bool use_fake_modes = SDL12Compat_GetHintBoolean("SDL12COMPAT_OPENGL_SCALING", SDL_TRUE);
+    const SDL_bool use_fake_modes = SDL12Compat_GetHintBoolean("SDL12COMPAT_OPENGL_SCALING", SDL_TRUE);
+
+    WantOpenGLScaling = use_fake_modes;
 
     if (VideoModesCount > 0) {
         return 0;  /* already did this. */
@@ -2191,8 +2195,11 @@ static int
 Init12Video(void)
 {
     const char *driver = SDL20_GetCurrentVideoDriver();
+    const char *scale_method_env = SDL12Compat_GetHint("SDL12COMPAT_SCALE_METHOD");
     SDL_DisplayMode mode;
     int i;
+
+    WantScaleMethodNearest = (scale_method_env && !SDL20_strcmp(scale_method_env, "nearest")) ? SDL_TRUE : SDL_FALSE;
 
     /* Only override this if the env var is set, as the default is platform-specific. */
     TranslateKeyboardLayout = SDL12Compat_GetHintBoolean("SDL12COMPAT_USE_KEYBOARD_LAYOUT", TranslateKeyboardLayout);
@@ -5626,6 +5633,7 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
     SDL_DisplayMode dmode;
     Uint32 fullscreen_flags20 = 0;
     Uint32 appfmt;
+    const char *vsync_env = SDL12Compat_GetHint("SDL12COMPAT_SYNC_TO_VBLANK");
     float window_size_scaling = SDL12Compat_GetHintFloat("SDL12COMPAT_WINDOW_SCALING", 1.0f);
     SDL_bool use_gl_scaling = SDL_FALSE;
     SDL_bool use_highdpi = SDL_TRUE;
@@ -5648,7 +5656,7 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
 
            UT2004 is known to use FBOs with SDL 1.2, and I assume idTech 4 games (Doom 3,
            Quake 4, Prey) do as well. */
-        use_gl_scaling = SDL12Compat_GetHintBoolean("SDL12COMPAT_OPENGL_SCALING", SDL_TRUE);
+        use_gl_scaling = WantOpenGLScaling;
 
         /* default use_highdpi to false for OpenGL windows when not using
            OpenGL scaling as legacy OpenGL applications are unlikely to support
@@ -5888,7 +5896,6 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
     }
 
     if (flags12 & SDL12_OPENGL) {
-        const char *vsync_env = SDL12Compat_GetHint("SDL12COMPAT_SYNC_TO_VBLANK");
         SDL_assert(!VideoTexture20);  /* either a new window or we destroyed all this */
         SDL_assert(!VideoRenderer20);
 
@@ -5952,11 +5959,8 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
 
     } else {
         /* always use a renderer for non-OpenGL windows. */
-        const char *vsync_env = SDL12Compat_GetHint("SDL12COMPAT_SYNC_TO_VBLANK");
         const char *old_scale_quality = SDL20_GetHint(SDL_HINT_RENDER_SCALE_QUALITY);
-        const char *scale_method_env = SDL12Compat_GetHint("SDL12COMPAT_SCALE_METHOD");
         const SDL_bool want_vsync = (vsync_env && SDL20_atoi(vsync_env)) ? SDL_TRUE : SDL_FALSE;
-        const SDL_bool want_nearest = (scale_method_env && !SDL20_strcmp(scale_method_env, "nearest"))? SDL_TRUE : SDL_FALSE;
         SDL_RendererInfo rinfo;
         SDL_assert(!VideoGLContext20);  /* either a new window or we destroyed all this */
         if (!VideoRenderer20 && want_vsync) {
@@ -5995,7 +5999,7 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
             VideoConvertSurface20 = NULL;
         }
 
-        SDL20_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, want_nearest?"0":"1");
+        SDL20_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, WantScaleMethodNearest ? "0" : "1");
         VideoTexture20 = SDL20_CreateTexture(VideoRenderer20, rinfo.texture_formats[0], SDL_TEXTUREACCESS_STREAMING, width, height);
         SDL20_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, old_scale_quality);
         if (!VideoTexture20) {
@@ -7524,8 +7528,6 @@ SDL_GL_SwapBuffers(void)
 
         if (OpenGLLogicalScalingFBO != 0) {
             const GLboolean has_scissor = OpenGLFuncs.glIsEnabled(GL_SCISSOR_TEST);
-            const char *scale_method_env = SDL12Compat_GetHint("SDL12COMPAT_SCALE_METHOD");
-            const SDL_bool want_nearest = (scale_method_env && !SDL20_strcmp(scale_method_env, "nearest"))? SDL_TRUE : SDL_FALSE;
             int physical_w, physical_h;
             GLfloat clearcolor[4];
             SDL_Rect dstrect;
@@ -7556,7 +7558,7 @@ SDL_GL_SwapBuffers(void)
             OpenGLFuncs.glClear(GL_COLOR_BUFFER_BIT);
             OpenGLFuncs.glBlitFramebuffer(0, 0, OpenGLLogicalScalingWidth, OpenGLLogicalScalingHeight,
                                           dstrect.x, dstrect.y, dstrect.x + dstrect.w, dstrect.y + dstrect.h,
-                                          GL_COLOR_BUFFER_BIT, want_nearest?GL_NEAREST:GL_LINEAR);
+                                          GL_COLOR_BUFFER_BIT, WantScaleMethodNearest ? GL_NEAREST : GL_LINEAR);
             OpenGLFuncs.glBindFramebuffer(GL_FRAMEBUFFER, 0);
             SDL20_GL_SwapWindow(VideoWindow20);
             OpenGLFuncs.glClearColor(clearcolor[0], clearcolor[1], clearcolor[2], clearcolor[3]);
