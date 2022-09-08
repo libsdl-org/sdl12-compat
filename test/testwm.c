@@ -458,6 +458,9 @@ int main(int argc, char *argv[])
 			printf("Generic syswm info: data=%X\n", syswm_info.data);
 			#endif
 		}
+#if SDL_COMPILEDVERSION >= SDL_VERSIONNUM(1, 2, 54)
+		printf("SDL 2.0 window: %p\n", SDL12COMPAT_GetWindow());
+#endif
 	}
 	SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
 #endif

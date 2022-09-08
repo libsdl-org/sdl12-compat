@@ -7057,6 +7057,12 @@ SDL_GetWMInfo(SDL12_SysWMinfo *info12)
     return 1;
 }
 
+DECLSPEC12 SDL_Window * SDLCALL
+SDL12COMPAT_GetWindow(void)
+{
+    return VideoWindow20;
+}
+
 DECLSPEC12 SDL12_Overlay * SDLCALL
 SDL_CreateYUVOverlay(int w, int h, Uint32 format12, SDL12_Surface *display12)
 {
@@ -7298,6 +7304,11 @@ SDL_GL_GetProcAddress(const char *sym)
     }
     if ((SDL20_strcmp(sym, "glCopyTexSubImage3D") == 0)) {
         return (void *) glCopyTexSubImage3D_shim_for_scaling;
+    }
+
+    /* this function is specific to the shim library */
+    if ((SDL20_strcmp(sym, "SDL12COMPAT_GetWindow") == 0)) {
+        return (void *) SDL12COMPAT_GetWindow;
     }
     return SDL20_GL_GetProcAddress(sym);
 }
