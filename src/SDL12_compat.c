@@ -2290,7 +2290,6 @@ DECLSPEC12 int SDLCALL
 SDL_InitSubSystem(Uint32 sdl12flags)
 {
     Uint32 sdl20flags = 0;
-    const char *forcevideodrv;
     int rc;
 
 #ifdef __WINDOWS__
