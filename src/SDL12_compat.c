@@ -650,6 +650,7 @@ typedef struct SDL12_SysWMinfo2on12
     void *data6;
     void *data7;
     void *data8;
+    void *sdl2_window;
 } SDL12_SysWMinfo2on12;
 
 
@@ -7047,6 +7048,7 @@ SDL_GetWMInfo(SDL12_SysWMinfo *info12)
         SDL_zerop(wminfo2);
         SDL20_memcpy(&wminfo2->version, &info20.version, sizeof (wminfo2->version));
         wminfo2->subsystem = (Uint32) info20.subsystem;  /* these do not map to SDL 1.2 values! You're on your own! */
+        wminfo2->sdl2_window = VideoWindow20;
 
         switch (info20.subsystem) {
             #if defined(SDL_VIDEO_DRIVER_WINDOWS)

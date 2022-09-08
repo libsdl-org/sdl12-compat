@@ -134,6 +134,7 @@ typedef struct SDL_SysWMinfo2on12
     void *data6;
     void *data7;
     void *data8;
+    void *sdl2_window;  /* this is the SDL2 SDL_Window */
 } SDL_SysWMinfo2on12;
 
 extern DECLSPEC int SDLCALL SDL_GetWMInfo(SDL_SysWMinfo *info);
