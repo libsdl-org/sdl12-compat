@@ -234,3 +234,4 @@
 ++'_SDL_HasSSE'.'SDL.dll'.'SDL_HasSSE'.'SDL_HasSSE'
 ++'_SDL_HasSSE2'.'SDL.dll'.'SDL_HasSSE2'.'SDL_HasSSE2'
 ++'_SDL_HasAltiVec'.'SDL.dll'.'SDL_HasAltiVec'.'SDL_HasAltiVec'
+++'_SDL12COMPAT_GetWindow'.'SDL.dll'.'SDL12COMPAT_GetWindow'.'SDL12COMPAT_GetWindow'
