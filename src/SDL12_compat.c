@@ -6693,6 +6693,11 @@ SDL_WM_SetIcon(SDL12_Surface *icon12, Uint8 *mask)
     int bpp;
     int ret;
 
+    /* Make sure we actually have an icon to set */
+    if (!icon12) {
+        return;
+    }
+
     /* take the mask and zero out those alpha values. */
     oldmode = SDL_BLENDMODE_NONE;
     if (SDL20_GetSurfaceBlendMode(icon12->surface20, &oldmode) < 0) {
