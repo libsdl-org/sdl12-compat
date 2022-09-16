@@ -43,13 +43,13 @@ typedef struct SDL_version
 } SDL_version;
 
 #define SDL_VERSION(X) { \
-    (X)->major = 1; \
-    (X)->minor = 2; \
-    (X)->patch = 54; \
+    (X)->major = SDL_MAJOR_VERSION; \
+    (X)->minor = SDL_MINOR_VERSION; \
+    (X)->patch = SDL_PATCHLEVEL; \
 }
 
 #define SDL_VERSIONNUM(X, Y, Z) ((X)*1000 + (Y)*100 + (Z))
-#define SDL_COMPILEDVERSION SDL_VERSIONNUM(1, 2, 54)
+#define SDL_COMPILEDVERSION SDL_VERSIONNUM(SDL_MAJOR_VERSION, SDL_MINOR_VERSION, SDL_PATCHLEVEL)
 #define SDL_VERSION_ATLEAST(X, Y, Z) (SDL_COMPILEDVERSION >= SDL_VERSIONNUM(X, Y, Z))
 
 extern DECLSPEC const SDL_version * SDLCALL SDL_Linked_Version(void);
