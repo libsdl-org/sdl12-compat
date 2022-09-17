@@ -950,6 +950,7 @@ static SDL_bool VideoWindowGrabbed = SDL_FALSE;
 static SDL_bool VideoCursorHidden = SDL_FALSE;
 static SDL_Window *VideoWindow20 = NULL;
 static SDL_Renderer *VideoRenderer20 = NULL;
+static SDL_mutex *VideoRendererLock = NULL;
 static SDL_Texture *VideoTexture20 = NULL;
 static SDL12_Surface *VideoSurface12 = NULL;
 static SDL_Palette *VideoPhysicalPalette20 = NULL;
@@ -5245,6 +5246,10 @@ EndVidModeCreate(void)
         SDL20_DestroyRenderer(VideoRenderer20);
         VideoRenderer20 = NULL;
     }
+    if (VideoRendererLock) {
+        SDL20_DestroyMutex(VideoRendererLock);
+        VideoRendererLock = NULL;
+    }
     if (VideoGLContext20) {
         SDL20_GL_MakeCurrent(NULL, NULL);
         SDL20_GL_DeleteContext(VideoGLContext20);
@@ -5601,12 +5606,25 @@ InitializeOpenGLScaling(const int w, const int h)
    after. Without this, we either need all apps to render exclusively on
    the main thread or fail to draw at all.
 
-   This feels risky, but it's better than the alternative! */
-static void ResetVideoRendererForThreading(void)
+   This feels risky, but it's better than the alternative!
+
+   Also, the renderer API isn't thread safe in general, so wrapping it
+   in a mutex is necessary anyhow. */
+
+static SDL_Renderer *
+LockVideoRenderer(void)
+{
+    SDL20_LockMutex(VideoRendererLock);
+    return VideoRenderer20;
+}
+
+static void
+UnlockVideoRenderer(void)
 {
     if ((VideoRenderer20 != NULL) && (SDL20_GL_GetCurrentContext() != NULL)) {
         SDL20_GL_MakeCurrent(NULL, NULL);
     }
+    SDL20_UnlockMutex(VideoRendererLock);
 }
 
 static void HandleInputGrab(SDL12_GrabMode mode);
@@ -5947,6 +5965,10 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
         const SDL_bool want_vsync = (vsync_env && SDL20_atoi(vsync_env)) ? SDL_TRUE : SDL_FALSE;
         SDL_RendererInfo rinfo;
         SDL_assert(!VideoGLContext20);  /* either a new window or we destroyed all this */
+        VideoRendererLock = SDL20_CreateMutex();
+        if (!VideoRendererLock) {
+            return EndVidModeCreate();
+        }
         if (!VideoRenderer20 && want_vsync) {
             VideoRenderer20 = SDL20_CreateRenderer(VideoWindow20, -1, SDL_RENDERER_ACCELERATED|SDL_RENDERER_PRESENTVSYNC);
         }
@@ -6037,7 +6059,9 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
     VideoSurfaceLastPresentTicks = 0;
 
     if ((flags12 & SDL12_OPENGL) == 0) {
-        ResetVideoRendererForThreading();
+        /* see notes above these functions about GL context resetting. Force a lock/unlock here to set that up. */
+        LockVideoRenderer();
+        UnlockVideoRenderer();
     }
 
     return VideoSurface12;
@@ -6326,13 +6350,14 @@ static void
 PresentScreen(void)
 {
     QueuedOverlayItem *overlay;
+    SDL_Renderer *renderer = LockVideoRenderer();
 
-    if (!VideoRenderer20) {
+    if (!renderer) {
         return;
     }
 
-    SDL20_RenderClear(VideoRenderer20);
-    SDL20_RenderCopy(VideoRenderer20, VideoTexture20, NULL, NULL);
+    SDL20_RenderClear(renderer);
+    SDL20_RenderCopy(renderer, VideoTexture20, NULL, NULL);
 
     /* Render any pending YUV overlay over the surface texture. */
     overlay = QueuedDisplayOverlays.next;
@@ -6342,7 +6367,7 @@ PresentScreen(void)
             if (overlay->overlay12) {
                 SDL12_YUVData *hwdata = (SDL12_YUVData *) overlay->overlay12->hwdata;
                 SDL_Rect dstrect20;
-                SDL20_RenderCopy(VideoRenderer20, hwdata->texture20, NULL, Rect12to20(&overlay->dstrect12, &dstrect20));
+                SDL20_RenderCopy(renderer, hwdata->texture20, NULL, Rect12to20(&overlay->dstrect12, &dstrect20));
             }
             SDL_free(overlay);
             overlay = next;
@@ -6351,11 +6376,11 @@ PresentScreen(void)
         QueuedDisplayOverlaysTail = &QueuedDisplayOverlays;
     }
 
-    SDL20_RenderPresent(VideoRenderer20);
+    SDL20_RenderPresent(renderer);
     VideoSurfaceLastPresentTicks = SDL20_GetTicks();
     VideoSurfacePresentTicks = 0;
 
-    ResetVideoRendererForThreading();
+    UnlockVideoRenderer();
 }
 
 static void
@@ -6789,9 +6814,12 @@ SDL_WM_ToggleFullScreen(SDL12_Surface *surface)
                 VideoSurface12->flags |= SDL12_FULLSCREEN;
             }
         }
-        if (retval && VideoRenderer20) {
-            SDL20_RenderSetLogicalSize(VideoRenderer20, VideoSurface12->w, VideoSurface12->h);
-            ResetVideoRendererForThreading();
+        if (retval) {
+            SDL_Renderer *renderer = LockVideoRenderer();
+            if (renderer) {
+                SDL20_RenderSetLogicalSize(renderer, VideoSurface12->w, VideoSurface12->h);
+                UnlockVideoRenderer();
+            }
         }
     }
     return retval;
@@ -7087,6 +7115,7 @@ SDL_CreateYUVOverlay(int w, int h, Uint32 format12, SDL12_Surface *display12)
     const char *old_scale_quality = SDL20_GetHint(SDL_HINT_RENDER_SCALE_QUALITY);
     SDL12_Overlay *retval = NULL;
     SDL12_YUVData *hwdata = NULL;
+    SDL_Renderer *renderer = NULL;
     Uint32 format20 = 0;
 
     if (display12 != VideoSurface12) {  /* SDL 1.2 doesn't check this, but it seems irresponsible not to. */
@@ -7098,8 +7127,6 @@ SDL_CreateYUVOverlay(int w, int h, Uint32 format12, SDL12_Surface *display12)
         SDL20_SetError("YUV overlays are not supported in OpenGL mode");
         return NULL;
     }
-
-    SDL_assert(VideoRenderer20 != NULL);
 
     switch (format12) {
         #define SUPPORTED_YUV_FORMAT(x) case SDL12_##x##_OVERLAY: format20 = SDL_PIXELFORMAT_##x; break
@@ -7138,9 +7165,14 @@ SDL_CreateYUVOverlay(int w, int h, Uint32 format12, SDL12_Surface *display12)
         hwdata->pitches[0] = w * 2;
     }
 
+    renderer = LockVideoRenderer();
+
     SDL20_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
-    hwdata->texture20 = SDL20_CreateTexture(VideoRenderer20, format20, SDL_TEXTUREACCESS_STREAMING, w, h);
+    hwdata->texture20 = SDL20_CreateTexture(renderer, format20, SDL_TEXTUREACCESS_STREAMING, w, h);
     SDL20_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, old_scale_quality);
+
+    UnlockVideoRenderer();
+
     if (!hwdata->texture20) {
         SDL20_free(hwdata->pixelbuf);
         SDL20_free(retval);
@@ -7158,8 +7190,6 @@ SDL_CreateYUVOverlay(int w, int h, Uint32 format12, SDL12_Surface *display12)
     /* Some programs (e.g. mplayer) access pixels without locking. */
     retval->pixels = hwdata->pixels;
     hwdata->dirty = SDL_TRUE;
-
-    ResetVideoRendererForThreading();
 
     return retval;
 }
@@ -7192,12 +7222,13 @@ SDL_DisplayYUVOverlay(SDL12_Overlay *overlay12, SDL12_Rect *dstrect12)
 {
     QueuedOverlayItem *overlay;
     SDL12_YUVData *hwdata;
+    SDL_Renderer *renderer = NULL;
 
     if (!overlay12) {
         return SDL20_InvalidParamError("overlay");
     } else if (!dstrect12) {
         return SDL20_InvalidParamError("dstrect");
-    } else if (!VideoRenderer20) {
+    } else if (!(renderer = LockVideoRenderer())) {
         return SDL20_SetError("No software screen surface available");
     }
 
@@ -7209,6 +7240,7 @@ SDL_DisplayYUVOverlay(SDL12_Overlay *overlay12, SDL12_Rect *dstrect12)
     }
 
     if ((overlay = (QueuedOverlayItem *) SDL_malloc(sizeof (QueuedOverlayItem))) == NULL) {
+        UnlockVideoRenderer();
         return SDL20_OutOfMemory();
     }
 
@@ -7256,7 +7288,7 @@ SDL_DisplayYUVOverlay(SDL12_Overlay *overlay12, SDL12_Rect *dstrect12)
         VideoSurfacePresentTicks = VideoSurfaceLastPresentTicks + GetDesiredMillisecondsPerFrame();  /* flip it later. */
     }
 
-    ResetVideoRendererForThreading();
+    UnlockVideoRenderer();
 
     return 0;
 }
@@ -7273,6 +7305,7 @@ DECLSPEC12 void SDLCALL
 SDL_FreeYUVOverlay(SDL12_Overlay *overlay12)
 {
     if (overlay12) {
+        SDL_Renderer *renderer = LockVideoRenderer();
         SDL12_YUVData *hwdata = (SDL12_YUVData *) overlay12->hwdata;
         QueuedOverlayItem *overlay = QueuedDisplayOverlays.next;
         while (overlay != NULL) {
@@ -7281,7 +7314,11 @@ SDL_FreeYUVOverlay(SDL12_Overlay *overlay12)
             }
         }
 
-        SDL20_DestroyTexture(hwdata->texture20);
+        if (renderer) {
+            SDL20_DestroyTexture(hwdata->texture20);
+            UnlockVideoRenderer();
+        }
+
         SDL20_free(hwdata->pixelbuf);
         SDL20_free(overlay12);
     }
