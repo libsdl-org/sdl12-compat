@@ -1223,6 +1223,15 @@ static void OS_GetExeName(char *buf, const unsigned maxpath) {
     buf[0] = '\0';
     DosQueryModuleName(pib->pib_hmte, maxpath, buf);
 }
+#elif defined(__APPLE__) || defined(__FREEBSD__)
+static void OS_GetExeName(char *buf, const unsigned maxpath) {
+    const char *progname = getprogname();
+    if (progname != NULL) {
+        strlcpy(buf, progname, maxpath);
+    } else {
+        buf[0] = '\0';
+    }
+}
 #else
 #warning Please implement this for your platform.
 static void OS_GetExeName(char *buf, const unsigned maxpath) {
