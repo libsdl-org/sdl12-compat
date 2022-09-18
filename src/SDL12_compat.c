@@ -1970,10 +1970,14 @@ VidModeSizeGreater(SDL12_Rect *mode1, SDL12_Rect *mode2)
 }
 
 static int
-AddVidModeToList(VideoModeList *vmode, SDL12_Rect *mode)
+AddVidModeToList(VideoModeList *vmode, SDL12_Rect *mode, const Uint16 maxw, const Uint16 maxh)
 {
     void *ptr = NULL;
     int i;
+
+    if ( (maxw && (mode->w > maxw)) || (maxh && (mode->h > maxh)) ) {
+        return 0;   /* clamp this one out as too big. */
+    }
 
     /* make sure we don't have this one already (with a different refresh rate, etc). */
     for (i = 0; i < vmode->nummodes; i++) {
@@ -2038,20 +2042,31 @@ static int
 Init12VidModes(void)
 {
     const int total = SDL20_GetNumDisplayModes(VideoDisplayIndex);
+    const char *maxmodestr;
     VideoModeList *vmode = NULL;
     void *ptr = NULL;
     int i, j;
     SDL12_Rect prev_mode = { 0, 0, 0, 0 }, current_mode = { 0, 0, 0, 0 };
     /* We only want to enable fake modes if OpenGL Logical Scaling is enabled. */
     const SDL_bool use_fake_modes = SDL12Compat_GetHintBoolean("SDL12COMPAT_OPENGL_SCALING", SDL_TRUE);
-
-    WantOpenGLScaling = use_fake_modes;
+    Uint16 maxw = 0;
+    Uint16 maxh = 0;
 
     if (VideoModesCount > 0) {
         return 0;  /* already did this. */
     }
 
+    WantOpenGLScaling = use_fake_modes;
+
     SDL_assert(VideoModes == NULL);
+
+    maxmodestr = SDL12Compat_GetHint("SDL12COMPAT_MAX_VIDMODE");
+    if (maxmodestr) {
+        unsigned int w, h;
+        SDL_sscanf(maxmodestr, "%ux%u", &w, &h);
+        maxw = (Uint16) SDL_clamp(w, 0, 0xFFFF);
+        maxh = (Uint16) SDL_clamp(h, 0, 0xFFFF);
+    }
 
     for (i = 0; i < total; ++i) {
         SDL_DisplayMode mode;
@@ -2098,14 +2113,14 @@ Init12VidModes(void)
         if (use_fake_modes) {
             for (j = 0; j < (int) SDL_arraysize(fake_modes); ++j) {
                 if (VidModeSizeGreater(&prev_mode, &fake_modes[j]) && VidModeSizeGreater(&fake_modes[j], &current_mode)) {
-                    if (AddVidModeToList(vmode, &fake_modes[j])) {
+                    if (AddVidModeToList(vmode, &fake_modes[j], maxw, maxh)) {
                         return SDL20_OutOfMemory();
                     }
                 }
             }
         }
 
-        if (AddVidModeToList(vmode, &current_mode)) {
+        if (AddVidModeToList(vmode, &current_mode, maxw, maxh)) {
             return SDL20_OutOfMemory();
         }
 
@@ -2117,7 +2132,7 @@ Init12VidModes(void)
     if (use_fake_modes) {
         for (i = 0; i < (int) SDL_arraysize(fake_modes); ++i) {
             if (VidModeSizeGreater(&prev_mode, &fake_modes[i])) {
-                if (AddVidModeToList(vmode, &fake_modes[i])) {
+                if (AddVidModeToList(vmode, &fake_modes[i], maxw, maxh)) {
                     return SDL20_OutOfMemory();
                 }
             }

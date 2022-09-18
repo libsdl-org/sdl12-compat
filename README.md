@@ -228,6 +228,18 @@ The available options are:
   will create the window at the originally-requested size. If this variable
   isn't specified, it defaults to 1.0 (no scaling).
 
+- SDL12COMPAT_MAX_VIDMODE: (checked during SDL_Init)
+  This is a string in the form of `WxH`, where `W` is the maximum width
+  and `H` is the maximum height (for example: `640x480`). The list of valid
+  resolutions that will be reported by SDL_ListModes and SDL_VideoModeOK will
+  not include any dimensions that are wider or taller than these sizes. A size
+  of zero will be ignored, so for `0x480` a resolution of 1920x480 would be
+  accepted). If not specified, or set to `0x0`, no resolution clamping is done.
+  This is for old software-rendered games that might always choose the largest
+  resolution offered, but never conceived of 4K displays. In these cases, it
+  might be better for them to use a smaller resolution and let sdl12-compat
+  scale their output up with the GPU.
+
 - SDL_MOUSE_RELATIVE_SCALING: (checked during SDL_SetVideoMode)
   If enabled, relative mouse motion is scaled when the application is
   running at a non-native resolution.  This may be required with some
