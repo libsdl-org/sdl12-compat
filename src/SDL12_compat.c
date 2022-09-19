@@ -5743,6 +5743,11 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
     if (bpp == 0) {
         flags12 |= SDL12_ANYFORMAT;
         bpp = SDL_BITSPERPIXEL(dmode.format);
+        /* keep this simple: we aren't handling palettes here, so for < 16-bit
+           formats, give them 16-bit and we'll convert later. Nothing in SDL 1.2 will
+           handle > 32 bits, so clamp there, too. AND ALSO, most apps will handle 32-bits
+           but not 24, so force around that...so basically, you can have 16 or 32 bit. */
+        bpp = (bpp <= 16) ? 16 : 32;
     }
 
     if ((bpp != 8) && (bpp != 16) && (bpp != 24) && (bpp != 32)) {
