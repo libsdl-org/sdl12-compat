@@ -6177,8 +6177,8 @@ RestoreDestAlpha(SDL12_Surface *dst12, Uint8 *dstalpha, const SDL12_Rect *dstrec
     if (dstalpha) {
         int x, y;
 
-        const int w = dst12->w;
-        const int h = dst12->h;
+        const int w = dstrect12->w;
+        const int h = dstrect12->h;
         const Uint8 *sptr = dstalpha;
         const Uint32 amask = dst12->format->Amask;
         const Uint32 ashift = dst12->format->Ashift;
