@@ -232,7 +232,7 @@ SDL20_SYM_PASSTHROUGH(SDL_bool,HasAltiVec,(void),(),return)
 SDL20_SYM(SDL_TimerID,AddTimer,(Uint32 a, SDL_TimerCallback b, void *c),(a,b,c),return)
 SDL20_SYM(SDL_bool,RemoveTimer,(SDL_TimerID a),(a),return)
 SDL20_SYM_PASSTHROUGH(Uint32,GetTicks,(void),(),return)
-SDL20_SYM_PASSTHROUGH(void,Delay,(Uint32 a),(a),)
+SDL20_SYM(void,Delay,(Uint32 a),(a),)
 
 SDL20_SYM(SDL_bool,IsGameController,(int a),(a),return)
 SDL20_SYM(const char *,GameControllerNameForIndex,(int a),(a),return)

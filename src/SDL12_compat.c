@@ -1023,6 +1023,11 @@ static EventQueueType EventQueuePool[SDL12_MAXEVENTS];
 static EventQueueType *EventQueueHead = NULL;
 static EventQueueType *EventQueueTail = NULL;
 static EventQueueType *EventQueueAvailable = NULL;
+static unsigned long SetVideoModeThread = 0;
+static SDL_bool VideoSurfaceUpdatedInBackgroundThread = SDL_FALSE;
+static SDL_bool AllowThreadedDraws = SDL_FALSE;
+static SDL_bool AllowThreadedPumps = SDL_FALSE;
+
 
 /* This is a KEYDOWN event which is being held for a follow-up TEXTINPUT */
 static SDL12_Event PendingKeydownEvent;
@@ -1196,6 +1201,14 @@ static QuirkEntryType quirks[] = {
     {"tucnak", "SDL_VIDEODRIVER", "x11"},
     {"tucnak", "SDL_RENDER_DRIVER", "software"},
     {"tucnak", "SDL_FRAMEBUFFER_ACCELERATION", "false"},
+
+    /* Civilization: Call to Power draws and pumps from multiple threads at once, causing issues. */
+    {"civctp", "SDL12COMPAT_ALLOW_THREADED_DRAWS", "0"},
+    {"civctp", "SDL12COMPAT_ALLOW_THREADED_PUMPS", "0"},
+    {"civctp.dynamic", "SDL12COMPAT_ALLOW_THREADED_DRAWS", "0"},
+    {"civctp.dynamic", "SDL12COMPAT_ALLOW_THREADED_PUMPS", "0"},
+    {"civctp.dynamic_fixed", "SDL12COMPAT_ALLOW_THREADED_DRAWS", "0"},
+    {"civctp.dynamic_fixed", "SDL12COMPAT_ALLOW_THREADED_PUMPS", "0"},
 
     /* The 32-bit Steam build only of Multiwinia Quits but doesn't re-Init */
     {"multiwinia.bin.x86", "SDL12COMPAT_NO_QUIT_VIDEO", "1"}
@@ -2206,6 +2219,9 @@ Init12Video(void)
     SDL_DisplayMode mode;
     int i;
 
+    AllowThreadedDraws = SDL12Compat_GetHintBoolean("SDL12COMPAT_ALLOW_THREADED_DRAWS", SDL_TRUE);
+    AllowThreadedPumps = SDL12Compat_GetHintBoolean("SDL12COMPAT_ALLOW_THREADED_PUMPS", SDL_TRUE);
+
     WantScaleMethodNearest = (scale_method_env && !SDL20_strcmp(scale_method_env, "nearest")) ? SDL_TRUE : SDL_FALSE;
 
     /* Only override this if the env var is set, as the default is platform-specific. */
@@ -2455,6 +2471,9 @@ Quit12Video(void)
     SDL_FreeCursor(CurrentCursor12);
     VideoModes = NULL;
     VideoModesCount = 0;
+
+    AllowThreadedDraws = SDL_FALSE;
+    AllowThreadedPumps = SDL_FALSE;
 
     if (EventQueueMutex) {
         SDL20_DestroyMutex(EventQueueMutex);
@@ -5310,6 +5329,9 @@ EndVidModeCreate(void)
     QueuedDisplayOverlays.next = NULL;
     QueuedDisplayOverlaysTail = &QueuedDisplayOverlays;
 
+    VideoSurfaceUpdatedInBackgroundThread = SDL_FALSE;
+    SetVideoModeThread = 0;
+
     return NULL;
 }
 
@@ -6063,15 +6085,17 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
         }
     }
 
+    SetVideoModeThread = SDL20_ThreadID();
+    VideoSurfacePresentTicks = 0;
+    VideoSurfaceLastPresentTicks = 0;
+    VideoSurfaceUpdatedInBackgroundThread = SDL_FALSE;
+
     SDL20_RaiseWindow(VideoWindow20);
 
     /* SDL 1.2 always grabbed input if the video mode was fullscreen. */
     if (VideoSurface12->flags & SDL12_FULLSCREEN) {
         HandleInputGrab(SDL12_GRAB_ON);
     }
-
-    VideoSurfacePresentTicks = 0;
-    VideoSurfaceLastPresentTicks = 0;
 
     if ((flags12 & SDL12_OPENGL) == 0) {
         /* see notes above these functions about GL context resetting. Force a lock/unlock here to set that up. */
@@ -6392,6 +6416,7 @@ PresentScreen(void)
     }
 
     SDL20_RenderPresent(renderer);
+    VideoSurfaceUpdatedInBackgroundThread = SDL_FALSE;
     VideoSurfaceLastPresentTicks = SDL20_GetTicks();
     VideoSurfacePresentTicks = 0;
 
@@ -6554,6 +6579,8 @@ SDL_GL_Unlock(void)
 DECLSPEC12 void SDLCALL
 SDL_UpdateRects(SDL12_Surface *surface12, int numrects, SDL12_Rect *rects12)
 {
+    const SDL_bool ThisIsSetVideoModeThread = (SDL20_ThreadID() == SetVideoModeThread);
+
     /* strangely, SDL 1.2 doesn't check if surface12 is NULL before touching it */
     /* (UpdateRect, singular, does...) */
 
@@ -6573,6 +6600,7 @@ SDL_UpdateRects(SDL12_Surface *surface12, int numrects, SDL12_Rect *rects12)
      *  but in practice most apps never got a double-buffered surface and
      *  don't handle it correctly, so we have to work around it. */
     if (surface12 == VideoSurface12) {
+        const SDL_bool upload_later = !ThisIsSetVideoModeThread && !AllowThreadedDraws;
         SDL_Palette *logicalPal = surface12->surface20->format->palette;
         const int pixsize = surface12->format->BytesPerPixel;
         const int srcpitch = surface12->pitch;
@@ -6584,7 +6612,10 @@ SDL_UpdateRects(SDL12_Surface *surface12, int numrects, SDL12_Rect *rects12)
 
         for (i = 0; i < numrects; i++) {
             UpdateRect12to20(surface12, &rects12[i], &rect20, &whole_screen);
-            if (!rect20.w || !rect20.h) {
+
+            if (upload_later) {
+                continue;
+            } else if (!rect20.w || !rect20.h) {
                 continue;
             } else if (SDL20_LockTexture(VideoTexture20, &rect20, &pixels, &pitch) < 0) {
                 continue;  /* oh well */
@@ -6623,7 +6654,10 @@ SDL_UpdateRects(SDL12_Surface *surface12, int numrects, SDL12_Rect *rects12)
             VideoConvertSurface20->h = VideoSurface12->h;
         }
 
-        if (whole_screen) {
+        if (upload_later) {
+            VideoSurfaceUpdatedInBackgroundThread = SDL_TRUE;
+            VideoSurfacePresentTicks = whole_screen ? 1 : VideoSurfaceLastPresentTicks + GetDesiredMillisecondsPerFrame();  /* flip it later (or as soon as the main thread can). */
+        } else if (whole_screen) {
             PresentScreen();  /* flip it now. */
         } else {
             VideoSurfacePresentTicks = VideoSurfaceLastPresentTicks + GetDesiredMillisecondsPerFrame();  /* flip it later. */
@@ -6676,14 +6710,24 @@ HandleKeyRepeat(void)
 DECLSPEC12 void SDLCALL
 SDL_PumpEvents(void)
 {
+    const SDL_bool ThisIsSetVideoModeThread = (SDL20_ThreadID() == SetVideoModeThread);
     SDL_Event e;
+
+    if (!ThisIsSetVideoModeThread && !AllowThreadedPumps) {
+        return;
+    }
 
     /* If the app is doing dirty rectangles, we set a flag and present the
      *  screen surface when they pump for new events if we're close to 60Hz,
      *  which we consider a sign that they are done rendering for the current
      *  frame and it would make sense to send it to the screen. */
+
     if (VideoSurfacePresentTicks && SDL_TICKS_PASSED(SDL20_GetTicks(), VideoSurfacePresentTicks)) {
-        PresentScreen();
+        if (VideoSurfaceUpdatedInBackgroundThread) {
+            SDL_Flip(VideoSurface12);  /* this will update the texture and present. */
+        } else {
+            PresentScreen();
+        }
     }
 
     if (EventQueueMutex) {
@@ -7632,6 +7676,18 @@ SDL_SetTimer(Uint32 interval, SDL12_TimerCallback callback)
     }
     return 0;
 }
+
+DECLSPEC12 void SDLCALL
+SDL_Delay(Uint32 ticks)
+{
+    /* In case there's a loading screen from a background thread and the main thread is waiting... */
+    const SDL_bool ThisIsSetVideoModeThread = (SDL20_ThreadID() == SetVideoModeThread);
+    if (ThisIsSetVideoModeThread && VideoSurfaceUpdatedInBackgroundThread) {
+        SDL_Flip(VideoSurface12);  /* this will update the texture and present. */
+    }
+    SDL20_Delay(ticks);
+}
+
 
 DECLSPEC12 int SDLCALL
 SDL_putenv(const char *_var)
