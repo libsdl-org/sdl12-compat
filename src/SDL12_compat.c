@@ -953,7 +953,6 @@ static SDL_Renderer *VideoRenderer20 = NULL;
 static SDL_mutex *VideoRendererLock = NULL;
 static SDL_Texture *VideoTexture20 = NULL;
 static SDL12_Surface *VideoSurface12 = NULL;
-static SDL_Palette *VideoPhysicalPalette20 = NULL;
 static Uint32 VideoSurfacePresentTicks = 0;
 static Uint32 VideoSurfaceLastPresentTicks = 0;
 static SDL_Surface *VideoConvertSurface20 = NULL;
@@ -5293,10 +5292,6 @@ EndVidModeCreate(void)
         SDL20_DestroyWindow(VideoWindow20);
         VideoWindow20 = NULL;
     }
-    if (VideoPhysicalPalette20) {
-        SDL20_FreePalette(VideoPhysicalPalette20);
-        VideoPhysicalPalette20 = NULL;
-    }
     if (VideoSurface12) {
         SDL20_free(VideoSurface12->pixels);
         VideoSurface12->pixels = NULL;
@@ -6080,13 +6075,6 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
                 { const int x = (i & 0x3) | ((i & 0x3) << 2); color->b = x | x << 4; }
                 color->a = 255;
             }
-            if (!VideoPhysicalPalette20) {
-                VideoPhysicalPalette20 = SDL20_AllocPalette(256);
-                if (!VideoPhysicalPalette20) {
-                    return EndVidModeCreate();
-                }
-            }
-            SDL20_SetPaletteColors(VideoPhysicalPalette20, VideoSurface12->format->palette->colors, 0, 256);
         }
     }
 
@@ -6606,7 +6594,6 @@ SDL_UpdateRects(SDL12_Surface *surface12, int numrects, SDL12_Rect *rects12)
      *  don't handle it correctly, so we have to work around it. */
     if (surface12 == VideoSurface12) {
         const SDL_bool upload_later = !ThisIsSetVideoModeThread && !AllowThreadedDraws;
-        SDL_Palette *logicalPal = surface12->surface20->format->palette;
         const int pixsize = surface12->format->BytesPerPixel;
         const int srcpitch = surface12->pitch;
         SDL_bool whole_screen = SDL_FALSE;
@@ -6631,7 +6618,6 @@ SDL_UpdateRects(SDL12_Surface *surface12, int numrects, SDL12_Rect *rects12)
                 dstrect20.x = dstrect20.y = 0;
                 dstrect20.w = rect20.w;
                 dstrect20.h = rect20.h;
-                surface12->surface20->format->palette = VideoPhysicalPalette20;
                 VideoConvertSurface20->pixels = pixels;
                 VideoConvertSurface20->pitch = pitch;
                 VideoConvertSurface20->w = rect20.w;
@@ -6652,7 +6638,6 @@ SDL_UpdateRects(SDL12_Surface *surface12, int numrects, SDL12_Rect *rects12)
         }
 
         if (VideoConvertSurface20) {  /* reset some state we messed with */
-            surface12->surface20->format->palette = logicalPal;
             VideoConvertSurface20->pixels = NULL;
             VideoConvertSurface20->pitch = 0;
             VideoConvertSurface20->w = VideoSurface12->w;
@@ -7046,20 +7031,10 @@ SDL_SetPalette(SDL12_Surface *surface12, int flags, const SDL_Color *colors,
         }
     }
 
-    if ((flags & SDL12_PHYSPAL) && (surface12 == VideoSurface12) && VideoPhysicalPalette20) {
-        if (SDL20_SetPaletteColors(VideoPhysicalPalette20, opaquecolors, firstcolor, ncolors) < 0) {
-            retval = -1;
-        }
-    }
-
     SDL20_free(opaquecolors);
 
     /* in case this pointer changed... */
     palette12->colors = palette20->colors;
-
-    if ((surface12 == VideoSurface12) && (flags & SDL12_PHYSPAL)) {
-        SDL_UpdateRect(surface12, 0, 0, 0, 0);   /* force screen to reblit with new palette. */
-    }
 
     return retval;
 }
