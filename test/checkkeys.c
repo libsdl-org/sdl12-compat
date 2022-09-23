@@ -69,7 +69,7 @@ static void PrintKey(SDL_keysym *sym, int pressed)
 		} else {
 #ifdef UNICODE
 			printf(" '%c' (0x%.4X)", sym->unicode, (int)sym->unicode);
-#elif defined(_WIN32)
+#elif defined(_WIN32) || defined(__OS2__)
 			/* This is a Latin-1 program, so only show 8-bits */
 			if ( !(sym->unicode & 0xFF00) )
 				printf(" '%c' (0x%.4X)", sym->unicode, (int)sym->unicode);
