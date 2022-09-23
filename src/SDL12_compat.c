@@ -1082,6 +1082,8 @@ static char loaderror[256];
     #include <pwd.h>
     #include <unistd.h>
     #define SDL20_LIBNAME "libSDL2-2.0.0.dylib"
+    /* SDL2 cmake'ry is (was?) messy: */
+    #define SDL20_LIBNAME2 "libSDL2-2.0.dylib"
     #define SDL20_FRAMEWORK "SDL2.framework/Versions/A/SDL2"
     #define SDL20_REQUIRED_VER SDL_VERSIONNUM(2,0,7)
     #define strcpy_fn  strcpy
@@ -1093,12 +1095,15 @@ static char loaderror[256];
         /* I don't know if this is the _right_ order to try, but this seems reasonable */
         static const char * const dylib_locations[] = {
             "@loader_path/" SDL20_LIBNAME, /* MyApp.app/Contents/MacOS/libSDL2-2.0.0.dylib */
+            "@loader_path/" SDL20_LIBNAME2, /* MyApp.app/Contents/MacOS/libSDL2-2.0.dylib */
             "@loader_path/../Frameworks/" SDL20_FRAMEWORK, /* MyApp.app/Contents/Frameworks/SDL2.framework */
             "@executable_path/" SDL20_LIBNAME, /* MyApp.app/Contents/MacOS/libSDL2-2.0.0.dylib */
+            "@executable_path/" SDL20_LIBNAME2, /* MyApp.app/Contents/MacOS/libSDL2-2.0.dylib */
             "@executable_path/../Frameworks/" SDL20_FRAMEWORK, /* MyApp.app/Contents/Frameworks/SDL2.framework */
             NULL,  /* /Users/username/Library/Frameworks/SDL2.framework */
             "/Library/Frameworks" SDL20_FRAMEWORK, /* /Library/Frameworks/SDL2.framework */
-            SDL20_LIBNAME  /* oh well, anywhere the system can see the .dylib (/usr/local/lib or whatever) */
+            SDL20_LIBNAME, /* oh well, anywhere the system can see the .dylib (/usr/local/lib or whatever) */
+            SDL20_LIBNAME2
         };
 
         int i;
