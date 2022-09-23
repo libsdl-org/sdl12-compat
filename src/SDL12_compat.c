@@ -6577,7 +6577,7 @@ SDL_GL_Unlock(void)
 DECLSPEC12 void SDLCALL
 SDL_UpdateRects(SDL12_Surface *surface12, int numrects, SDL12_Rect *rects12)
 {
-    const SDL_bool ThisIsSetVideoModeThread = (SDL20_ThreadID() == SetVideoModeThread);
+    const SDL_bool ThisIsSetVideoModeThread = (SDL20_ThreadID() == SetVideoModeThread) ? SDL_TRUE : SDL_FALSE;
 
     /* strangely, SDL 1.2 doesn't check if surface12 is NULL before touching it */
     /* (UpdateRect, singular, does...) */
@@ -6598,7 +6598,7 @@ SDL_UpdateRects(SDL12_Surface *surface12, int numrects, SDL12_Rect *rects12)
      *  but in practice most apps never got a double-buffered surface and
      *  don't handle it correctly, so we have to work around it. */
     if (surface12 == VideoSurface12) {
-        const SDL_bool upload_later = !ThisIsSetVideoModeThread && !AllowThreadedDraws;
+        const SDL_bool upload_later = (!ThisIsSetVideoModeThread && !AllowThreadedDraws) ? SDL_TRUE : SDL_FALSE;
         const int pixsize = surface12->format->BytesPerPixel;
         const int srcpitch = surface12->pitch;
         SDL_bool whole_screen = SDL_FALSE;
@@ -6705,7 +6705,7 @@ HandleKeyRepeat(void)
 DECLSPEC12 void SDLCALL
 SDL_PumpEvents(void)
 {
-    const SDL_bool ThisIsSetVideoModeThread = (SDL20_ThreadID() == SetVideoModeThread);
+    const SDL_bool ThisIsSetVideoModeThread = (SDL20_ThreadID() == SetVideoModeThread) ? SDL_TRUE : SDL_FALSE;
     SDL_Event e;
 
     if (!ThisIsSetVideoModeThread && !AllowThreadedPumps) {
@@ -7666,7 +7666,7 @@ DECLSPEC12 void SDLCALL
 SDL_Delay(Uint32 ticks)
 {
     /* In case there's a loading screen from a background thread and the main thread is waiting... */
-    const SDL_bool ThisIsSetVideoModeThread = (SDL20_ThreadID() == SetVideoModeThread);
+    const SDL_bool ThisIsSetVideoModeThread = (SDL20_ThreadID() == SetVideoModeThread) ? SDL_TRUE : SDL_FALSE;
     if (ThisIsSetVideoModeThread && VideoSurfaceUpdatedInBackgroundThread) {
         SDL_Flip(VideoSurface12);  /* this will update the texture and present. */
     }
