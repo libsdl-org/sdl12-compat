@@ -25,8 +25,8 @@
 
 /*
  * We report the library version as 1.2.$(SDL12_COMPAT_VERSION). This number
- *  should be way ahead of what SDL-1.2 Classic would report, so apps can
- *  decide if they're running under the compat layer, if they really care.
+ * should be way ahead of what SDL-1.2 Classic would report, so apps can
+ * decide if they're running under the compat layer, if they really care.
  */
 #define SDL12_COMPAT_VERSION 56
 
@@ -6116,8 +6116,8 @@ SaveDestAlpha(SDL12_Surface *src12, SDL12_Surface *dst12, const SDL12_Rect *dstr
     /* The 1.2 docs say this:
      * RGBA->RGBA:
      *     SDL_SRCALPHA set:
-     * 	alpha-blend (using the source alpha channel) the RGB values;
-     * 	leave destination alpha untouched. [Note: is this correct?]
+     *  alpha-blend (using the source alpha channel) the RGB values;
+     *  leave destination alpha untouched. [Note: is this correct?]
      *
      * In SDL2, we change the destination alpha. We have to save it off in this case, which sucks.
      */
@@ -6595,8 +6595,8 @@ SDL_UpdateRects(SDL12_Surface *surface12, int numrects, SDL12_Rect *rects12)
     }
 
     /* everything else is marked SDL12_DOUBLEBUF and SHOULD BE a no-op here,
-     *  but in practice most apps never got a double-buffered surface and
-     *  don't handle it correctly, so we have to work around it. */
+     * but in practice most apps never got a double-buffered surface and
+     * don't handle it correctly, so we have to work around it. */
     if (surface12 == VideoSurface12) {
         const SDL_bool upload_later = (!ThisIsSetVideoModeThread && !AllowThreadedDraws) ? SDL_TRUE : SDL_FALSE;
         const int pixsize = surface12->format->BytesPerPixel;
@@ -6713,9 +6713,9 @@ SDL_PumpEvents(void)
     }
 
     /* If the app is doing dirty rectangles, we set a flag and present the
-     *  screen surface when they pump for new events if we're close to 60Hz,
-     *  which we consider a sign that they are done rendering for the current
-     *  frame and it would make sense to send it to the screen. */
+     * screen surface when they pump for new events if we're close to 60Hz,
+     * which we consider a sign that they are done rendering for the current
+     * frame and it would make sense to send it to the screen. */
 
     if (VideoSurfacePresentTicks && SDL_TICKS_PASSED(SDL20_GetTicks(), VideoSurfacePresentTicks)) {
         if (VideoSurfaceUpdatedInBackgroundThread) {
@@ -6742,7 +6742,6 @@ SDL_PumpEvents(void)
     if (EventQueueMutex) {
         SDL20_UnlockMutex(EventQueueMutex);
     }
-
 }
 
 DECLSPEC12 void SDLCALL
@@ -6889,7 +6888,7 @@ UpdateRelativeMouseMode(void)
             MouseInputIsRelative = enable;
             if (MouseInputIsRelative) {
                 /* reset position, we'll have to track it ourselves in SDL_MOUSEMOTION events, since 1.2
-                 *  would give you window coordinates, even in relative mode. */
+                 * would give you window coordinates, even in relative mode. */
                 SDL20_GetMouseState(&MousePosition.x, &MousePosition.y);
                 AdjustOpenGLLogicalScalingPoint(&MousePosition.x, &MousePosition.y);
             }
@@ -7020,7 +7019,7 @@ SDL_SetPalette(SDL12_Surface *surface12, int flags, const SDL_Color *colors,
     }
 
     /* don't SDL_memcpy in case the 'a' field is uninitialized and upsets
-     *  memory tools like Valgrind. */
+     * memory tools like Valgrind. */
     for (i = 0; i < ncolors; i++) {
         opaquecolors[i].r = colors[i].r;
         opaquecolors[i].g = colors[i].g;
