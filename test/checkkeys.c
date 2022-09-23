@@ -76,9 +76,12 @@ static void PrintKey(SDL_keysym *sym, int pressed)
 			else
 				printf(" (0x%.4X)", (int)sym->unicode);
 #else /* other platforms than Windows hopefully use UTF-8 for 8bit chars */
-			Uint32 utf32str[2] = { sym->unicode, 0 };
 			const char* utf32type = (SDL_BYTEORDER == SDL_LIL_ENDIAN) ? "UTF-32LE" : "UTF-32BE";
-			char* utf8str = SDL_iconv_string("UTF-8", utf32type, (const char*)utf32str, 2*4);
+			char* utf8str;
+			Uint32 utf32str[2];
+			utf32str[0] = sym->unicode;
+			utf32str[1] = 0;
+			utf8str = SDL_iconv_string("UTF-8", utf32type, (const char*)utf32str, 2*4);
 			printf(" '%s' (0x%.4X)", utf8str, (int)sym->unicode);
 			SDL_free(utf8str);
 #endif
