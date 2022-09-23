@@ -2079,10 +2079,10 @@ Init12VidModes(void)
 
     maxmodestr = SDL12Compat_GetHint("SDL12COMPAT_MAX_VIDMODE");
     if (maxmodestr) {
-        unsigned int w, h;
+        unsigned int w = 0, h = 0;
         SDL_sscanf(maxmodestr, "%ux%u", &w, &h);
-        maxw = (Uint16) SDL_clamp(w, 0, 0xFFFF);
-        maxh = (Uint16) SDL_clamp(h, 0, 0xFFFF);
+        if (w > 0xFFFF) w = 0xFFFF;
+        if (h > 0xFFFF) h = 0xFFFF;
     }
 
     for (i = 0; i < total; ++i) {
