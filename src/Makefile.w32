@@ -9,7 +9,7 @@ VERSION = 1.2.56
 
 # change SDL2INC to point to the SDL2 headers
 SDL2INC = include
-INCPATH = -I"$(%WATCOM)/h/nt" -I"$(%WATCOM)/h" -I"$(SDL2INC)"
+INCPATH = -I"$(%WATCOM)/h/nt" -I"$(%WATCOM)/h"
 LIBNAME = $(DLLNAME)
 
 DLLFILE = $(LIBNAME).dll
@@ -25,13 +25,21 @@ CFLAGS+= -wcd=200
 CFLAGS+= -wcd=303
 # the include paths :
 CFLAGS+= $(INCPATH)
-# building dll:
-CFLAGS+= -bd
-# we override the DECLSPEC define in begin_code.h, because we are using
-# an exports file to remove the _cdecl '_' prefix from the symbol names
-CFLAGS+= -DDECLSPEC=
 # misc
 CFLAGS+= -DNDEBUG -DSDL_DISABLE_IMMINTRIN_H
+
+CFLAGS_DLL = $(CFLAGS)
+# building dll:
+CFLAGS_DLL+= -bd
+# the include paths :
+CFLAGS_DLL+= -I"$(SDL2INC)"
+# we override the DECLSPEC define in begin_code.h, because we are using
+# an exports file to remove the _cdecl '_' prefix from the symbol names
+CFLAGS_DLL+= -DDECLSPEC=
+
+CFLAGS_SDLMAIN = $(CFLAGS)
+# the include paths :
+CFLAGS_SDLMAIN+= -I"../include/SDL"
 
 object_files= SDL12_compat.obj
 resource_obj= version.res
@@ -40,11 +48,11 @@ resource_obj= version.res
 .extensions: .lib .dll .obj .c .asm .res .rc
 
 .c.obj:
-	wcc386 $(CFLAGS) -fo=$^@ $<
+	wcc386 $(CFLAGS_DLL) -fo=$^@ $<
 .rc.res:
 	wrc -q -r -bt=nt -I"$(%WATCOM)/h/nt" -fo=$^@ $<
 
-all: $(DLLFILE) $(LIBFILE) .symbolic
+all: $(DLLFILE) $(LIBFILE) SDLmain.lib .symbolic
 
 $(DLLFILE): compiling_info $(object_files) $(resource_obj) $(LNKFILE)
 	@echo * Linking: $@
@@ -53,6 +61,12 @@ $(DLLFILE): compiling_info $(object_files) $(resource_obj) $(LNKFILE)
 $(LIBFILE): $(DLLFILE)
 	@echo * Creating LIB file: $@
 	wlib -q -b -n -c -pa -s -t -zld -ii -io $* @SDL12.lbc
+
+SDLmain.lib: SDL_win32_main.obj
+	wlib -q -b -n $@ -+SDL_win32_main.obj
+
+SDL_win32_main.obj : SDLmain/win32/SDL_win32_main.c
+	wcc386 $(CFLAGS_SDLMAIN) -fo=$^@ $<
 
 compiling_info : .symbolic
 	@echo * Compiling...
@@ -83,3 +97,4 @@ distclean: clean .SYMBOLIC
 	@if exist *.err rm *.err
 	@if exist $(DLLFILE) rm $(DLLFILE)
 	@if exist $(LIBFILE) rm $(LIBFILE)
+	@if exist SDLmain.lib rm SDLmain.lib
