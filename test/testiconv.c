@@ -69,5 +69,7 @@ int main(int argc, char *argv[])
 		fputs(test[0], stdout);
 		SDL_free(test[0]);
 	}
+
+	fprintf(stderr, "\nTotal errors: %d\n", errors);
 	return (errors ? errors + 1 : 0);
 }
