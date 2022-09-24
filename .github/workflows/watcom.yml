@@ -1,0 +1,39 @@
+name: Build (OpenWatcom)
+
+on: [push, pull_request]
+
+jobs:
+  os2:
+    name: ${{ matrix.platform.name }}
+    runs-on: windows-latest
+
+    strategy:
+      matrix:
+        platform:
+        - { name: Windows, makefile: Makefile.w32 }
+        - { name: OS/2,    makefile: Makefile.os2 }
+
+    steps:
+      - uses: open-watcom/setup-watcom@v0
+      - name: Get sdl12-compat sources
+        uses: actions/checkout@v2
+      - name: Get SDL2 headers
+        uses: actions/checkout@v2
+        with:
+          repository: libsdl-org/SDL
+          ref: release-2.24.0
+          path: SDL2
+      - name: Build sdl12-compat
+        run: |
+          cd src && wmake -f ${{ matrix.platform.makefile }} SDL2INC="${{ github.workspace }}/SDL2/include"
+          cd ..
+      - name: Build tests
+        run: |
+          cd test && wmake -f ${{ matrix.platform.makefile }}
+          cd ..
+      - name: distclean
+        run: |
+          cd src && wmake -f ${{ matrix.platform.makefile }} distclean
+          cd ..
+          cd test && wmake -f ${{ matrix.platform.makefile }} distclean
+          cd ..
