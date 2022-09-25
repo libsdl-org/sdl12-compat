@@ -4512,6 +4512,9 @@ EventFilter20to12(void *data, SDL_Event *event20)
             event12.motion.which = (Uint8) event20->motion.which;
             event12.motion.state = event20->motion.state;
             AdjustOpenGLLogicalScalingPoint(&event20->motion.x, &event20->motion.y);
+            /* Clamp the absolute position to the window dimensions. */
+            event20->motion.x = SDL_max(SDL_min(event20->motion.x, VideoSurface12->w), 0);
+            event20->motion.y = SDL_max(SDL_min(event20->motion.y, VideoSurface12->h), 0);
             event12.motion.x = (Uint16) event20->motion.x;
             event12.motion.y = (Uint16) event20->motion.y;
             if (UseMouseRelativeScaling) {
