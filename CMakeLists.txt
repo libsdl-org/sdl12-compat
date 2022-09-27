@@ -15,6 +15,11 @@ if(STATICDEVEL AND NOT (CMAKE_SYSTEM_NAME MATCHES "Linux"))
   MESSAGE(FATAL_ERROR "Static builds are only supported on Linux.")
 endif()
 
+include(CheckCSourceCompiles)
+include(CheckIncludeFile)
+include(CheckCCompilerFlag)
+include(GNUInstallDirs)
+
 set(CMAKE_SKIP_RPATH TRUE)
 
 if(APPLE)
@@ -43,11 +48,6 @@ set(SDL12COMPAT_SRCS
 )
 add_library(SDL SHARED ${SDL12COMPAT_SRCS})
 
-include(CheckCSourceCompiles)
-include(CheckIncludeFile)
-include(CheckCCompilerFlag)
-
-include(GNUInstallDirs)
 include("cmake/modules/FindSDL2.cmake")
 target_include_directories(SDL PRIVATE ${SDL2_INCLUDE_DIRS})
 
