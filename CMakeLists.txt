@@ -15,6 +15,10 @@ if(STATICDEVEL AND NOT (CMAKE_SYSTEM_NAME MATCHES "Linux"))
   MESSAGE(FATAL_ERROR "Static builds are only supported on Linux.")
 endif()
 
+list(APPEND CMAKE_MODULE_PATH
+    "${CMAKE_CURRENT_LIST_DIR}/cmake/modules"
+)
+
 include(CheckCSourceCompiles)
 include(CheckIncludeFile)
 include(CheckCCompilerFlag)
@@ -48,7 +52,10 @@ set(SDL12COMPAT_SRCS
 )
 add_library(SDL SHARED ${SDL12COMPAT_SRCS})
 
-include("cmake/modules/FindSDL2.cmake")
+find_package(SDL2)
+if(NOT SDL2_INCLUDE_DIRS)
+  message(FATAL_ERROR "Could not find SDL2 headers")
+endif()
 target_include_directories(SDL PRIVATE ${SDL2_INCLUDE_DIRS})
 
 set(EXTRA_CFLAGS )
