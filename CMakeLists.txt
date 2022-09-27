@@ -141,7 +141,6 @@ return 0; }" IS_X86)
     endforeach(flag_var)
 endif()
 
-
 # SDLmain library...
 if(APPLE)
     add_library(SDLmain STATIC src/SDLmain/macosx/SDLMain.m)
