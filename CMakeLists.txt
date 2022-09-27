@@ -102,7 +102,7 @@ elseif(WIN32)
     set_target_properties(SDL PROPERTIES
         VERSION "${PROJECT_VERSION}"
         SOVERSION "0"
-      OUTPUT_NAME "SDL")
+        OUTPUT_NAME "SDL")
 elseif(OS2)
     set_target_properties(SDL PROPERTIES COMPILE_DEFINITIONS "BUILD_SDL") # for DECLSPEC
     set_target_properties(SDL PROPERTIES
@@ -113,7 +113,7 @@ else()
     set_target_properties(SDL PROPERTIES
         VERSION "${PROJECT_VERSION}"
         SOVERSION "0"
-      OUTPUT_NAME "SDL")
+        OUTPUT_NAME "SDL")
 endif()
 
 if(MINGW)
@@ -262,7 +262,10 @@ if(SDL12DEVEL)
       set(SDL_CFLAGS "-D_GNU_SOURCE=1 -D_REENTRANT")
       set(SDL_RLD_FLAGS "")  # !!! FIXME: this forces rpath, which we might want?
       set(SDL_LIBS "-lSDL")
-      set(SDL_STATIC_LIBS ${CMAKE_DL_LIBS})
+      set(SDL_STATIC_LIBS "")
+      foreach(lib ${CMAKE_DL_LIBS})
+          set(SDL_STATIC_LIBS "-l${lib}")
+      endforeach()
       if(NOT STATICDEVEL)
         set(SDL_STATIC_LIBS "")
       endif()
