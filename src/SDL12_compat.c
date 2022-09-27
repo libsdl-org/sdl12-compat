@@ -2324,9 +2324,15 @@ SDL_InitSubSystem(Uint32 sdl12flags)
        backend, but it doesn't exist in SDL2. Force to "windows" instead. */
     const char *origvidenv = NULL;
     const char *env = SDL20_getenv("SDL_VIDEODRIVER");
-    if (env && (SDL20_strcmp(env, "windib") == 0)) {
-        origvidenv = "windib";
-        SDL20_setenv("SDL_VIDEODRIVER", "windows", 1);
+    if (env) {
+        if (SDL20_strcmp(env, "windib") == 0) {
+            origvidenv = "windib";
+            SDL20_setenv("SDL_VIDEODRIVER", "windows", 1);
+        } else
+        if (SDL20_strcmp(env, "directx") == 0) {
+            origvidenv = "directx";
+            SDL20_setenv("SDL_VIDEODRIVER", "windows", 1);
+        }
     }
 #endif
 
@@ -2599,7 +2605,26 @@ SDL_AudioDriverName(char *namebuf, int maxlen)
 DECLSPEC12 const char * SDLCALL
 SDL_VideoDriverName(char *namebuf, int maxlen)
 {
+#ifdef __WINDOWS__
+    const char *val = SDL20_getenv("SDL_VIDEODRIVER");
+    if (val) {
+        /* give them back what they requested: */
+        if (SDL20_strcmp(val,  "windib") == 0  ||
+            SDL20_strcmp(val, "directx") == 0) {
+            return GetDriverName(val, namebuf, maxlen);
+        }
+    }
+    val = SDL20_GetCurrentVideoDriver();
+    if (val && SDL20_strcmp(val, "windows") == 0) {
+        /* Windows apps may use SDL_VideoDriverName() to check accelerated
+         * vs unaccelerated display by using directx and windib.
+         * https://github.com/libsdl-org/sdl12-compat/issues/223 */
+        val = "directx";
+    }
+    return GetDriverName(val, namebuf, maxlen);
+#else
     return GetDriverName(SDL20_GetCurrentVideoDriver(), namebuf, maxlen);
+#endif
 }
 
 
