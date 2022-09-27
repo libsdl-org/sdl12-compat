@@ -12,7 +12,7 @@ option(SDL12DEVEL "Enable installing SDL-1.2 development headers" ON)
 option(STATICDEVEL "Enable installing static link library" OFF)
 
 if(STATICDEVEL AND NOT (CMAKE_SYSTEM_NAME MATCHES "Linux"))
-  MESSAGE(FATAL_ERROR "Static builds are only supported on Linux.")
+  message(FATAL_ERROR "Static builds are only supported on Linux.")
 endif()
 
 list(APPEND CMAKE_MODULE_PATH
