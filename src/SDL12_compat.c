@@ -4616,8 +4616,8 @@ EventFilter20to12(void *data, SDL_Event *event20)
             event12.button.which = (Uint8) event20->wheel.which;
             event12.button.button = (event20->wheel.y > 0) ? 4 : 5;  /* wheelup is 4, down is 5. */
             event12.button.state = SDL_PRESSED;
-            event12.button.x = 0;
-            event12.button.y = 0;
+            event12.button.x = MousePosition.x;
+            event12.button.y = MousePosition.y;
             PushEventIfNotFiltered(&event12);
 
             event12.type = SDL12_MOUSEBUTTONUP;  /* immediately release mouse "button" at the end of this switch. */
