@@ -4533,6 +4533,10 @@ EventFilter20to12(void *data, SDL_Event *event20)
         }
 
         case SDL_MOUSEMOTION:
+            if (!VideoSurface12) {
+                return 1;  /* we don't have a screen surface yet? Don't send this on to the app. */
+            }
+
             event12.type = SDL12_MOUSEMOTION;
             event12.motion.which = (Uint8) event20->motion.which;
             event12.motion.state = event20->motion.state;
