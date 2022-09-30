@@ -133,7 +133,6 @@ stage, though. Send patches if your platform lacks something. */
 #define HAVE_BCOPY 1
 #define HAVE_ATOI 1
 #define HAVE_ATOF 1
-#define HAVE_STRLCPY 1
 #define HAVE_STRLCAT 1
 #define HAVE__STRREV 1
 #define HAVE__STRUPR 1
@@ -164,6 +163,10 @@ stage, though. Send patches if your platform lacks something. */
 #define HAVE_SIGACTION 1
 #define HAVE_SA_SIGACTION 1
 #define HAVE_SETJMP 1
+#endif
+
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__)  /* macos and BSDs have this. */
+#define HAVE_STRLCPY 1
 #endif
 
 /* Don't define most of the SDL backends, under the assumption checking for these against the headers won't work anyhow.
