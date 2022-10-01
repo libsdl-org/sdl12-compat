@@ -28,7 +28,7 @@
  * should be way ahead of what SDL-1.2 Classic would report, so apps can
  * decide if they're running under the compat layer, if they really care.
  */
-#define SDL12_COMPAT_VERSION 56
+#define SDL12_COMPAT_VERSION 58
 
 #include <stdarg.h>
 #include <limits.h>
