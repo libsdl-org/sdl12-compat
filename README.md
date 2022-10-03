@@ -246,6 +246,18 @@ The available options are:
   applications which use their own mouse cursors. See also:
   https://wiki.libsdl.org/SDL_HINT_MOUSE_RELATIVE_SCALING
 
+- SDL12COMPAT_ALLOW_THREADED_DRAWS: (checked during SDL_Init)
+  Enabled by default.
+  If disabled, calls to `SDL_UpdateRects()` from non-main threads are
+  converted into requests for the main thread to carry out the update later.
+  The thread that called `SDL_SetVideoMode()` is treated as the main thread.
+
+- SDL12COMPAT_ALLOW_THREADED_PUMPS: (checked during SDL_Init)
+  Enabled by default.
+  If disabled, calls to `SDL_PumpEvents()` from non-main threads are
+  completely ignored.
+  The thread that called `SDL_SetVideoMode()` is treated as the main thread.
+
 # Compatibility issues with OpenGL scaling
 
 The OpenGL scaling feature of sdl12-compat allows applications which wish to
