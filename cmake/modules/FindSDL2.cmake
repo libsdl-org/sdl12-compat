@@ -57,6 +57,7 @@ This module will set the following variables in your project:
 ::
 
   SDL2_LIBRARIES, the name of the library to link against
+  SDL2_SDL12_COMPAT_SHARED_LIBRARY_PATH, the location of the shared library loaded by sdl12-compat
   SDL2_INCLUDE_DIRS, where to find SDL.h
   SDL2_FOUND, if false, do not try to link to SDL2
   SDL2MAIN_FOUND, if false, do not try to link to SDL2main
@@ -266,6 +267,54 @@ if(SDL2_LIBRARY)
     endif()
     unset(_SDL2_MAIN_INDEX)
   endif()
+
+  # Get the path to the shared library needed by sdl12-compat.
+  # Distributing an application built with sdl12-compat requires
+  # copying the -2.0.0 shared library from SDL2 into a location
+  # findable by the sdl12-compat library, such as alongside it in
+  # the same directory.
+  # This is a convenience so that projects don't need to write their
+  # own methods of finding it if they use SDL2 with sdl12-compat.
+  foreach(SDL2_TEST_SHARED_LIBRARY ${SDL2_LIBRARIES})
+    if(APPLE)
+      set(SDL2_SDL12_COMPAT_LIBRARY_CANDIDATE "${SDL2_TEST_SHARED_LIBRARY}")
+      if(SDL2_SDL12_COMPAT_LIBRARY_CANDIDATE MATCHES "libSDL2\.dylib$")
+        string(REGEX REPLACE "\.dylib$" "-2\.0\.0\.dylib" SDL2_SDL12_COMPAT_LIBRARY_CANDIDATE_MODIFIED "${SDL2_SDL12_COMPAT_LIBRARY_CANDIDATE}")
+        if(EXISTS "${SDL2_SDL12_COMPAT_LIBRARY_CANDIDATE_MODIFIED}")
+          set(SDL2_SDL12_COMPAT_SHARED_LIBRARY_PATH "${SDL2_SDL12_COMPAT_LIBRARY_CANDIDATE_MODIFIED}")
+          unset(SDL2_SDL12_COMPAT_LIBRARY_CANDIDATE_MODIFIED)
+          unset(SDL2_SDL12_COMPAT_LIBRARY_CANDIDATE)
+          break()
+        endif()
+        # SDL2 cmake stuff was weird for macOS builds
+        if(NOT SDL2_SDL12_COMPAT_SHARED_LIBRARY_PATH)
+          string(REGEX REPLACE "\.dylib$" "-2\.0\.dylib" SDL2_SDL12_COMPAT_LIBRARY_CANDIDATE_MODIFIED "${SDL2_SDL12_COMPAT_LIBRARY_CANDIDATE}")
+          if(EXISTS "${SDL2_SDL12_COMPAT_LIBRARY_CANDIDATE_MODIFIED}")
+            set(SDL2_SDL12_COMPAT_SHARED_LIBRARY_PATH "${SDL2_SDL12_COMPAT_LIBRARY_CANDIDATE_MODIFIED}")
+            unset(SDL2_SDL12_COMPAT_LIBRARY_CANDIDATE_MODIFIED)
+            unset(SDL2_SDL12_COMPAT_LIBRARY_CANDIDATE)
+            break()
+          endif()
+        endif()
+        unset(SDL2_SDL12_COMPAT_LIBRARY_CANDIDATE_MODIFIED)
+      endif()
+      unset(SDL2_SDL12_COMPAT_LIBRARY_CANDIDATE)
+    elseif(UNIX)
+      if(SDL2_TEST_SHARED_LIBRARY MATCHES "libSDL2-2\.0\.so\.0$")
+        if(EXISTS "${SDL2_TEST_SHARED_LIBRARY}")
+          set(SDL2_SDL12_COMPAT_SHARED_LIBRARY_PATH "${SDL2_TEST_SHARED_LIBRARY}")
+          break()
+        endif()
+      endif()
+    elseif(WIN32 OR OS2)
+      if(SDL2_TEST_SHARED_LIBRARY "SDL2\.dll$")
+        if(EXISTS "${SDL2_TEST_SHARED_LIBRARY}")
+          set(SDL2_SDL12_COMPAT_SHARED_LIBRARY_PATH "${SDL2_TEST_SHARED_LIBRARY}")
+          break()
+        endif()
+      endif()
+    endif()
+  endforeach()
 
   # For OS X, SDL2 uses Cocoa as a backend so it must link to Cocoa.
   # CMake doesn't display the -framework Cocoa string in the UI even
