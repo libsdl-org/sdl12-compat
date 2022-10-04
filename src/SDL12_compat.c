@@ -6656,15 +6656,20 @@ SDL_UpdateRects(SDL12_Surface *surface12, int numrects, SDL12_Rect *rects12)
         const int pixsize = surface12->format->BytesPerPixel;
         const int srcpitch = surface12->pitch;
         SDL_bool whole_screen = SDL_FALSE;
+        SDL_Renderer *renderer = NULL;
         void *pixels = NULL;
         SDL_Rect rect20;
         int pitch = 0;
         int i, j;
 
+        if (!upload_later) {
+            renderer = LockVideoRenderer();  /* must own the renderer before locking the texture! */
+        }
+
         for (i = 0; i < numrects; i++) {
             UpdateRect12to20(surface12, &rects12[i], &rect20, &whole_screen);
 
-            if (upload_later) {
+            if (!renderer) {
                 continue;
             } else if (!rect20.w || !rect20.h) {
                 continue;
@@ -6710,6 +6715,10 @@ SDL_UpdateRects(SDL12_Surface *surface12, int numrects, SDL12_Rect *rects12)
             PresentScreen();  /* flip it now. */
         } else {
             VideoSurfacePresentTicks = VideoSurfaceLastPresentTicks + GetDesiredMillisecondsPerFrame();  /* flip it later. */
+        }
+
+        if (renderer) {
+            UnlockVideoRenderer();
         }
     }
 }
