@@ -1356,9 +1356,9 @@ LoadSDL20(void)
                     WantDebugLogging = SDL12Compat_GetHintBoolean("SDL12COMPAT_DEBUG_LOGGING", SDL_FALSE);
                     if (WantDebugLogging) {
                         #if defined(__DATE__) && defined(__TIME__)
-                        SDL20_Log("sdl12-compat, built on " __DATE__ " at " __TIME__ ", talking to SDL2 %d.%d.%d", v.major, v.minor, v.patch);
+                        SDL20_Log("sdl12-compat 1.2.%d, built on " __DATE__ " at " __TIME__ ", talking to SDL2 %d.%d.%d", SDL12_COMPAT_VERSION, v.major, v.minor, v.patch);
                         #else
-                        SDL20_Log("sdl12-compat, talking to SDL2 %d.%d.%d", v.major, v.minor, v.patch);
+                        SDL20_Log("sdl12-compat 1.2.%d, talking to SDL2 %d.%d.%d", SDL12_COMPAT_VERSION, v.major, v.minor, v.patch);
                         #endif
                     }
                     SDL12Compat_ApplyQuirks();  /* Apply and maybe print a list of any enabled quirks. */
