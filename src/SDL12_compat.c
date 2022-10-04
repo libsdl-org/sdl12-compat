@@ -9030,6 +9030,13 @@ SDL_OpenAudio(SDL_AudioSpec *want, SDL_AudioSpec *obtained)
 {
     SDL_bool already_opened;
 
+    /* SDL_OpenAudio() will init the subsystem for you if necessary, yuck. */
+    if ((InitializedSubsystems20 & SDL_INIT_AUDIO) != SDL_INIT_AUDIO) {
+        if (SDL_InitSubSystem(SDL12_INIT_AUDIO) < 0) {
+            return -1;
+        }
+    }
+
     /* SDL2 uses a NULL callback to mean "we plan to use SDL_QueueAudio()" */
     if (want && (want->callback == NULL)) {
         return SDL20_SetError("Callback can't be NULL");
