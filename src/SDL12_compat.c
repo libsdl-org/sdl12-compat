@@ -5117,16 +5117,21 @@ SDL_VideoModeOK(int width, int height, int bpp, Uint32 sdl12flags)
         return 0;
     }
 
+    /* if the 1.2 video backend could center a surface in a larger mode, it
+       would accept the size. Since we scale things, we will, too, even
+       without an exact width/height match. */
+
     if (!(sdl12flags & SDL12_FULLSCREEN)) {
         SDL_DisplayMode mode;
         SDL20_GetDesktopDisplayMode(VideoDisplayIndex, &mode);
-        actual_bpp = SDL_BITSPERPIXEL(mode.format);
+        if ((mode.w >= width) && (mode.h >= height)) {
+            actual_bpp = SDL_BITSPERPIXEL(mode.format);
+        }
     } else {
         for (i = 0; i < VideoModesCount; ++i) {
             VideoModeList *vmode = &VideoModes[i];
             for (j = 0; j < vmode->nummodes; ++j) {
-                if (vmode->modeslist12[j].w == width && vmode->modeslist12[j].h == height)
-                {
+                if (vmode->modeslist12[j].w >= width && vmode->modeslist12[j].h >= height) {
                     if (!vmode->format) {
                         return bpp;
                     }
