@@ -8844,7 +8844,7 @@ FakeCdRomAudioCallback(AudioCallbackWrapperData *data, Uint8 *stream, int len, c
             SDL20_AudioStreamGet(data->cdrom_stream, stream, available);
         } else {
             SDL20_AudioStreamGet(data->cdrom_stream, data->mix_buffer, available);
-            SDL20_MixAudio(stream, data->mix_buffer, available, SDL_MIX_MAXVOLUME);
+            SDL20_MixAudioFormat(stream, data->mix_buffer, audio_cbdata->device_format.format, available, SDL_MIX_MAXVOLUME);
         }
 
         data->cdrom_pcm_frames_written += (int) ((available / ((double) SDL_AUDIO_BITSIZE(data->device_format.format) / 8.0)) / data->device_format.channels);
@@ -9153,6 +9153,37 @@ SDL_GetAudioStatus(void)
 }
 
 DECLSPEC12 void SDLCALL
+SDL_MixAudio(Uint8 *dst, const Uint8 *src, Uint32 len, int volume)
+{
+    SDL_AudioFormat fmt;
+
+    if (volume == 0) {
+        return;  /* nothing to do. */
+    }
+
+    /* in 1.2, if not the subsystem isn't initialized _at all_, it forces
+       format to AUDIO_S16. If it's initialized but the device isn't opened,
+       you get a format of zero and it returns an error without mixing
+       anything. */
+    SDL20_LockAudio();
+    if ((InitializedSubsystems20 & SDL_INIT_AUDIO) != SDL_INIT_AUDIO) {
+        fmt = AUDIO_S16;  /* to quote 1.2: "HACK HACK HACK" */
+    } else if (!audio_cbdata || !audio_cbdata->app_callback_opened) {
+        fmt = 0;  /* this will fail, but drop the lock first. */
+    } else {
+        fmt = audio_cbdata->app_callback_format.format;
+    }
+    SDL20_UnlockAudio();
+
+    if (fmt == 0) {
+        SDL_SetError("SDL_MixAudio(): unknown audio format");  /* this is the exact error 1.2 reports for this. */
+    } else {
+        SDL20_MixAudioFormat(dst, src, fmt, len, volume);
+    }
+}
+
+
+DECLSPEC12 void SDLCALL
 SDL_CloseAudio(void)
 {
     SDL20_LockAudio();
@@ -9165,7 +9196,6 @@ SDL_CloseAudio(void)
 
     CloseSDL2AudioDevice();
 }
-
 
 static SDL_AudioCVT *
 AudioCVT12to20(const SDL12_AudioCVT *cvt12, SDL_AudioCVT *cvt20)

@@ -113,6 +113,7 @@
 #define SDL_VideoInit IGNORE_THIS_VERSION_OF_SDL_VideoInit
 #define SDL_BuildAudioCVT IGNORE_THIS_VERSION_OF_SDL_BuildAudioCVT
 #define SDL_ConvertAudio IGNORE_THIS_VERSION_OF_SDL_ConvertAudio
+#define SDL_MixAudio IGNORE_THIS_VERSION_OF_SDL_MixAudio
 #define SDL_RegisterApp IGNORE_THIS_VERSION_OF_SDL_RegisterApp
 #define SDL_UnregisterApp IGNORE_THIS_VERSION_OF_SDL_UnregisterApp
 
@@ -242,6 +243,7 @@ typedef void (__cdecl *pfnSDL_CurrentEndThread) (unsigned);
 #undef SDL_VideoInit
 #undef SDL_BuildAudioCVT
 #undef SDL_ConvertAudio
+#undef SDL_MixAudio
 #undef SDL_RegisterApp
 #undef SDL_UnregisterApp
 

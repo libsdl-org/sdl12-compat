@@ -206,7 +206,7 @@ SDL20_SYM(void,PauseAudio,(int a),(a),)
 SDL20_SYM_PASSTHROUGH(void,FreeWAV,(Uint8 *a),(a),)
 SDL20_SYM(int,BuildAudioCVT,(SDL_AudioCVT *a, Uint16 b, Uint8 c, int d, Uint16 e, Uint8 f, int g),(a,b,c,d,e,f,g),return)
 SDL20_SYM(int,ConvertAudio,(SDL_AudioCVT *a),(a),return)
-SDL20_SYM_PASSTHROUGH(void,MixAudio,(Uint8 *a, const Uint8 *b, Uint32 c, int d),(a,b,c,d),)
+SDL20_SYM(void,MixAudioFormat,(Uint8 *a, const Uint8 *b, SDL_AudioFormat c, Uint32 d, int e),(a,b,c,d,e),)
 SDL20_SYM_PASSTHROUGH(void,LockAudio,(void),(),)
 SDL20_SYM_PASSTHROUGH(void,UnlockAudio,(void),(),)
 
