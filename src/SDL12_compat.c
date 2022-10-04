@@ -6162,15 +6162,23 @@ SaveDestAlpha(SDL12_Surface *src12, SDL12_Surface *dst12, const SDL12_Rect *dstr
     const SDL_bool save_dstalpha = ((src12->flags & SDL12_SRCALPHA) && dst12->format->Amask && ((src12->format->alpha != 255) || src12->format->Amask)) ? SDL_TRUE : SDL_FALSE;
 
     if (save_dstalpha) {
-        Uint8 *dptr;
-        int x, y;
-
-        const int w = dstrect12->w;
-        const int h = dstrect12->h;
-
         const Uint32 amask = dst12->format->Amask;
         const Uint32 ashift = dst12->format->Ashift;
         const Uint16 pitch = dst12->pitch;
+        SDL12_Rect fullrect;
+        Uint8 *dptr;
+        int x, y, w, h;
+
+        if (!dstrect12) {
+            fullrect.x = 0;
+            fullrect.y = 0;
+            fullrect.w = dst12->w;
+            fullrect.h = dst12->h;
+            dstrect12 = &fullrect;
+        }
+
+        w = dstrect12->w;
+        h = dstrect12->h;
 
         dstalpha = (Uint8 *) SDL20_malloc(w * h);
         if (!dstalpha) {
@@ -6210,14 +6218,23 @@ static void
 RestoreDestAlpha(SDL12_Surface *dst12, Uint8 *dstalpha, const SDL12_Rect *dstrect12)
 {
     if (dstalpha) {
-        int x, y;
-
-        const int w = dstrect12->w;
-        const int h = dstrect12->h;
         const Uint8 *sptr = dstalpha;
         const Uint32 amask = dst12->format->Amask;
         const Uint32 ashift = dst12->format->Ashift;
         const Uint16 pitch = dst12->pitch;
+        SDL12_Rect fullrect;
+        int x, y, w, h;
+
+        if (!dstrect12) {
+            fullrect.x = 0;
+            fullrect.y = 0;
+            fullrect.w = dst12->w;
+            fullrect.h = dst12->h;
+            dstrect12 = &fullrect;
+        }
+
+        w = dstrect12->w;
+        h = dstrect12->h;
 
         if (dst12->format->BytesPerPixel == 2) {
             Uint16 *dptr = (Uint16 *) dst12->pixels;
