@@ -1206,14 +1206,6 @@ static QuirkEntryType quirks[] = {
     {"tucnak", "SDL_RENDER_DRIVER", "software"},
     {"tucnak", "SDL_FRAMEBUFFER_ACCELERATION", "false"},
 
-    /* Civilization: Call to Power draws and pumps from multiple threads at once, causing issues. */
-    {"civctp", "SDL12COMPAT_ALLOW_THREADED_DRAWS", "0"},
-    {"civctp", "SDL12COMPAT_ALLOW_THREADED_PUMPS", "0"},
-    {"civctp.dynamic", "SDL12COMPAT_ALLOW_THREADED_DRAWS", "0"},
-    {"civctp.dynamic", "SDL12COMPAT_ALLOW_THREADED_PUMPS", "0"},
-    {"civctp.dynamic_fixed", "SDL12COMPAT_ALLOW_THREADED_DRAWS", "0"},
-    {"civctp.dynamic_fixed", "SDL12COMPAT_ALLOW_THREADED_PUMPS", "0"},
-
     /* The 32-bit Steam build only of Multiwinia Quits but doesn't re-Init */
     {"multiwinia.bin.x86", "SDL12COMPAT_NO_QUIT_VIDEO", "1"}
 #else
