@@ -948,6 +948,7 @@ static SDL12_PixelFormat VideoInfoVfmt12;
 static SDL_PixelFormat *VideoInfoVfmt20 = NULL;
 static SDL_bool VideoWindowGrabbed = SDL_FALSE;
 static SDL_bool VideoCursorHidden = SDL_FALSE;
+static SDL_bool SetVideoModeInProgress = SDL_FALSE;
 static SDL_Window *VideoWindow20 = NULL;
 static SDL_Renderer *VideoRenderer20 = NULL;
 static SDL_mutex *VideoRendererLock = NULL;
@@ -4334,7 +4335,10 @@ EventFilter20to12(void *data, SDL_Event *event20)
 
                 case SDL_WINDOWEVENT_SHOWN:
                 case SDL_WINDOWEVENT_EXPOSED:
-                    event12.type = SDL12_VIDEOEXPOSE;
+                    /* drop these during window creation (see issue #229) */
+                    if (!SetVideoModeInProgress) {
+                        event12.type = SDL12_VIDEOEXPOSE;
+                    }
                     break;
 
                 case SDL_WINDOWEVENT_RESIZED: {
@@ -5695,8 +5699,8 @@ UnlockVideoRenderer(void)
 
 static void HandleInputGrab(SDL12_GrabMode mode);
 
-DECLSPEC12 SDL12_Surface * SDLCALL
-SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
+static SDL12_Surface *
+SetVideoModeImpl(int width, int height, int bpp, Uint32 flags12)
 {
     SDL_DisplayMode dmode;
     Uint32 fullscreen_flags20 = 0;
@@ -6130,7 +6134,19 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
         UnlockVideoRenderer();
     }
 
+    SDL_PumpEvents();  /* run this once at startup. */
+
     return VideoSurface12;
+}
+
+DECLSPEC12 SDL12_Surface * SDLCALL
+SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
+{
+    SDL12_Surface *retval;
+    SetVideoModeInProgress = SDL_TRUE;
+    retval = SetVideoModeImpl(width, height, bpp, flags12);
+    SetVideoModeInProgress = SDL_FALSE;
+    return retval;
 }
 
 DECLSPEC12 SDL12_Surface * SDLCALL
