@@ -8701,12 +8701,12 @@ SDL_CDPlay(SDL12_CD *cdrom, int start, int length)
 
     start_frame = start - cdrom->track[start_track].offset;
 
-    if (remain < (cdrom->track[start_frame].length - start_frame)) {
+    if (remain < (cdrom->track[start_track].length - start_frame)) {
         ntracks = 0;
         nframes = remain;
         remain = 0;
     } else {
-        remain -= (cdrom->track[start_frame].length - start_frame);
+        remain -= (cdrom->track[start_track].length - start_frame);
         for (i = start_track + 1; i < cdrom->numtracks; i++) {
             if (remain < cdrom->track[i].length) {
                 ntracks = i - start_track;
