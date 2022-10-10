@@ -460,7 +460,7 @@ int main(int argc, char *argv[])
 	}
 
 	{
-		typedef SDL_Window * SDLCALL (*fnSDL12COMPAT_GetWindow)(void);
+		typedef SDL_Window* (SDLCALL *fnSDL12COMPAT_GetWindow)(void);
 		fnSDL12COMPAT_GetWindow pfnSDL12COMPAT_GetWindow = (fnSDL12COMPAT_GetWindow) SDL_GL_GetProcAddress("SDL12COMPAT_GetWindow");
 		printf("SDL12COMPAT_GetWindow address is %p%s\n", pfnSDL12COMPAT_GetWindow, pfnSDL12COMPAT_GetWindow ? "" : " (probably using classic SDL 1.2)");
 		if (pfnSDL12COMPAT_GetWindow != NULL) {
