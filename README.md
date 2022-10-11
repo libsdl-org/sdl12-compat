@@ -258,6 +258,18 @@ The available options are:
   completely ignored.
   The thread that called `SDL_SetVideoMode()` is treated as the main thread.
 
+- SDL12COMPAT_ALLOW_SYSWM: (checked during SDL_Init)
+  Enabled by default.
+  If disabled, SDL_SYSWMEVENT events will not be delivered to the app, and
+  SDL_GetWMInfo() will fail; this is useful if you have a program that
+  tries to access X11 directly through SDL's interfaces, but can survive
+  without it, becoming compatible with, for example, Wayland, or perhaps
+  just avoiding a bug in target-specific code. Note that sdl12-compat already
+  disallows SysWM things unless SDL2 is using its "windows" or "x11" video
+  backends, because SDL 1.2 didn't have wide support for its SysWM APIs
+  outside of Windows and X11 anyhow.
+
+
 # Compatibility issues with OpenGL scaling
 
 The OpenGL scaling feature of sdl12-compat allows applications which wish to
