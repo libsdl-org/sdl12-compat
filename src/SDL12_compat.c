@@ -4306,7 +4306,8 @@ static int FlushPendingKeydownEvent(Uint32 unicode)
 
     if (KeyRepeatDelay) {
         SDL20_memcpy(&KeyRepeatEvent, &PendingKeydownEvent, sizeof (SDL12_Event));
-        KeyRepeatNextTicks = SDL20_GetTicks() + KeyRepeatDelay;
+        /* SDL 1.2 waits for the delay, and then a full interval past that before the first repeat is reported. */
+        KeyRepeatNextTicks = SDL20_GetTicks() + KeyRepeatDelay + KeyRepeatInterval;
     }
 
     /* Reset the event. */
