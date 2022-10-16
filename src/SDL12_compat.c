@@ -1189,11 +1189,9 @@ static QuirkEntryType quirks[] = {
 #if defined(__unix__)
     /* Awesomenauts uses Cg, and does weird things with the GL context. */
     {"Awesomenauts.bin.x86", "SDL12COMPAT_OPENGL_SCALING", "0"},
-    {"Awesomenauts.bin.x86", "SDL_VIDEODRIVER", "x11"},
     {"Awesomenauts.bin.x86", "SDL12COMPAT_FORCE_GL_SWAPBUFFER_CONTEXT", "1"},
 
     /* Braid uses Cg, which uses glXGetProcAddress(). */
-    {"braid", "SDL_VIDEODRIVER", "x11"},
     {"braid", "SDL12COMPAT_OPENGL_SCALING", "0"},
 
     /* GOG's DOSBox builds have architecture-specific filenames. */
@@ -1329,6 +1327,30 @@ SDL12Compat_ApplyQuirks(void)
             }
         }
     }
+
+    #ifdef __linux__
+    {
+        void *global_symbols = dlopen(NULL, RTLD_LOCAL|RTLD_NOW);
+        SDL_bool force_x11 = SDL_FALSE;
+
+        /* Use linked libraries to detect what quirks we are likely to need */
+        if (global_symbols != NULL) {
+            /* GLEW (e.g. Frogatto, SLUDGE) */
+            if (dlsym(global_symbols, "glxewInit") != NULL) { force_x11 = SDL_TRUE; }
+            /* NVIDIA Cg (e.g. Awesomenauts, Braid) */
+            else if (dlsym(global_symbols, "cgGLEnableProgramProfiles") != NULL) { force_x11 = SDL_TRUE; }
+        }
+
+        dlclose(global_symbols);
+
+        if (force_x11) {
+            SDL20_Log("sdl12-compat: We are forcing this app to use X11, because it probably");
+            SDL20_Log("sdl12-compat: talks to an X server directly, outside of SDL. If possible,");
+            SDL20_Log("sdl12-compat: this app should be fixed, to be compatible with Wayland, etc.");
+            SDL20_setenv("SDL_VIDEODRIVER", "x11", 1);
+        }
+    }
+    #endif
 }
 
 static int
