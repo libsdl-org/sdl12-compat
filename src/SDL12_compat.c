@@ -1304,10 +1304,17 @@ SDL12Compat_GetHintFloat(const char *name, float default_value)
 }
 
 static void
-SDL12Compat_ApplyQuirks(void)
+SDL12Compat_ApplyQuirks(SDL_bool force_x11)
 {
     const char *exe_name = SDL12Compat_GetExeName();
     int i;
+
+    #ifdef __linux__
+    if (force_x11) {
+        SDL20_Log("sdl12-compat: We are forcing this app to use X11, because it probably talks to an X server directly, outside of SDL. If possible, this app should be fixed, to be compatible with Wayland, etc.");
+        SDL20_setenv("SDL_VIDEODRIVER", "x11", 1);
+    }
+    #endif
 
     if (*exe_name == '\0') {
         return;
@@ -1327,30 +1334,6 @@ SDL12Compat_ApplyQuirks(void)
             }
         }
     }
-
-    #ifdef __linux__
-    {
-        void *global_symbols = dlopen(NULL, RTLD_LOCAL|RTLD_NOW);
-        SDL_bool force_x11 = SDL_FALSE;
-
-        /* Use linked libraries to detect what quirks we are likely to need */
-        if (global_symbols != NULL) {
-            /* GLEW (e.g. Frogatto, SLUDGE) */
-            if (dlsym(global_symbols, "glxewInit") != NULL) { force_x11 = SDL_TRUE; }
-            /* NVIDIA Cg (e.g. Awesomenauts, Braid) */
-            else if (dlsym(global_symbols, "cgGLEnableProgramProfiles") != NULL) { force_x11 = SDL_TRUE; }
-        }
-
-        dlclose(global_symbols);
-
-        if (force_x11) {
-            SDL20_Log("sdl12-compat: We are forcing this app to use X11, because it probably");
-            SDL20_Log("sdl12-compat: talks to an X server directly, outside of SDL. If possible,");
-            SDL20_Log("sdl12-compat: this app should be fixed, to be compatible with Wayland, etc.");
-            SDL20_setenv("SDL_VIDEODRIVER", "x11", 1);
-        }
-    }
-    #endif
 }
 
 static int
@@ -1358,6 +1341,22 @@ LoadSDL20(void)
 {
     int okay = 1;
     if (!Loaded_SDL20) {
+        SDL_bool force_x11 = SDL_FALSE;
+
+        #ifdef __linux__
+        void *global_symbols = dlopen(NULL, RTLD_LOCAL|RTLD_NOW);
+
+        /* Use linked libraries to detect what quirks we are likely to need */
+        if (global_symbols != NULL) {
+            if (dlsym(global_symbols, "glxewInit") != NULL) {  /* GLEW (e.g. Frogatto, SLUDGE) */
+                force_x11 = SDL_TRUE;
+            } else if (dlsym(global_symbols, "cgGLEnableProgramProfiles") != NULL) {  /* NVIDIA Cg (e.g. Awesomenauts, Braid) */
+                force_x11 = SDL_TRUE;
+            }
+            dlclose(global_symbols);
+        }
+        #endif
+
         okay = LoadSDL20Library();
         if (!okay) {
             strcpy_fn(loaderror, "Failed loading SDL2 library.");
@@ -1380,7 +1379,7 @@ LoadSDL20(void)
                         SDL20_Log("sdl12-compat 1.2.%d, talking to SDL2 %d.%d.%d", SDL12_COMPAT_VERSION, v.major, v.minor, v.patch);
                         #endif
                     }
-                    SDL12Compat_ApplyQuirks();  /* Apply and maybe print a list of any enabled quirks. */
+                    SDL12Compat_ApplyQuirks(force_x11);  /* Apply and maybe print a list of any enabled quirks. */
                 }
             }
             if (!okay) {
