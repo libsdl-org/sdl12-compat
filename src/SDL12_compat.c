@@ -1311,8 +1311,17 @@ SDL12Compat_ApplyQuirks(SDL_bool force_x11)
 
     #ifdef __linux__
     if (force_x11) {
-        SDL20_Log("sdl12-compat: We are forcing this app to use X11, because it probably talks to an X server directly, outside of SDL. If possible, this app should be fixed, to be compatible with Wayland, etc.");
-        SDL20_setenv("SDL_VIDEODRIVER", "x11", 1);
+        const char *videodriver_env = SDL20_getenv("SDL_VIDEODRIVER");
+        if (videodriver_env && (SDL20_strcmp(videodriver_env, "x11") != 0)) {
+            if (WantDebugLogging) {
+                SDL20_Log("This app looks like it requires X11, but the SDL_VIDEODRIVER environment variable is set to \"%s\". If you have issues, try setting SDL_VIDEODRIVER=x11", videodriver_env);
+            }
+        } else {
+            if (WantDebugLogging) {
+                SDL20_Log("sdl12-compat: We are forcing this app to use X11, because it probably talks to an X server directly, outside of SDL. If possible, this app should be fixed, to be compatible with Wayland, etc.");
+            }
+            SDL20_setenv("SDL_VIDEODRIVER", "x11", 1);
+        }
     }
     #endif
 
