@@ -1209,6 +1209,10 @@ static QuirkEntryType quirks[] = {
     /* looks for X11 display and does unnecessary X11 things. Causes problems with SDL2/x11. */
     {"fillets", "SDL12COMPAT_ALLOW_SYSWM", "0"},
 
+    /* doesn't render with GL scaling enabled */
+    {"scorched3d", "SDL12COMPAT_OPENGL_SCALING", "0"},
+    {"scorched3dc", "SDL12COMPAT_OPENGL_SCALING", "0"},
+
     /* The 32-bit Steam build only of Multiwinia Quits but doesn't re-Init */
     {"multiwinia.bin.x86", "SDL12COMPAT_NO_QUIT_VIDEO", "1"}
 #else
