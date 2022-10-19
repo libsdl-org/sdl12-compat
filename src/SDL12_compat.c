@@ -4984,6 +4984,13 @@ SDL_CreateRGBSurface(Uint32 flags12, int width, int height, int depth, Uint32 Rm
         return NULL;
     }
 
+    /* !!! FIXME: this isn't strictly correct, but SDL2 doesn't support
+       !!! FIXME:  surfaces smaller than 8 bits, and this lets at
+       !!! FIXME:  least one game function correctly. */
+    if (depth < 8) {
+        depth = 8;
+    }
+
     if (depth == 8) {  /* don't pass masks to SDL2 for 8-bit surfaces, it'll cause problems. */
         surface20 = SDL20_CreateRGBSurface(0, width, height, depth, 0, 0, 0, 0);
     } else {
