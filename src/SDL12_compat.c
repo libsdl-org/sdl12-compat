@@ -6455,6 +6455,24 @@ SDL_UnlockSurface(SDL12_Surface *surface12)
     surface12->pitch = surface12->surface20->pitch;
 }
 
+DECLSPEC12 int SDLCALL
+SDL_SetColorKey(SDL12_Surface *surface12, Uint32 flag12, Uint32 key)
+{
+    const SDL_bool addkey = (flag12 & SDL12_SRCCOLORKEY) ? SDL_TRUE : SDL_FALSE;
+    const int retval = SDL20_SetColorKey(surface12->surface20, addkey, key);
+    if (SDL20_GetColorKey(surface12->surface20, &surface12->format->colorkey) < 0) {
+        surface12->format->colorkey = 0;
+    }
+
+    if (addkey) {
+        surface12->flags |= SDL12_SRCCOLORKEY;
+    } else {
+        surface12->flags &= ~SDL12_SRCCOLORKEY;
+    }
+
+    return retval;
+}
+
 DECLSPEC12 SDL12_Surface * SDLCALL
 SDL_ConvertSurface(SDL12_Surface *src12, const SDL12_PixelFormat *format12, Uint32 flags12)
 {
@@ -6476,6 +6494,11 @@ SDL_ConvertSurface(SDL12_Surface *src12, const SDL12_PixelFormat *format12, Uint
             if (flags12 & SDL12_SRCALPHA) {
                 SDL20_SetSurfaceBlendMode(surface20, SDL_BLENDMODE_BLEND);
                 retval->flags |= SDL12_SRCALPHA;
+            }
+            if (flags12 & SDL12_SRCCOLORKEY) {
+                Uint8 r, g, b, a;
+                SDL20_GetRGBA(src12->format->colorkey, src12->surface20->format, &r, &g, &b, &a);
+                SDL_SetColorKey(retval, SDL12_SRCCOLORKEY, SDL20_MapRGBA(retval->surface20->format, r, g, b, a));
             }
         }
     }
@@ -7114,24 +7137,6 @@ SDL_GetAppState(void)
         }
     }
     return state12;
-}
-
-DECLSPEC12 int SDLCALL
-SDL_SetColorKey(SDL12_Surface *surface12, Uint32 flag12, Uint32 key)
-{
-    const SDL_bool addkey = (flag12 & SDL12_SRCCOLORKEY) ? SDL_TRUE : SDL_FALSE;
-    const int retval = SDL20_SetColorKey(surface12->surface20, addkey, key);
-    if (SDL20_GetColorKey(surface12->surface20, &surface12->format->colorkey) < 0) {
-        surface12->format->colorkey = 0;
-    }
-
-    if (addkey) {
-        surface12->flags |= SDL12_SRCCOLORKEY;
-    } else {
-        surface12->flags &= ~SDL12_SRCCOLORKEY;
-    }
-
-    return retval;
 }
 
 DECLSPEC12 int SDLCALL
