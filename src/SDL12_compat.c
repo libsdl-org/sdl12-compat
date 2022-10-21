@@ -6821,7 +6821,11 @@ SDL_UpdateRects(SDL12_Surface *surface12, int numrects, SDL12_Rect *rects12)
         } else if (whole_screen) {
             PresentScreen();  /* flip it now. */
         } else {
-            VideoSurfacePresentTicks = VideoSurfaceLastPresentTicks + GetDesiredMillisecondsPerFrame();  /* flip it later. */
+            if (!VideoSurfacePresentTicks) {
+                VideoSurfacePresentTicks = VideoSurfaceLastPresentTicks + GetDesiredMillisecondsPerFrame();  /* flip it later. */
+            } else if (SDL_TICKS_PASSED(SDL20_GetTicks(), VideoSurfacePresentTicks)) {
+                PresentScreen();
+            }
         }
 
         if (renderer) {
@@ -7828,9 +7832,14 @@ SDL_Delay(Uint32 ticks)
 {
     /* In case there's a loading screen from a background thread and the main thread is waiting... */
     const SDL_bool ThisIsSetVideoModeThread = (SDL20_ThreadID() == SetVideoModeThread) ? SDL_TRUE : SDL_FALSE;
-    if (ThisIsSetVideoModeThread && VideoSurfaceUpdatedInBackgroundThread) {
-        SDL_Flip(VideoSurface12);  /* this will update the texture and present. */
+    if (ThisIsSetVideoModeThread) {
+        if (VideoSurfaceUpdatedInBackgroundThread) {
+            SDL_Flip(VideoSurface12);  /* this will update the texture and present. */
+        } else if (VideoSurfacePresentTicks) {
+            PresentScreen();
+        }
     }
+
     SDL20_Delay(ticks);
 }
 
