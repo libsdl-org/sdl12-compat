@@ -1057,6 +1057,7 @@ static char loaderror[256];
     #include <os2.h>
     #define DIRSEP "\\"
     #define SDL20_LIBNAME "SDL2.dll"
+    #define SDL20_LIBNAME2 "SDL2"       /* if loading from LIBPATH */
     #define SDL20_REQUIRED_VER SDL_VERSIONNUM(2,0,7)
     #define strcpy_fn  strcpy
     #define sprintf_fn sprintf
@@ -1064,7 +1065,9 @@ static char loaderror[256];
     static SDL_bool LoadSDL20Library(void) {
         char err[256];
         if (DosLoadModule(err, sizeof(err), SDL20_LIBNAME, &Loaded_SDL20) != 0) {
-            return SDL_FALSE;
+            if (DosLoadModule(err, sizeof(err), SDL20_LIBNAME2, &Loaded_SDL20) != 0) {
+                return SDL_FALSE;
+            }
         }
         return SDL_TRUE;
     }
