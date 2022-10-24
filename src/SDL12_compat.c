@@ -1368,6 +1368,8 @@ LoadSDL20(void)
                 force_x11 = SDL_TRUE;
             } else if (dlsym(global_symbols, "cgGLEnableProgramProfiles") != NULL) {  /* NVIDIA Cg (e.g. Awesomenauts, Braid) */
                 force_x11 = SDL_TRUE;
+            } else if (dlsym(global_symbols, "_Z7ssgInitv") != NULL) {  /* ::ssgInit(void) in plib (e.g. crrcsim) */
+                force_x11 = SDL_TRUE;
             }
             dlclose(global_symbols);
         }
