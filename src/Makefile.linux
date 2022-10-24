@@ -16,7 +16,7 @@ LDFLAGS = -shared -Wl,-soname,libSDL-1.2.so.0
 LDFLAGS+= -Wl,--no-undefined
 LDLIBS  = -ldl
 
-SHLIB = libSDL-1.2.so.1.2.60
+SHLIB = libSDL-1.2.so.1.2.61
 
 OBJ = SDL12_compat.o
 

@@ -4,7 +4,7 @@
 
 cmake_minimum_required(VERSION 3.0.0)
 project(sdl12_compat
-        VERSION 1.2.60
+        VERSION 1.2.61
         LANGUAGES C)
 
 option(SDL12TESTS "Enable to build SDL-1.2 test programs" ON)
@@ -33,7 +33,7 @@ if(APPLE)
   # Xcode project file uses 1.0.0, but it's more compatible to use the
   # higher version.
   set(DYLIB_COMPAT_VERSION 12.0.0 CACHE STRING "library compatibility version")
-  set(DYLIB_CURRENT_VERSION 12.60.0 CACHE STRING "library current version")
+  set(DYLIB_CURRENT_VERSION 12.61.0 CACHE STRING "library current version")
   include_directories("/opt/X11/include")  # hack.
   if(CMAKE_VERSION VERSION_LESS 3.9)
   else()
