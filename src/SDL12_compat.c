@@ -4994,7 +4994,7 @@ SDL_CreateRGBSurface(Uint32 flags12, int width, int height, int depth, Uint32 Rm
        !!! FIXME:  least one game function correctly. */
     if (depth < 8) {
         if (WantDebugLogging) {
-            SDL20_Log("This app is creating an %d-bit SDL_Surface, but we are bumping it to 8-bits. If you see rendering issues, please report them!");
+            SDL20_Log("This app is creating an %d-bit SDL_Surface, but we are bumping it to 8-bits. If you see rendering issues, please report them!", depth);
         }
         depth = 8;
     }
