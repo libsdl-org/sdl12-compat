@@ -42,7 +42,37 @@ Either overwrite the copy of SDL-1.2 that the game uses with sdl12-compat,
 or (on Linux) export LD_LIBRARY_PATH to point to your copy, so the system will
 favor it when loading libraries.
 
+## Watch out for setuid/setgid binaries!
 
+On Linux, if you're testing a binary that's setgid to a "games" group (which
+we ran into several times with Debian packages), or setuid root or whatever,
+then the system will ignore the LD_LIBRARY_PATH variable, as a security
+measure.
+
+The reason some games are packaged like this is usually because they want to
+write to a high score list in a global, shared directory. Often times the
+games will just carry on if they fail to do so.
+
+There are several ways to bypass this:
+
+- On some distros, you can run `ld.so` directly:
+  ```bash
+  LD_LIBRARY_PATH=/where/i/can/find/sdl12-compat ld.so /usr/games/mygame
+  ```
+- You can remove the setgid bit:
+  ```bash
+  # (it's `u-s` for the setuid bit)
+  sudo chmod g-s /usr/games/mygame
+  ```
+- You can install sdl12-compat system-wide, so the game uses that
+  instead of SDL 1.2 by default.
+- If you don't have root access at all, you can try to copy the game 
+  somewhere else or install a personal copy, or build from source code,
+  but these are drastic measures.
+  
+Definitely read the next section ("Am I actually running sdl12-compat?") in
+these scenarios to make sure you ended up with the right library!
+  
 ## Am I actually running sdl12-compat?
 
 The easiest way to know is to set some environment variables:
