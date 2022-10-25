@@ -2119,6 +2119,8 @@ Init12VidModes(void)
         SDL_sscanf(maxmodestr, "%ux%u", &w, &h);
         if (w > 0xFFFF) w = 0xFFFF;
         if (h > 0xFFFF) h = 0xFFFF;
+        maxw = w;
+        maxh = h;
     }
 
     for (i = 0; i < total; ++i) {
