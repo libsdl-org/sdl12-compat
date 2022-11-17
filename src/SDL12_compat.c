@@ -1194,9 +1194,6 @@ static QuirkEntryType quirks[] = {
     {"Awesomenauts.bin.x86", "SDL12COMPAT_OPENGL_SCALING", "0"},
     {"Awesomenauts.bin.x86", "SDL12COMPAT_FORCE_GL_SWAPBUFFER_CONTEXT", "1"},
 
-    /* Quake 2 XP uses FBOs and doesn't use SDL_GL_GetProcAddress to get the entry points. */
-    {"quake2xp", "SDL12COMPAT_OPENGL_SCALING", "0"},
-
     /* Braid uses Cg, which uses glXGetProcAddress(). */
     {"braid", "SDL12COMPAT_OPENGL_SCALING", "0"},
 
