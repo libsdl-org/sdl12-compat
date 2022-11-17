@@ -7535,6 +7535,7 @@ SDL_FreeYUVOverlay(SDL12_Overlay *overlay12)
             if (overlay->overlay12 == overlay12) {
                 overlay->overlay12 = NULL;  /* don't try to draw this later. */
             }
+            overlay = overlay->next;
         }
 
         if (renderer) {
