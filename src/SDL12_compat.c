@@ -2361,7 +2361,7 @@ SDL_VideoInit(const char *driver, Uint32 flags)
 static void
 Init12Audio(void)
 {
-    WantCompatibilityAudioCVT = SDL12Compat_GetHintBoolean("SDL12COMPAT_COMPATIBILITY_AUDIOCVT", SDL_TRUE);
+    WantCompatibilityAudioCVT = SDL12Compat_GetHintBoolean("SDL12COMPAT_COMPATIBILITY_AUDIOCVT", SDL_FALSE);
 }
 
 
