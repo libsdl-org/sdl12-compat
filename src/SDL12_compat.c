@@ -9445,7 +9445,7 @@ CompatibilityCVT_Resampler(SDL12_AudioCVT *cvt12, Uint16 format)
         #define DO_RESAMPLE(typ) \
             const typ *src = (const typ *) (cvt12->buf + cvt12->len_cvt); \
             typ *dst = (typ *) (cvt12->buf + (cvt12->len_cvt * 2)); \
-            for (i = cvt12->len_cvt; i; i--) { \
+            for (i = cvt12->len_cvt / sizeof (typ); i; i--) { \
                 const typ sample = *(--src); \
                 dst -= 2; \
                 dst[0] = dst[1] = sample; \
