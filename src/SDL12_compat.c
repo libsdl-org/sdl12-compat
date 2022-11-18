@@ -875,9 +875,13 @@ typedef struct
     } dev;
 } SDL12_Joystick;
 
+
+struct SDL12_AudioCVT;
+typedef void (SDLCALL *SDL12_AudioCVTFilter)(struct SDL12_AudioCVT *cvt, Uint16 format);
+
 /* this is identical to SDL2, except SDL2 forced the structure packing in
    some instances, so we can't passthrough without converting the struct. :( */
-typedef struct
+typedef struct SDL12_AudioCVT
 {
     int needed;
     Uint16 src_format;
@@ -888,7 +892,7 @@ typedef struct
     int len_cvt;
     int len_mult;
     double len_ratio;
-    void (SDLCALL *filters[10])(struct SDL_AudioCVT *cvt, Uint16 format);
+    SDL12_AudioCVTFilter filters[10];
     int filter_index;
 } SDL12_AudioCVT;
 
@@ -1028,6 +1032,7 @@ static unsigned long SetVideoModeThread = 0;
 static SDL_bool VideoSurfaceUpdatedInBackgroundThread = SDL_FALSE;
 static SDL_bool AllowThreadedDraws = SDL_FALSE;
 static SDL_bool AllowThreadedPumps = SDL_FALSE;
+static SDL_bool WantCompatibilityAudioCVT = SDL_FALSE;
 
 
 /* This is a KEYDOWN event which is being held for a follow-up TEXTINPUT */
@@ -1215,6 +1220,9 @@ static QuirkEntryType quirks[] = {
     /* doesn't render with GL scaling enabled */
     {"scorched3d", "SDL12COMPAT_OPENGL_SCALING", "0"},
     {"scorched3dc", "SDL12COMPAT_OPENGL_SCALING", "0"},
+
+    /* boswars has a bug where SDL_AudioCVT must not require extra buffer space. See Issue #232. */
+    {"boswars", "SDL12COMPAT_COMPATIBILITY_AUDIOCVT", "1"},
 
     /* The 32-bit Steam build only of Multiwinia Quits but doesn't re-Init */
     {"multiwinia.bin.x86", "SDL12COMPAT_NO_QUIT_VIDEO", "1"}
@@ -2350,6 +2358,12 @@ SDL_VideoInit(const char *driver, Uint32 flags)
     return retval;
 }
 
+static void
+Init12Audio(void)
+{
+    WantCompatibilityAudioCVT = SDL12Compat_GetHintBoolean("SDL12COMPAT_COMPATIBILITY_AUDIOCVT", SDL_TRUE);
+}
+
 
 static void InitializeCDSubsystem(void);
 static void QuitCDSubsystem(void);
@@ -2428,6 +2442,10 @@ SDL_InitSubSystem(Uint32 sdl12flags)
         SDL20_setenv("SDL_VIDEODRIVER", origvidenv, 1);
     }
 #endif
+
+    if ((rc == 0) && (sdl20flags & SDL_INIT_AUDIO)) {
+        Init12Audio();
+    }
 
     if ((rc == 0) && (sdl20flags & SDL_INIT_JOYSTICK)) {
         Init12Joystick();  /* if this fails, we just won't report any sticks. */
@@ -9382,22 +9400,185 @@ AudioCVT20to12(const SDL_AudioCVT *cvt20, SDL12_AudioCVT *cvt12)
     return cvt12;
 }
 
+static void SDLCALL
+CompatibilityCVT_RunStream(SDL12_AudioCVT *cvt12, Uint16 format)
+{
+    const size_t channel_mash = (size_t) cvt12->filters[SDL_arraysize(cvt12->filters) - 1];
+    const Uint8 src_channels = (Uint8) (channel_mash & 0xFF);
+    const Uint8 dst_channels = (Uint8) ((channel_mash >> 8) & 0xFF);
+
+    /* use an audiostream, so we can allocate a dynamic buffer for the work, even if the app screwed up their allocation. */
+    SDL_AudioStream *stream = SDL20_NewAudioStream(format, src_channels, 44100, cvt12->dst_format, dst_channels, 44100);  /* don't resample here! */
+    if (stream == NULL) {
+        return;  /* oh well. */
+    }
+
+    if ((SDL20_AudioStreamPut(stream, cvt12->buf, cvt12->len_cvt) == -1) || (SDL20_AudioStreamFlush(stream) == -1)) {  /* probably out of memory if failed. */
+        SDL20_FreeAudioStream(stream);
+        return;  /* oh well. */
+    }
+
+    cvt12->len_cvt = SDL20_AudioStreamAvailable(stream);
+    SDL20_AudioStreamGet(stream, cvt12->buf, cvt12->len_cvt);
+    SDL20_FreeAudioStream(stream);
+
+    if (cvt12->filters[++cvt12->filter_index]) {
+        cvt12->filters[cvt12->filter_index](cvt12, cvt12->dst_format);
+    }
+}
+
+/* this is an extremely low-quality resampler: it only doubles or halves the
+   sample rate and offers no interpolation...but it's also how SDL 1.2 did it.
+   Notably: it can resample in-place, so this avoids bugs in apps that don't
+   set up SDL_AudioCVT's buffer correctly, or expect this weird 1.2 behavior
+   for whatever reason. */
+static void SDLCALL
+CompatibilityCVT_Resampler(SDL12_AudioCVT *cvt12, Uint16 format)
+{
+    const int bitsize = (int) SDL_AUDIO_BITSIZE(format);
+    int i;
+
+    SDL_assert((bitsize == 8) || (bitsize == 16));  /* there were no 32-bit audio types in 1.2. */
+
+    if (cvt12->rate_incr > 0.0) {   /* upsampling */
+        /*printf("2x Upsampling!\n");*/
+        #define DO_RESAMPLE(typ) \
+            const typ *src = (const typ *) (cvt12->buf + cvt12->len_cvt); \
+            typ *dst = (typ *) (cvt12->buf + (cvt12->len_cvt * 2)); \
+            for (i = cvt12->len_cvt; i; i--) { \
+                const typ sample = *(--src); \
+                dst -= 2; \
+                dst[0] = dst[1] = sample; \
+            }
+        if (bitsize == 8) {
+            DO_RESAMPLE(Uint8);
+        } else if (bitsize == 16) {
+            DO_RESAMPLE(Uint16);
+        }
+        #undef DO_RESAMPLE
+        cvt12->len_cvt *= 2;
+    } else {  /* downsampling. */
+        /*printf("2x Downsampling!\n");*/
+        #define DO_RESAMPLE(typ) \
+            const typ *src = (const typ *) (cvt12->buf + cvt12->len_cvt); \
+            typ *dst = (typ *) (cvt12->buf + (cvt12->len_cvt * 2)); \
+            for (i = cvt12->len_cvt / (sizeof (typ) * 2); i; i--, src += 2) { \
+                *(dst++) = *src; \
+            }
+        if (bitsize == 8) {
+            DO_RESAMPLE(Uint8);
+        } else if (bitsize == 16) {
+            DO_RESAMPLE(Uint16);
+        }
+        #undef DO_RESAMPLE
+        cvt12->len_cvt /= 2;
+    }
+
+    if (cvt12->filters[++cvt12->filter_index]) {
+        cvt12->filters[cvt12->filter_index](cvt12, format);
+    }
+}
+
 DECLSPEC12 int SDLCALL
 SDL_BuildAudioCVT(SDL12_AudioCVT *cvt12, Uint16 src_format, Uint8 src_channels, int src_rate, Uint16 dst_format, Uint8 dst_channels, int dst_rate)
 {
-    SDL_AudioCVT cvt20;
-    const int retval = SDL20_BuildAudioCVT(&cvt20, src_format, src_channels, src_rate, dst_format, dst_channels, dst_rate);
-    AudioCVT20to12(&cvt20, cvt12);  /* SDL 1.2 derefences cvt12 without checking for NULL */
+    int retval = 0;
+
+    SDL_zerop(cvt12); /* SDL 1.2 derefences cvt12 without checking for NULL */
+
+    if (!WantCompatibilityAudioCVT) {
+        SDL_AudioCVT cvt20;
+        retval = SDL20_BuildAudioCVT(&cvt20, src_format, src_channels, src_rate, dst_format, dst_channels, dst_rate);
+        AudioCVT20to12(&cvt20, cvt12);
+    } else {
+        const size_t channel_mash = ((size_t) src_channels) | (((size_t) dst_channels) << 8);
+
+        if ((src_format == dst_format) && (src_channels == dst_channels) && (src_rate == dst_rate)) {
+            return 0;  /* no conversion needed. */
+        }
+
+        cvt12->needed = 1;
+        cvt12->len_mult = 1;
+        cvt12->len_ratio = 1.0;
+        cvt12->src_format = src_format;
+        cvt12->dst_format = dst_format;
+
+        if ((src_format != dst_format) || (src_channels != dst_channels)) {
+            if (src_format != dst_format) {
+                /* there are only 8 and 16 bit formats in SDL 1.2 */
+                if (SDL_AUDIO_BITSIZE(src_format) < SDL_AUDIO_BITSIZE(dst_format)) {
+                    cvt12->len_mult *= 2;
+                    cvt12->len_ratio *= 2.0;
+                } else {
+                    cvt12->len_ratio /= 2.0;
+                }
+            }
+
+            /* SDL 1.2 only supported 1, 2, 4, and 6 channels, and would fail to convert between 4 and 6 at all. :O */
+            if (src_channels < dst_channels) {
+                const int diff = (int) (dst_channels / src_channels);
+                cvt12->len_mult *= diff;
+                cvt12->len_ratio *= (double) diff;
+            } else if (src_channels > dst_channels) {
+                const int diff = (int) (src_channels / dst_channels);
+                cvt12->len_ratio /= (double) diff;
+            }
+
+            cvt12->filters[cvt12->filter_index++] = CompatibilityCVT_RunStream;
+            cvt12->filters[SDL_arraysize(cvt12->filters) - 1] = (SDL12_AudioCVTFilter) channel_mash;  /* cheat by hiding this info at end of array. */
+        }
+
+        if (src_rate != dst_rate) {
+            Uint32 hi_rate = src_rate;
+            Uint32 lo_rate = dst_rate;
+            int len_mult = 1;
+            double len_ratio = 0.5;
+
+            if (src_rate < dst_rate) {  /* flip everything. */
+                hi_rate = dst_rate;
+                lo_rate = src_rate;
+                len_mult = 2;
+                len_ratio = 2.0;
+            }
+
+            while (((lo_rate * 2) / 100) <= (hi_rate / 100)) {   /* this is what SDL 1.2 does. *shrug* */
+                if (cvt12->filter_index >= (SDL_arraysize(cvt12->filters) - 2)) {
+                    return SDL20_SetError("Too many conversion filters needed");
+                }
+                cvt12->filters[cvt12->filter_index++] = CompatibilityCVT_Resampler;
+                cvt12->len_mult *= len_mult;
+                lo_rate *= 2;
+                cvt12->len_ratio *= len_ratio;
+            }
+
+            cvt12->rate_incr = ((double) src_rate) / ((double) dst_rate);
+        }
+
+        retval = 1;  /* conversion definitely needed. */
+    }
+
     return retval;
 }
 
 DECLSPEC12 int SDLCALL
 SDL_ConvertAudio(SDL12_AudioCVT *cvt12)
 {
-    /* neither SDL 1.2 nor 2.0 makes sure cvt12 isn't NULL here.  :/  */
-    SDL_AudioCVT cvt20;
-    const int retval = SDL20_ConvertAudio(AudioCVT12to20(cvt12, &cvt20));
-    AudioCVT20to12(&cvt20, cvt12);
+    int retval = 0;
+
+    if (!cvt12->buf) {  /* neither SDL 1.2 nor 2.0 makes sure cvt12 isn't NULL here.  :/  */
+        retval = SDL20_SetError("No buffer allocated for conversion");
+    } else if (!WantCompatibilityAudioCVT) {
+        SDL_AudioCVT cvt20;
+        retval = SDL20_ConvertAudio(AudioCVT12to20(cvt12, &cvt20));
+        AudioCVT20to12(&cvt20, cvt12);
+    } else {
+        cvt12->len_cvt = cvt12->len;
+        cvt12->filter_index = 0;
+        if (cvt12->filters[0]) {
+            cvt12->filters[0](cvt12, cvt12->src_format);
+        }
+    }
+
     return retval;
 }
 
