@@ -1215,7 +1215,9 @@ static QuirkEntryType quirks[] = {
     {"tucnak", "SDL_FRAMEBUFFER_ACCELERATION", "false"},
 
     /* looks for X11 display and does unnecessary X11 things. Causes problems with SDL2/x11. */
+    /* also has some issue with audio conversion I didn't look more closely at. */
     {"fillets", "SDL12COMPAT_ALLOW_SYSWM", "0"},
+    {"fillets", "SDL12COMPAT_COMPATIBILITY_AUDIOCVT", "1"},
 
     /* doesn't render with GL scaling enabled */
     {"scorched3d", "SDL12COMPAT_OPENGL_SCALING", "0"},
