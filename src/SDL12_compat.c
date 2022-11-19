@@ -1326,6 +1326,10 @@ SDL12Compat_ApplyQuirks(SDL_bool force_x11)
     const char *exe_name = SDL12Compat_GetExeName();
     int i;
 
+    if (WantDebugLogging) {
+        SDL20_Log("This app appears to be named '%s'", exe_name);
+    }
+
     #ifdef __linux__
     if (force_x11) {
         const char *videodriver_env = SDL20_getenv("SDL_VIDEODRIVER");
