@@ -9446,7 +9446,7 @@ CompatibilityCVT_Resampler(SDL12_AudioCVT *cvt12, Uint16 format)
 
     SDL_assert((bitsize == 8) || (bitsize == 16));  /* there were no 32-bit audio types in 1.2. */
 
-    if (cvt12->rate_incr > 0.0) {   /* upsampling */
+    if (cvt12->rate_incr < 1.0) {   /* upsampling */
         /*printf("2x Upsampling!\n");*/
         #define DO_RESAMPLE(typ) \
             const typ *src = (const typ *) (cvt12->buf + cvt12->len_cvt); \
@@ -9466,8 +9466,8 @@ CompatibilityCVT_Resampler(SDL12_AudioCVT *cvt12, Uint16 format)
     } else {  /* downsampling. */
         /*printf("2x Downsampling!\n");*/
         #define DO_RESAMPLE(typ) \
-            const typ *src = (const typ *) (cvt12->buf + cvt12->len_cvt); \
-            typ *dst = (typ *) (cvt12->buf + (cvt12->len_cvt * 2)); \
+            const typ *src = (const typ *) cvt12->buf; \
+            typ *dst = (typ *) cvt12->buf; \
             for (i = cvt12->len_cvt / (sizeof (typ) * 2); i; i--, src += 2) { \
                 *(dst++) = *src; \
             }
