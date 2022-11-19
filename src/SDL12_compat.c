@@ -1219,6 +1219,10 @@ static QuirkEntryType quirks[] = {
     {"fillets", "SDL12COMPAT_ALLOW_SYSWM", "0"},
     {"fillets", "SDL12COMPAT_COMPATIBILITY_AUDIOCVT", "1"},
 
+    /* Misuses SDL_AudioCVT */
+    {"pink-pony", "SDL12COMPAT_COMPATIBILITY_AUDIOCVT", "1"},
+    {"pink-pony.bin", "SDL12COMPAT_COMPATIBILITY_AUDIOCVT", "1"},
+
     /* doesn't render with GL scaling enabled */
     {"scorched3d", "SDL12COMPAT_OPENGL_SCALING", "0"},
     {"scorched3dc", "SDL12COMPAT_OPENGL_SCALING", "0"},
