@@ -6593,6 +6593,17 @@ PresentScreen(void)
         return;
     }
 
+    /* We don't actually implement an event thread in sdl12-compat, but some
+     * games will only call SDL_PeepEvents(), which doesn't otherwise pump
+     * events, and get stuck when they've consumed all the events.
+     *
+     * Just pumping the event loop here simulates an event thread well enough
+     * for most things.
+     */
+    if (EventThreadEnabled) {
+        SDL_PumpEvents();
+    }
+
     SDL20_RenderClear(renderer);
     SDL20_RenderCopy(renderer, VideoTexture20, NULL, NULL);
 
@@ -6923,10 +6934,15 @@ SDL_PumpEvents(void)
 {
     const SDL_bool ThisIsSetVideoModeThread = (SDL20_ThreadID() == SetVideoModeThread) ? SDL_TRUE : SDL_FALSE;
     SDL_Event e;
+    static SDL_bool InPumpEvents = SDL_FALSE;
 
     if (!ThisIsSetVideoModeThread && !AllowThreadedPumps) {
         return;
     }
+
+    if (InPumpEvents)
+        return;
+    InPumpEvents = SDL_TRUE;
 
     /* If the app is doing dirty rectangles, we set a flag and present the
      * screen surface when they pump for new events if we're close to 60Hz,
@@ -6958,6 +6974,7 @@ SDL_PumpEvents(void)
     if (EventQueueMutex) {
         SDL20_UnlockMutex(EventQueueMutex);
     }
+    InPumpEvents = SDL_FALSE;
 }
 
 DECLSPEC12 void SDLCALL
