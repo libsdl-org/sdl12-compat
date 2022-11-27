@@ -7474,6 +7474,7 @@ SDL_DisplayYUVOverlay(SDL12_Overlay *overlay12, SDL12_Rect *dstrect12)
     QueuedOverlayItem *overlay;
     SDL12_YUVData *hwdata;
     SDL_Renderer *renderer = NULL;
+    const SDL_bool ThisIsSetVideoModeThread = (SDL20_ThreadID() == SetVideoModeThread) ? SDL_TRUE : SDL_FALSE;
 
     if (!overlay12) {
         return SDL20_InvalidParamError("overlay");
@@ -7485,7 +7486,15 @@ SDL_DisplayYUVOverlay(SDL12_Overlay *overlay12, SDL12_Rect *dstrect12)
 
     for (overlay = QueuedDisplayOverlays.next; overlay != NULL; overlay = overlay->next) {
         if (overlay->overlay12 == overlay12) {   /* trying to draw the same overlay twice in one frame? Dump the current surface and overlays to the screen now. */
-            SDL_Flip(VideoSurface12);
+            /* Force an update of the screen. */
+            if (ThisIsSetVideoModeThread) {
+                if (VideoSurfaceUpdatedInBackgroundThread) {
+                    SDL_Flip(VideoSurface12);  /* this will update the texture and present. */
+                } else if (VideoSurfacePresentTicks) {
+                    PresentScreen();
+                }
+            }
+
             break;
         }
     }
