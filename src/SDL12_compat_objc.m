@@ -21,10 +21,7 @@
 
 /* This file contains some macOS-specific support code */
 
-#define __BUILDING_SDL12_COMPAT__ 1
-#include "SDL.h"
-
-#ifdef __MACOSX__
+#ifdef __APPLE__
 #include <Cocoa/Cocoa.h>
 
 #if __GNUC__ >= 4

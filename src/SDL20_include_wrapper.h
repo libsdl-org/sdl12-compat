@@ -131,15 +131,14 @@
 
 #define __BUILDING_SDL12_COMPAT__ 1
 #include "SDL.h"
-#include "SDL_syswm.h"    /* includes windows.h for _WIN32, os2.h for __OS2__ */
+#include "SDL_syswm.h"  /* includes windows.h or os2.h */
 
-/* Headers from SDL2 >= 2.0.7 needed for SDL_AudioStream:
- */
+/* Headers from SDL2 >= 2.0.7 needed for SDL_AudioStream. */
 #if !SDL_VERSION_ATLEAST(2,0,7)
 #error You need to compile against SDL >= 2.0.7 headers.
 #endif
 
-/* Missing SDL_thread.h stuff (see above): */
+/* Missing SDL_thread.h stuff (see above) */
 #if defined(_WIN32) || defined(__OS2__)
 typedef struct SDL_Thread SDL_Thread;
 typedef int (SDLCALL *SDL_ThreadFunction) (void*);
@@ -152,7 +151,8 @@ typedef void (*pfnSDL_CurrentEndThread) (void);
 typedef UINT_PTR (__cdecl *pfnSDL_CurrentBeginThread)
                    (void*, unsigned, unsigned (__stdcall *func)(void*), void*, unsigned, unsigned*);
 typedef void (__cdecl *pfnSDL_CurrentEndThread) (unsigned);
-/* the following macros from Win32 SDK headers are harmful here: */
+/* the following macros from Win32 SDK headers are harmful here. */
+#undef CreateWindow
 #undef CreateThread
 #undef CreateSemaphore
 #undef CreateMutex
@@ -431,4 +431,3 @@ typedef void (__cdecl *pfnSDL_CurrentEndThread) (unsigned);
 #endif
 
 /* vi: set ts=4 sw=4 expandtab: */
-
