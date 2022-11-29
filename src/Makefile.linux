@@ -27,9 +27,9 @@ all: $(SHLIB)
 
 $(SHLIB): $(OBJ)
 	$(LD) -o $@ $(LDFLAGS) $(OBJ) $(LDLIBS)
-	ln -sf $(SHLIB) libSDL-1.2.so
 	ln -sf $(SHLIB) libSDL-1.2.so.0
-	ln -sf $(SHLIB) libSDL.so
+	ln -sf libSDL-1.2.so.0 libSDL-1.2.so
+	ln -sf libSDL-1.2.so.0 libSDL.so
 
 .c.o:
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(INCLUDES) -o $@ -c $<
