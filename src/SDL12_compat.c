@@ -1619,7 +1619,7 @@ static int get_cpu_ext_features(void) {
         if (SDL20_HasMMX()) {
             int a, b, c, d;
             cpuid(0x80000000, a, b, c, d);
-            if (a >= 0x80000001) {
+            if ((unsigned int)a >= 0x80000001) {
                 cpuid(0x80000001, a, b, c, d);
                 cpu_ext_features = d;
             }
@@ -9578,7 +9578,7 @@ SDL_BuildAudioCVT(SDL12_AudioCVT *cvt12, Uint16 src_format, Uint8 src_channels, 
             }
 
             while (((lo_rate * 2) / 100) <= (hi_rate / 100)) {   /* this is what SDL 1.2 does. *shrug* */
-                if (cvt12->filter_index >= (SDL_arraysize(cvt12->filters) - 2)) {
+                if (cvt12->filter_index >= (int)(SDL_arraysize(cvt12->filters) - 2)) {
                     return SDL20_SetError("Too many conversion filters needed");
                 }
                 cvt12->filters[cvt12->filter_index++] = CompatibilityCVT_Resampler;
