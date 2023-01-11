@@ -8358,7 +8358,27 @@ SDL_LoadWAV_RW(SDL12_RWops *rwops12, int freerwops12,
                SDL_AudioSpec *spec, Uint8 **buf, Uint32 *len)
 {
     SDL_RWops *rwops20 = RWops12to20(rwops12);
-    SDL_AudioSpec *retval = SDL20_LoadWAV_RW(rwops20, freerwops12, spec, buf, len);
+    SDL_AudioSpec *retval = NULL;
+
+    *buf = NULL;
+
+    /* SDL2's LoadWAV requires a seekable stream, but SDL 1.2 didn't,
+       so if the stream appears unseekable, try to load it into a
+       memory rwops that we _can_ seek in */
+    if (rwops20->seek(rwops20, 0, RW_SEEK_CUR) != -1) {  /* if seekable */
+        retval = SDL20_LoadWAV_RW(rwops20, freerwops12, spec, buf, len);
+    } else {
+        size_t datasize = 0;
+        void *buffer = SDL20_LoadFile_RW(rwops20, &datasize, freerwops12);
+        if (buffer) {
+            SDL_RWops *memrwops20 = SDL20_RWFromConstMem(buffer, (int) datasize);
+            if (memrwops20) {
+                retval = SDL20_LoadWAV_RW(memrwops20, 1, spec, buf, len);
+            }
+            SDL_free(buffer);
+        }
+    }
+
     if (retval && retval->format & 0x20) {
         SDL20_SetError("Unsupported 32-bit PCM data format");
         SDL20_FreeWAV(*buf);

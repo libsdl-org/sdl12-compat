@@ -267,6 +267,7 @@ SDL20_SYM(SDL_RWops *,RWFromMem,(void *a, int b),(a,b),return)
 SDL20_SYM(SDL_RWops *,RWFromConstMem,(const void *a, int b),(a,b),return)
 SDL20_SYM(SDL_RWops *,AllocRW,(void),(),return)
 SDL20_SYM(void,FreeRW,(SDL_RWops *a),(a),)
+SDL20_SYM(void *,LoadFile_RW,(SDL_RWops *a, size_t *b, int c),(a,b,c),return)
 
 SDL20_SYM_PASSTHROUGH(void *,malloc,(size_t a),(a),return)
 SDL20_SYM_PASSTHROUGH(void *,calloc,(size_t a, size_t b),(a,b),return)
