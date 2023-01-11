@@ -6483,18 +6483,25 @@ SDL_SetAlpha(SDL12_Surface *surface12, Uint32 flags12, Uint8 value)
 DECLSPEC12 int SDLCALL
 SDL_LockSurface(SDL12_Surface *surface12)
 {
-    const int retval = SDL20_LockSurface(surface12->surface20);
-    surface12->pixels = surface12->surface20->pixels;
-    surface12->pitch = surface12->surface20->pitch;
+    int retval = 0;
+    /* just pretend to lock for the screen surface, but ignore it. */
+    if (surface12 != VideoSurface12) {
+        retval = SDL20_LockSurface(surface12->surface20);
+        surface12->pixels = surface12->surface20->pixels;
+        surface12->pitch = surface12->surface20->pitch;
+    }
     return retval;
 }
 
 DECLSPEC12 void SDLCALL
 SDL_UnlockSurface(SDL12_Surface *surface12)
 {
-    SDL20_UnlockSurface(surface12->surface20);
-    surface12->pixels = surface12->surface20->pixels;
-    surface12->pitch = surface12->surface20->pitch;
+    /* just pretend to lock for the screen surface, but ignore it. */
+    if (surface12 != VideoSurface12) {
+        SDL20_UnlockSurface(surface12->surface20);
+        surface12->pixels = surface12->surface20->pixels;
+        surface12->pitch = surface12->surface20->pitch;
+    }
 }
 
 DECLSPEC12 int SDLCALL
