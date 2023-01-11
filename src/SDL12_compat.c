@@ -6195,7 +6195,7 @@ SetVideoModeImpl(int width, int height, int bpp, Uint32 flags12)
         }
 
         VideoSurface12->flags &= ~SDL12_OPENGL;
-        VideoSurface12->surface20->pixels = SDL20_malloc(height * VideoSurface12->pitch);
+        VideoSurface12->surface20->pixels = SDL20_calloc(height, VideoSurface12->pitch);
         VideoSurface12->pixels = VideoSurface12->surface20->pixels;
         if (!VideoSurface12->pixels) {
             SDL20_OutOfMemory();
