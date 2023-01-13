@@ -6143,10 +6143,14 @@ SetVideoModeImpl(int width, int height, int bpp, Uint32 flags12)
         const SDL_bool want_vsync = (vsync_env && SDL20_atoi(vsync_env)) ? SDL_TRUE : SDL_FALSE;
         SDL_RendererInfo rinfo;
         SDL_assert(!VideoGLContext20);  /* either a new window or we destroyed all this */
-        VideoRendererLock = SDL20_CreateMutex();
+
         if (!VideoRendererLock) {
-            return EndVidModeCreate();
+            VideoRendererLock = SDL20_CreateMutex();
+            if (!VideoRendererLock) {
+                return EndVidModeCreate();
+            }
         }
+
         if (!VideoRenderer20 && want_vsync) {
             VideoRenderer20 = SDL20_CreateRenderer(VideoWindow20, -1, SDL_RENDERER_ACCELERATED|SDL_RENDERER_PRESENTVSYNC);
         }
