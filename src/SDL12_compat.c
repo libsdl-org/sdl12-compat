@@ -5430,10 +5430,11 @@ EndVidModeCreate(void)
         VideoPhysicalPalette20 = NULL;
     }
     if (VideoSurface12) {
+        SDL12_Surface *screen12 = VideoSurface12;
         SDL20_free(VideoSurface12->pixels);
         VideoSurface12->pixels = NULL;
-        SDL_FreeSurface(VideoSurface12);
-        VideoSurface12 = NULL;
+        VideoSurface12 = NULL;  /* SDL_FreeSurface will ignore the screen surface, so NULL the global variable out. */
+        SDL_FreeSurface(screen12);
     }
     if (VideoConvertSurface20) {
         SDL20_FreeSurface(VideoConvertSurface20);
