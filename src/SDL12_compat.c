@@ -1230,6 +1230,9 @@ static QuirkEntryType quirks[] = {
     /* boswars has a bug where SDL_AudioCVT must not require extra buffer space. See Issue #232. */
     {"boswars", "SDL12COMPAT_COMPATIBILITY_AUDIOCVT", "1"},
 
+    /* grafx2 tries to do all sorts of stuff by talking directly to the X server, causing problems. */
+    {"grafx2", "SDL12COMPAT_ALLOW_SYSWM", "0"},
+
     /* The 32-bit Steam build only of Multiwinia Quits but doesn't re-Init */
     {"multiwinia.bin.x86", "SDL12COMPAT_NO_QUIT_VIDEO", "1"}
 #else
