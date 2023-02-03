@@ -1513,6 +1513,10 @@ unsigned _System LibMain(unsigned hmod, unsigned termination)
     #error Please define an init procedure for your platform.
 #endif
 
+/* Forward declarations */
+DECLSPEC12 void SDLCALL SDL_CloseAudio(void);
+DECLSPEC12 void SDLCALL SDL_PumpEvents(void);
+
 #ifdef _WIN32
 /* SDL_main functions:
  * SDL2 doesn't define SDL_MAIN_NEEDED for _WIN32,

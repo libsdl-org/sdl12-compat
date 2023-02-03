@@ -46,7 +46,7 @@ SDL20_SYM_VARARGS(void,Log,(const char *fmt, ...))
 SDL20_SYM(int,Init,(Uint32 a),(a),return)
 SDL20_SYM(int,InitSubSystem,(Uint32 a),(a),return)
 SDL20_SYM(Uint32,WasInit,(Uint32 a),(a),return)
-SDL20_SYM(char*,GetError,(void),(),return)
+SDL20_SYM(const char*,GetError,(void),(),return)
 SDL20_SYM_VARARGS(int,SetError,(const char *fmt, ...))
 
 SDL20_SYM(const char *,GetHint,(const char *a),(a),return)
@@ -114,7 +114,7 @@ SDL20_SYM(SDL_Surface *,ConvertSurface,(SDL_Surface *a, const SDL_PixelFormat *b
 SDL20_SYM(int,LockSurface,(SDL_Surface *a),(a),return)
 SDL20_SYM(void,UnlockSurface,(SDL_Surface *a),(a),)
 SDL20_SYM(int,UpperBlit,(SDL_Surface *a,const SDL_Rect *b,SDL_Surface *c, SDL_Rect *d),(a,b,c,d),return)
-SDL20_SYM(int,LowerBlit,(SDL_Surface *a,const SDL_Rect *b,SDL_Surface *c, SDL_Rect *d),(a,b,c,d),return)
+SDL20_SYM(int,LowerBlit,(SDL_Surface *a,SDL_Rect *b,SDL_Surface *c, SDL_Rect *d),(a,b,c,d),return)
 SDL20_SYM(int,SoftStretch,(SDL_Surface *a,const SDL_Rect *b,SDL_Surface *c,const SDL_Rect *d),(a,b,c,d),return)
 SDL20_SYM(int,SetColorKey,(SDL_Surface *a, int b, Uint32 c),(a,b,c),return)
 SDL20_SYM(int,GetColorKey,(SDL_Surface *a, Uint32 *b),(a,b),return)
@@ -195,7 +195,7 @@ SDL20_SYM_PASSTHROUGH(int,CondWait,(SDL_cond *a, SDL_mutex *b),(a,b),return)
 SDL20_SYM_PASSTHROUGH(int,CondWaitTimeout,(SDL_cond *a, SDL_mutex *b, Uint32 c),(a,b,c),return)
 
 SDL20_SYM(int,AtomicGet,(SDL_atomic_t *a),(a),return)
-SDL20_SYM(void,AtomicSet,(SDL_atomic_t *a, int b),(a,b),)
+SDL20_SYM(int,AtomicSet,(SDL_atomic_t *a, int b),(a,b),return)
 SDL20_SYM(int,AtomicAdd,(SDL_atomic_t *a, int b),(a,b),return)
 
 SDL20_SYM(SDL_AudioSpec *,LoadWAV_RW,(SDL_RWops *a, int b, SDL_AudioSpec *c, Uint8 **d, Uint32 *e),(a,b,c,d,e),return)
@@ -262,7 +262,7 @@ SDL20_SYM(void,LockJoysticks,(void),(),)
 SDL20_SYM(void,UnlockJoysticks,(void),(),)
 
 SDL20_SYM(SDL_RWops *,RWFromFile,(const char *a, const char *b),(a,b),return)
-SDL20_SYM(SDL_RWops *,RWFromFP,(void *a, int b),(a,b),return) /* FILE* */
+SDL20_SYM(SDL_RWops *,RWFromFP,(void *a, SDL_bool b),(a,b),return) /* FILE* */
 SDL20_SYM(SDL_RWops *,RWFromMem,(void *a, int b),(a,b),return)
 SDL20_SYM(SDL_RWops *,RWFromConstMem,(const void *a, int b),(a,b),return)
 SDL20_SYM(SDL_RWops *,AllocRW,(void),(),return)
