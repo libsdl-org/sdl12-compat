@@ -8234,12 +8234,14 @@ SDL_RWFromConstMem(const void *mem, int size)
     return RWops20to12(SDL20_RWFromConstMem(mem, size));
 }
 
-#define READ_AND_BYTESWAP(endian, bits) \
-    DECLSPEC12 Uint##bits SDLCALL SDL_Read##endian##bits(SDL12_RWops *rwops12) { \
-        Uint##bits val; rwops12->read(rwops12, &val, sizeof (val), 1); \
-        return SDL_Swap##endian##bits(val); \
-    }
-
+#define READ_AND_BYTESWAP(endian, bits)            \
+DECLSPEC12 Uint##bits SDLCALL                      \
+SDL_Read##endian##bits(SDL12_RWops *rwops12)       \
+{                                                  \
+    Uint##bits val;                                \
+    rwops12->read(rwops12, &val, sizeof (val), 1); \
+    return SDL_Swap##endian##bits(val);            \
+}
 READ_AND_BYTESWAP(LE,16)
 READ_AND_BYTESWAP(BE,16)
 READ_AND_BYTESWAP(LE,32)
@@ -8248,11 +8250,13 @@ READ_AND_BYTESWAP(LE,64)
 READ_AND_BYTESWAP(BE,64)
 #undef READ_AND_BYTESWAP
 
-#define BYTESWAP_AND_WRITE(endian, bits) \
-    DECLSPEC12 int SDLCALL SDL_Write##endian##bits(SDL12_RWops *rwops12, Uint##bits val) { \
-        val = SDL_Swap##endian##bits(val); \
-        return rwops12->write(rwops12, &val, sizeof (val), 1); \
-    }
+#define BYTESWAP_AND_WRITE(endian, bits)                      \
+DECLSPEC12 int SDLCALL                                        \
+SDL_Write##endian##bits(SDL12_RWops *rwops12, Uint##bits val) \
+{                                                             \
+    val = SDL_Swap##endian##bits(val);                        \
+    return rwops12->write(rwops12, &val, sizeof (val), 1);    \
+}
 BYTESWAP_AND_WRITE(LE,16)
 BYTESWAP_AND_WRITE(BE,16)
 BYTESWAP_AND_WRITE(LE,32)
