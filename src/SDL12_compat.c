@@ -123,6 +123,7 @@ extern "C" {
 #define SDL20_InvalidParamError(param) SDL20_SetError("Parameter '%s' is invalid", (param))
 #define SDL20_zero(x) SDL20_memset(&(x), 0, sizeof((x)))
 #define SDL20_zerop(x) SDL20_memset((x), 0, sizeof(*(x)))
+#define SDL20_zeroa(x) SDL20_memset((x), 0, sizeof((x)))
 #define SDL_ReportAssertion SDL20_ReportAssertion
 
 /* From SDL2.0's SDL_bits.h: a force-inlined function. */
@@ -5454,7 +5455,7 @@ EndVidModeCreate(void)
         VideoConvertSurface20 = NULL;
     }
 
-    SDL_zero(OpenGLFuncs);
+    SDL20_zero(OpenGLFuncs);
     OpenGLBlitLockCount = 0;
     OpenGLLogicalScalingWidth = 0;
     OpenGLLogicalScalingHeight = 0;
@@ -5515,7 +5516,7 @@ LoadOpenGLFunctions(void)
     int major = 0, minor = 0;
 
     /* load core functions so we can guess about a few other things. */
-    SDL_zero(OpenGLFuncs);
+    SDL20_zero(OpenGLFuncs);
     OpenGLFuncs.SUPPORTS_Core = SDL_TRUE;
     #define OPENGL_SYM(ext,rc,fn,params,args,ret) OpenGLFuncs.fn = \
            (OpenGLFuncs.SUPPORTS_##ext)? (openglfn_##fn##_t)SDL20_GL_GetProcAddress(#fn) : NULL;
@@ -5967,7 +5968,7 @@ SetVideoModeImpl(int width, int height, int bpp, Uint32 flags12)
             SDL20_GL_MakeCurrent(NULL, NULL);
             SDL20_GL_DeleteContext(VideoGLContext20);
             VideoGLContext20 = NULL;
-            SDL_zero(OpenGLFuncs);
+            SDL20_zero(OpenGLFuncs);
             OpenGLBlitTexture = 0;
             OpenGLBlitLockCount = 0;
             OpenGLLogicalScalingWidth = 0;
@@ -7337,7 +7338,7 @@ SDL_GetWMInfo(SDL12_SysWMinfo *info12)
         temp_window = SDL_TRUE;
     }
 
-    SDL_zero(info20);
+    SDL20_zero(info20);
 
     /* SDL2, before the version scheme change, would fail if the requested version wasn't
        2.0.x, so if the SDL2 is from before this was fixed, we need to lie about the
@@ -8726,7 +8727,7 @@ SDL_CDOpen(int drive)
 
     if (retval->numtracks > 0) {
         SDL_AudioSpec want;
-        SDL_zero(want);
+        SDL20_zero(want);
         want.freq = 44100;
         want.format = AUDIO_F32SYS;
         want.channels = 2;
@@ -9465,7 +9466,7 @@ SDL_CloseAudio(void)
 static SDL_AudioCVT *
 AudioCVT12to20(const SDL12_AudioCVT *cvt12, SDL_AudioCVT *cvt20)
 {
-    SDL_zerop(cvt20);
+    SDL20_zerop(cvt20);
     cvt20->needed = cvt12->needed;
     cvt20->src_format = cvt12->src_format;
     cvt20->dst_format = cvt12->dst_format;
@@ -9483,7 +9484,7 @@ AudioCVT12to20(const SDL12_AudioCVT *cvt12, SDL_AudioCVT *cvt20)
 static SDL12_AudioCVT *
 AudioCVT20to12(const SDL_AudioCVT *cvt20, SDL12_AudioCVT *cvt12)
 {
-    SDL_zerop(cvt12);
+    SDL20_zerop(cvt12);
     cvt12->needed = cvt20->needed;
     cvt12->src_format = cvt20->src_format;
     cvt12->dst_format = cvt20->dst_format;
@@ -9582,7 +9583,7 @@ SDL_BuildAudioCVT(SDL12_AudioCVT *cvt12, Uint16 src_format, Uint8 src_channels, 
 {
     int retval = 0;
 
-    SDL_zerop(cvt12); /* SDL 1.2 derefences cvt12 without checking for NULL */
+    SDL20_zerop(cvt12); /* SDL 1.2 derefences cvt12 without checking for NULL */
 
     if (!WantCompatibilityAudioCVT) {
         SDL_AudioCVT cvt20;
