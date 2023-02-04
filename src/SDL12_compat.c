@@ -1872,7 +1872,8 @@ SDL_JoystickGetBall(SDL12_Joystick *stick12, int ball, int *dx, int *dy)
 {
     if (BogusJoystick(stick12)) {
         return 0;
-    } else if (JoysticksAreGameControllers) {
+    }
+    if (JoysticksAreGameControllers) {
         if (dx) { *dx = 0; }
         if (dy) { *dy = 0; }
         return SDL20_SetError("No joystick balls available");
@@ -2023,15 +2024,12 @@ GetVideoDisplay(void)
     }
     if (variable) {
         int preferred_display = SDL20_atoi(variable);
-        
         if (preferred_display < 0 || preferred_display >= SDL20_GetNumVideoDisplays()) {
             return 0;
         }
-
         return SDL20_atoi(variable);
-    } else {
-        return 0;
     }
+    return 0;
 }
 
 /* returns true if mode1 should sort before mode2 */
@@ -2040,11 +2038,11 @@ VidModeSizeGreater(SDL12_Rect *mode1, SDL12_Rect *mode2)
 {
     if (mode1->w > mode2->w) {
         return 1;
-    } else if (mode2->w > mode1->w) {
-        return 0;
-    } else {
-        return (mode1->h > mode2->h);
     }
+    if (mode2->w > mode1->w) {
+        return 0;
+    }
+    return (mode1->h > mode2->h);
 }
 
 static int
@@ -2666,9 +2664,8 @@ GetDriverName(const char *name, char *namebuf, int maxlen)
         if (namebuf) {
             SDL20_strlcpy(namebuf, name, maxlen);
             return namebuf;
-        } else {
-            return name;
         }
+        return name;
     }
     return NULL;
 }
@@ -3337,7 +3334,8 @@ Keysym20to12(const SDL_Keycode keysym20)
          * and so does the Latin-1 range (128-255) */
         if (keysym20 == SDLK_PAUSE) {
             return SDLK12_PAUSE;
-        } else if (keysym20 == SDLK_CLEAR) {
+        }
+        if (keysym20 == SDLK_CLEAR) {
             return SDLK12_CLEAR;
         }
         return (SDL12Key) keysym20;
@@ -4861,7 +4859,8 @@ Surface20to12(SDL_Surface *surface20)
 
     if (!surface20) {
         return NULL;
-    } else if (surface20->pitch > 65535) {
+    }
+    if (surface20->pitch > 65535) {
         SDL20_SetError("Pitch is too large");  /* can't fit to 16-bits */
         return NULL;
     }
@@ -5281,7 +5280,8 @@ SDL_ListModes(const SDL12_PixelFormat *format12, Uint32 flags)
         VideoModeList *modes = &VideoModes[i];
         if (SDL_BITSPERPIXEL(modes->format) == bpp) {
             return modes->modes12;
-        } else if (SDL_BITSPERPIXEL(modes->format) == 24 && bpp == 32) {
+        }
+        if (SDL_BITSPERPIXEL(modes->format) == 24 && bpp == 32) {
             best_modes = modes;
         } else if (SDL_BITSPERPIXEL(modes->format) > bpp) {
             if (!best_modes || SDL_BITSPERPIXEL(modes->format) > SDL_BITSPERPIXEL(best_modes->format)) {
@@ -6401,9 +6401,11 @@ SDL_UpperBlit(SDL12_Surface *src12, SDL12_Rect *srcrect12, SDL12_Surface *dst12,
 
     if ((src12 == NULL) || (dst12 == NULL)) {
         return SDL20_SetError("SDL_UpperBlit: passed a NULL surface");
-    } else if ((src12->pixels == NULL) || (dst12->pixels == NULL)) {
+    }
+    if ((src12->pixels == NULL) || (dst12->pixels == NULL)) {
         return SDL20_SetError("SDL_UpperBlit: passed a surface with NULL pixels");
-    } else if (SaveDestAlpha(src12, dst12, &dstrect20, &dstalpha) < 0) {
+    }
+    if (SaveDestAlpha(src12, dst12, &dstrect20, &dstalpha) < 0) {
         return -1;
     }
 
@@ -6848,9 +6850,11 @@ SDL_UpdateRects(SDL12_Surface *surface12, int numrects, SDL12_Rect *rects12)
 
             if (!renderer) {
                 continue;
-            } else if (!rect20.w || !rect20.h) {
+            }
+            if (!rect20.w || !rect20.h) {
                 continue;
-            } else if (SDL20_LockTexture(VideoTexture20, &rect20, &pixels, &pitch) < 0) {
+            }
+            if (SDL20_LockTexture(VideoTexture20, &rect20, &pixels, &pitch) < 0) {
                 continue;  /* oh well */
             }
 
@@ -7312,7 +7316,8 @@ SDL_GetWMInfo(SDL12_SysWMinfo *info12)
     if (info12->version.major > 1) {
         SDL20_SetError("Requested version is unsupported");
         return 0;  /* some programs only test against 0, not -1 */
-    } else if (!SupportSysWM) {
+    }
+    if (!SupportSysWM) {
         SDL20_SetError("No SysWM support available");
         return 0;  /* some programs only test against 0, not -1 */
     }
@@ -7514,9 +7519,11 @@ SDL_DisplayYUVOverlay(SDL12_Overlay *overlay12, SDL12_Rect *dstrect12)
 
     if (!overlay12) {
         return SDL20_InvalidParamError("overlay");
-    } else if (!dstrect12) {
+    }
+    if (!dstrect12) {
         return SDL20_InvalidParamError("dstrect");
-    } else if (!(renderer = LockVideoRenderer())) {
+    }
+    if (!(renderer = LockVideoRenderer())) {
         return SDL20_SetError("No software screen surface available");
     }
 
@@ -7702,11 +7709,11 @@ SDL_GL_SetAttribute(SDL12_GLattr attr, int value)
         SwapInterval = value;
         return 0;
     }
-    else if (attr == SDL12_GL_MULTISAMPLESAMPLES) {
+    if (attr == SDL12_GL_MULTISAMPLESAMPLES) {
         OpenGLLogicalScalingSamples = value;
         return 0;
     }
-    else if (attr == SDL12_GL_MULTISAMPLEBUFFERS) {
+    if (attr == SDL12_GL_MULTISAMPLEBUFFERS) {
         return 0;
     }
     return SDL20_GL_SetAttribute((SDL_GLattr) attr, value);
@@ -7725,11 +7732,11 @@ SDL_GL_GetAttribute(SDL12_GLattr attr, int* value)
         *value = SDL20_GL_GetSwapInterval();
         return 0;
     }
-    else if (attr == SDL12_GL_MULTISAMPLESAMPLES) {
+    if (attr == SDL12_GL_MULTISAMPLESAMPLES) {
         *value = OpenGLLogicalScalingSamples;
         return 0;
     }
-    else if (attr == SDL12_GL_MULTISAMPLEBUFFERS) {
+    if (attr == SDL12_GL_MULTISAMPLEBUFFERS) {
         *value = (OpenGLLogicalScalingSamples) ? 1 : 0;
         return 0;
     }
@@ -8855,15 +8862,20 @@ SDL_CDPlayTracks(SDL12_CD *cdrom, int start_track, int start_frame, int ntracks,
 {
     if ((cdrom = ValidCDDevice(cdrom)) == NULL) {
         return -1;
-    } else if (cdrom->status == SDL12_CD_TRAYEMPTY) {
+    }
+    if (cdrom->status == SDL12_CD_TRAYEMPTY) {
         return SDL20_SetError("Tray empty");
-    } else if ((start_track < 0) || (start_track >= cdrom->numtracks)) {
+    }
+    if ((start_track < 0) || (start_track >= cdrom->numtracks)) {
         return SDL20_SetError("Invalid start track");
-    } else if ((start_frame < 0) || (((Uint32) start_frame) >= cdrom->track[start_track].length)) {
+    }
+    if ((start_frame < 0) || (((Uint32) start_frame) >= cdrom->track[start_track].length)) {
         return SDL20_SetError("Invalid start frame");
-    } else if ((ntracks < 0) || ((start_track + ntracks) >= cdrom->numtracks)) {
+    }
+    if ((ntracks < 0) || ((start_track + ntracks) >= cdrom->numtracks)) {
         return SDL20_SetError("Invalid number of tracks");
-    } else if ((nframes < 0) || (((Uint32) nframes) >= cdrom->track[start_track + ntracks].length)) {
+    }
+    if ((nframes < 0) || (((Uint32) nframes) >= cdrom->track[start_track + ntracks].length)) {
         return SDL20_SetError("Invalid number of frames");
     }
 
@@ -8888,11 +8900,14 @@ SDL_CDPlay(SDL12_CD *cdrom, int start, int length)
 
     if ((cdrom = ValidCDDevice(cdrom)) == NULL) {
         return -1;
-    } else if (cdrom->status == SDL12_CD_TRAYEMPTY) {
+    }
+    if (cdrom->status == SDL12_CD_TRAYEMPTY) {
         return SDL20_SetError("Tray empty");
-    } else if (start < 0) {
+    }
+    if (start < 0) {
         return SDL20_SetError("Invalid start");
-    } else if (length < 0) {
+    }
+    if (length < 0) {
         return SDL20_SetError("Invalid length");
     }
 
@@ -8939,7 +8954,8 @@ SDL_CDPause(SDL12_CD *cdrom)
 {
     if ((cdrom = ValidCDDevice(cdrom)) == NULL) {
         return -1;
-    } else if (cdrom->status == SDL12_CD_TRAYEMPTY) {
+    }
+    if (cdrom->status == SDL12_CD_TRAYEMPTY) {
         return SDL20_SetError("Tray empty");
     }
 
@@ -8959,7 +8975,8 @@ SDL_CDResume(SDL12_CD *cdrom)
 {
     if ((cdrom = ValidCDDevice(cdrom)) == NULL) {
         return -1;
-    } else if (cdrom->status == SDL12_CD_TRAYEMPTY) {
+    }
+    if (cdrom->status == SDL12_CD_TRAYEMPTY) {
         return SDL20_SetError("Tray empty");
     }
 
