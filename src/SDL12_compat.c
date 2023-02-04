@@ -97,9 +97,18 @@ extern "C" {
 
 #define DECLSPEC12 DECLSPEC FORCEALIGNATTR
 
+/** Enable this to have warnings about wrong prototypes in SDL20_syms.h.
+ *  It won't compile but it helps to make sure it's sync'ed with SDL2 headers.
+ */
+#if 0
+#define SDL20_SYM(rc,fn,params,args,ret) \
+    typedef rc (SDLCALL *SDL20_##fn##_t) params; \
+    static SDL20_##fn##_t SDL20_##fn = IGNORE_THIS_VERSION_OF_SDL_##fn;
+#else
 #define SDL20_SYM(rc,fn,params,args,ret) \
     typedef rc (SDLCALL *SDL20_##fn##_t) params; \
     static SDL20_##fn##_t SDL20_##fn = NULL;
+#endif
 #include "SDL20_syms.h"
 
 /* Things that _should_ be binary compatible pass right through... */
@@ -4566,8 +4575,7 @@ EventFilter20to12(void *data, SDL_Event *event20)
             }
 
             /* some programs rely on unicode values for these control characters */
-            switch (PendingKeydownEvent.key.keysym.sym)
-            {
+            switch (PendingKeydownEvent.key.keysym.sym) {
                 case SDLK12_BACKSPACE:
                     FlushPendingKeydownEvent('\b');
                     break;
