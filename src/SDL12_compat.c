@@ -57,8 +57,6 @@
 #undef snprintf
 #undef vsnprintf
 
-#define SDL_BlitSurface SDL_UpperBlit
-
 #ifdef __linux__
 #include <unistd.h> /* for readlink() */
 #endif
