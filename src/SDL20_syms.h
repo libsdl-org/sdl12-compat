@@ -81,9 +81,6 @@ SDL20_SYM(int,GetDesktopDisplayMode,(int a, SDL_DisplayMode *b),(a,b),return)
 SDL20_SYM(int,GetCurrentDisplayMode,(int a, SDL_DisplayMode *b),(a,b),return)
 SDL20_SYM(int,GetWindowDisplayMode,(SDL_Window *a, SDL_DisplayMode *b),(a,b),return)
 
-SDL20_SYM(void,EnableScreenSaver,(void),(),)
-SDL20_SYM(void,DisableScreenSaver,(void),(),)
-
 SDL20_SYM(SDL_Window *,CreateWindow,(const char *a, int b, int c, int d, int e, Uint32 f),(a,b,c,d,e,f),return)
 SDL20_SYM(SDL_Window *,CreateWindowFrom,(const void *a),(a),return)
 SDL20_SYM(void,DestroyWindow,(SDL_Window *a),(a),)
@@ -381,7 +378,6 @@ OPENGL_SYM(Core,void,glTexImage2D,(GLenum a, GLint b, GLint c, GLsizei d, GLsize
 OPENGL_SYM(Core,void,glTexSubImage2D,(GLenum a, GLint b, GLint c, GLint d, GLsizei e, GLsizei f, GLenum g, GLenum h, const GLvoid *i),(a,b,c,d,e,f,g,h,i),)
 OPENGL_SYM(Core,void,glVertex2i,(GLint a, GLint b),(a,b),)
 OPENGL_SYM(Core,void,glTexCoord2f,(GLfloat a, GLfloat b),(a,b),)
-
 
 OPENGL_EXT(GL_ARB_framebuffer_object)
 OPENGL_SYM(GL_ARB_framebuffer_object,void,glBindRenderbuffer,(GLenum a, GLuint b),(a,b),)
