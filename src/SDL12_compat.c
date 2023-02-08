@@ -1053,6 +1053,41 @@ SDL20_atoi(const char *str)
     return SDL20_strtol(str, NULL, 10);
 }
 
+static char *
+SDL12COMPAT_stpcpy(char *dst, const char *src)
+{
+    while ((*dst++ = *src++) != '\0') {
+        /**/;
+    }
+    return --dst;
+}
+
+static void
+SDL12COMPAT_itoa(char *dst, int val)
+{
+    char *ptr, temp;
+
+    if (val < 0) {
+        *dst++ = '-';
+        val = -val;
+    }
+    ptr = dst;
+
+    do {
+        *ptr++ = '0' + (val % 10);
+        val /= 10;
+    } while (val > 0);
+    *ptr-- = '\0';
+
+    /* correct the order of digits */
+    do {
+        temp = *dst;
+        *dst++ = *ptr;
+        *ptr-- = temp;
+    } while (ptr > dst);
+}
+
+
 /* Obviously we can't use SDL_LoadObject() to load SDL2.  :)  */
 static char loaderror[256];
 #if defined(_WIN32)
@@ -1064,16 +1099,12 @@ static char loaderror[256];
     #define LoadSDL20Library() ((Loaded_SDL20 = LoadLibraryA(SDL20_LIBNAME)) != NULL)
     #define LookupSDL20Sym(sym) (void *)GetProcAddress(Loaded_SDL20, sym)
     #define CloseSDL20Library() { if (Loaded_SDL20) { FreeLibrary(Loaded_SDL20); Loaded_SDL20 = NULL; } }
-    #define strcpy_fn  lstrcpyA
-    #define sprintf_fn wsprintfA
 #elif defined(__OS2__)
     #include <os2.h>
     #define DIRSEP "\\"
     #define SDL20_LIBNAME "SDL2.dll"
     #define SDL20_LIBNAME2 "SDL2"       /* if loading from LIBPATH */
     #define SDL20_REQUIRED_VER SDL_VERSIONNUM(2,0,7)
-    #define strcpy_fn  strcpy
-    #define sprintf_fn sprintf
     static HMODULE Loaded_SDL20 = NULLHANDLE;
     static SDL_bool LoadSDL20Library(void) {
         char err[256];
@@ -1104,8 +1135,6 @@ static char loaderror[256];
     #define SDL20_LIBNAME2 "libSDL2-2.0.dylib"
     #define SDL20_FRAMEWORK "SDL2.framework/Versions/A/SDL2"
     #define SDL20_REQUIRED_VER SDL_VERSIONNUM(2,0,7)
-    #define strcpy_fn  strcpy
-    #define sprintf_fn sprintf
     static void *Loaded_SDL20 = NULL;
     #define LookupSDL20Sym(sym) dlsym(Loaded_SDL20, sym)
     #define CloseSDL20Library() { if (Loaded_SDL20) { dlclose(Loaded_SDL20); Loaded_SDL20 = NULL; } }
@@ -1162,8 +1191,6 @@ static char loaderror[256];
     #define LoadSDL20Library() ((Loaded_SDL20 = dlopen(SDL20_LIBNAME, RTLD_LOCAL|RTLD_NOW)) != NULL)
     #define LookupSDL20Sym(sym) dlsym(Loaded_SDL20, sym)
     #define CloseSDL20Library() { if (Loaded_SDL20) { dlclose(Loaded_SDL20); Loaded_SDL20 = NULL; } }
-    #define strcpy_fn  strcpy
-    #define sprintf_fn sprintf
 #else
     #error Please define your platform.
 #endif
@@ -1179,7 +1206,8 @@ LoadSDL20Symbol(const char *fn, int *okay)
     if (*okay) { /* only bother trying if we haven't previously failed. */
         retval = LookupSDL20Sym(fn);
         if (retval == NULL) {
-            sprintf_fn(loaderror, "%s missing in SDL2 library.", fn);
+            char *p = SDL12COMPAT_stpcpy(loaderror, fn);
+            SDL12COMPAT_stpcpy(p, " missing in SDL2 library.");
             *okay = 0;
         }
     }
@@ -1406,7 +1434,7 @@ LoadSDL20(void)
 
         okay = LoadSDL20Library();
         if (!okay) {
-            strcpy_fn(loaderror, "Failed loading SDL2 library.");
+            SDL12COMPAT_stpcpy(loaderror, "Failed loading SDL2 library.");
         } else {
             #define SDL20_SYM(rc,fn,params,args,ret) SDL20_##fn = (SDL20_##fn##_t) LoadSDL20Symbol("SDL_" #fn, &okay);
             #include "SDL20_syms.h"
@@ -1416,7 +1444,19 @@ LoadSDL20(void)
                 LinkedSDL2VersionInt = SDL_VERSIONNUM(v.major, v.minor, v.patch);
                 okay = (LinkedSDL2VersionInt >= SDL20_REQUIRED_VER);
                 if (!okay) {
-                    sprintf_fn(loaderror, "SDL2 %d.%d.%d library is too old.", v.major, v.minor, v.patch);
+                    char value[12];
+                    char *p = SDL12COMPAT_stpcpy(loaderror, "SDL2 ");
+
+                    SDL12COMPAT_itoa(value, v.major);
+                    p = SDL12COMPAT_stpcpy(p, value);
+                    *p++ = '.';
+                    SDL12COMPAT_itoa(value, v.minor);
+                    p = SDL12COMPAT_stpcpy(p, value);
+                    *p++ = '.';
+                    SDL12COMPAT_itoa(value, v.patch);
+                    p = SDL12COMPAT_stpcpy(p, value);
+
+                    SDL12COMPAT_stpcpy(p, " library is too old.");
                 } else {
                     WantDebugLogging = SDL12Compat_GetHintBoolean("SDL12COMPAT_DEBUG_LOGGING", SDL_FALSE);
                     if (WantDebugLogging) {
