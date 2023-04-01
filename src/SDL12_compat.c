@@ -126,6 +126,21 @@ extern "C" {
 #define SDL20_zeroa(x) SDL20_memset((x), 0, sizeof((x)))
 #define SDL_ReportAssertion SDL20_ReportAssertion
 
+/* for SDL_assert() : */
+#define SDL_enabled_assert(condition) \
+do { \
+    while ( !(condition) ) { \
+        static struct SDL_AssertData sdl_assert_data = { 0, 0, #condition, 0, 0, 0, 0 }; \
+        const SDL_AssertState sdl_assert_state = SDL20_ReportAssertion(&sdl_assert_data, SDL_FUNCTION, SDL_FILE, SDL_LINE); \
+        if (sdl_assert_state == SDL_ASSERTION_RETRY) { \
+            continue; /* go again. */ \
+        } else if (sdl_assert_state == SDL_ASSERTION_BREAK) { \
+            SDL_TriggerBreakpoint(); \
+        } \
+        break; /* not retrying. */ \
+    } \
+} while (SDL_NULL_WHILE_LOOP_CONDITION)
+
 /* From SDL2.0's SDL_bits.h: a force-inlined function. */
 #if defined(__WATCOMC__) && defined(__386__)
 extern __inline int _SDL20_bsr_watcom(Uint32);
