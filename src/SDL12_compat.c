@@ -1448,11 +1448,9 @@ LoadSDL20(void)
                     char *p = SDL12COMPAT_stpcpy(loaderror, "SDL2 ");
 
                     SDL12COMPAT_itoa(value, v.major);
-                    p = SDL12COMPAT_stpcpy(p, value);
-                    *p++ = '.';
+                    p = SDL12COMPAT_stpcpy(p, value); *p++ = '.';
                     SDL12COMPAT_itoa(value, v.minor);
-                    p = SDL12COMPAT_stpcpy(p, value);
-                    *p++ = '.';
+                    p = SDL12COMPAT_stpcpy(p, value); *p++ = '.';
                     SDL12COMPAT_itoa(value, v.patch);
                     p = SDL12COMPAT_stpcpy(p, value);
 
