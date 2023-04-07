@@ -7660,9 +7660,10 @@ SDL_DisplayYUVOverlay(SDL12_Overlay *overlay12, SDL12_Rect *dstrect12)
 DECLSPEC12 void SDLCALL
 SDL_UnlockYUVOverlay(SDL12_Overlay *overlay12)
 {
-    if (overlay12) {
+    /* MLT SDL1 consumer uses locks, but accesses pixels pointer outside the lock, so don't null the pixels pointer. */
+    /*if (overlay12) {
         overlay12->pixels = NULL;
-    }
+    }*/
 }
 
 DECLSPEC12 void SDLCALL
