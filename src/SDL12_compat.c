@@ -6590,6 +6590,10 @@ SDL_SetColorKey(SDL12_Surface *surface12, Uint32 flag12, Uint32 key)
 
     if (addkey) {
         surface12->flags |= SDL12_SRCCOLORKEY;
+        /* you could set a color key on a 1.2 surface that had an alpha channel, but it would be ignored during blits. */
+        if (surface12->format->Amask) {
+            SDL20_SetColorKey(surface12->surface20, SDL_FALSE, key);
+        }
     } else {
         surface12->flags &= ~SDL12_SRCCOLORKEY;
     }
