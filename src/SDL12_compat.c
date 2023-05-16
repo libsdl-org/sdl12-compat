@@ -1056,7 +1056,7 @@ static SDL_bool VideoSurfaceUpdatedInBackgroundThread = SDL_FALSE;
 static SDL_bool AllowThreadedDraws = SDL_FALSE;
 static SDL_bool AllowThreadedPumps = SDL_FALSE;
 static SDL_bool WantCompatibilityAudioCVT = SDL_FALSE;
-
+static SDL_bool PreserveDestinationAlpha = SDL_TRUE;
 
 /* This is a KEYDOWN event which is being held for a follow-up TEXTINPUT */
 static SDL12_Event PendingKeydownEvent;
@@ -1246,6 +1246,9 @@ typedef struct QuirkEntryType
 
 static QuirkEntryType quirks[] = {
 #if defined(__unix__)
+    /* freedroid use RLE-encoded surfaces, where SDL-1.2 didn't preserve destination alpha. This works around an sdl12-compat incompatibility. */
+    {"freedroid", "SDL12COMPAT_PRESERVE_DEST_ALPHA", "0"},
+
     /* Awesomenauts uses Cg, and does weird things with the GL context. */
     {"Awesomenauts.bin.x86", "SDL12COMPAT_OPENGL_SCALING", "0"},
     {"Awesomenauts.bin.x86", "SDL12COMPAT_FORCE_GL_SWAPBUFFER_CONTEXT", "1"},
@@ -2194,6 +2197,7 @@ Init12VidModes(void)
         return 0;  /* already did this. */
     }
 
+    PreserveDestinationAlpha = SDL12Compat_GetHintBoolean("SDL12COMPAT_PRESERVE_DEST_ALPHA", SDL_TRUE);
     WantOpenGLScaling = use_fake_modes;
 
     SDL_assert(VideoModes == NULL);
@@ -6346,7 +6350,7 @@ SaveDestAlpha(SDL12_Surface *src12, SDL12_Surface *dst12, SDL_Rect *dstrect20, U
      * In SDL2, we change the destination alpha. We have to save it off in this case, which sucks.
      */
     Uint8 *dstalpha = NULL;
-    const SDL_bool save_dstalpha = ((src12->flags & SDL12_SRCALPHA) && dst12->format->Amask && ((src12->format->alpha != 255) || src12->format->Amask)) ? SDL_TRUE : SDL_FALSE;
+    const SDL_bool save_dstalpha = (PreserveDestinationAlpha && (src12->flags & SDL12_SRCALPHA) && dst12->format->Amask && ((src12->format->alpha != 255) || src12->format->Amask)) ? SDL_TRUE : SDL_FALSE;
 
     if (save_dstalpha && (dstrect20->w > 0) && (dstrect20->h > 0)) {
         const Uint32 amask = dst12->format->Amask;
