@@ -5134,7 +5134,7 @@ SDL_CreateRGBSurface(Uint32 flags12, int width, int height, int depth, Uint32 Rm
 
     SetPalette12ForMasks(surface12, Rmask, Gmask, Bmask);
 
-    if (flags12 & SDL12_SRCALPHA) {
+    if (Amask != 0) {
         surface12->flags |= SDL12_SRCALPHA;
         SDL20_SetSurfaceBlendMode(surface20, SDL_BLENDMODE_BLEND);
     }
@@ -6619,7 +6619,7 @@ SDL_ConvertSurface(SDL12_Surface *src12, const SDL12_PixelFormat *format12, Uint
         if (!retval) {
             SDL20_FreeSurface(surface20);
         } else {
-            if (flags12 & SDL12_SRCALPHA) {
+            if (retval->format->Amask != 0) {
                 SDL20_SetSurfaceBlendMode(surface20, SDL_BLENDMODE_BLEND);
                 retval->flags |= SDL12_SRCALPHA;
             }
