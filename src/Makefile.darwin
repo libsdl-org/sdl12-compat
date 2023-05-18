@@ -18,7 +18,7 @@ CFLAGS  = -mmacosx-version-min=10.6 -fPIC -O3 -Wall
 LDFLAGS = -mmacosx-version-min=10.6 -dynamiclib -Wl,-undefined,error -Wl,-single_module
 #LDFLAGS+= -Wl,-headerpad_max_install_names
 LDFLAGS+= -Wl,-install_name,"/usr/local/lib/$(DYLIB)"
-LDFLAGS+= -Wl,-compatibility_version,1.0 -Wl,-current_version,12.62
+LDFLAGS+= -Wl,-compatibility_version,1.0 -Wl,-current_version,12.63
 LDLIBS  = -Wl,-framework,AppKit
 # this is needed for x86_64 - cross-gcc might not add it.
 #LDLIBS += -Wl,-lbundle1.o
