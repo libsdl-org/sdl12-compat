@@ -110,3 +110,20 @@ name and the game isn't working, try this environment variable:
 
     export SDL12COMPAT_NO_QUIT_VIDEO=1
 
+## Civilization: Call to Power (Linux)
+
+The Linux port of Civilization: Call to Power is very old, and has a number
+of issues running on modern systems. The relevant ones for sdl12-compat are
+that the game uses SDL 1.1 (not SDL 1.2), and that it uses CD audio.
+
+To fix the former, you'll need to either rename the sdl12-compat files, or
+patch the game binary to look for libSDL-1.2.so.0.
+
+For the latter, you'll need to rip the game's CD audio, and set the
+SDL12COMPAT_FAKE_CDROM_PATH environment variable. Make sure you set this to an
+absolute path, as the game changes directories before initializing SDL.
+
+A more complete guide for getting the game to work on modern systems with
+sdl12-compat is available [here](https://davidgow.net/hacks/civctp.html).
+
+(Some of these tricks may also work for other old Loki Entertainment ports, too.)
