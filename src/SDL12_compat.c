@@ -7440,8 +7440,8 @@ SDL_GetWMInfo(SDL12_SysWMinfo *info12)
         info12->info.x11.window = temp_window ? 0 : info20.info.x11.window;
         if (SDL_VERSIONNUM(info12->version.major, info12->version.minor, info12->version.patch) >= SDL_VERSIONNUM(1, 0, 2)) {
             /* While these don't exist in SDL2, some programs expect to get a valid window anyway. */
-            info12->info.x11.fswindow = info20.info.x11.window;
-            info12->info.x11.wmwindow = info20.info.x11.window;
+            info12->info.x11.fswindow = info12->info.x11.window;
+            info12->info.x11.wmwindow = info12->info.x11.window;
         }
         if (SDL_VERSIONNUM(info12->version.major, info12->version.minor, info12->version.patch) >= SDL_VERSIONNUM(1, 2, 12)) {
             info12->info.x11.gfxdisplay = info20.info.x11.display;  /* shrug */
