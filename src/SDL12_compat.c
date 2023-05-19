@@ -1667,13 +1667,12 @@ SDL_revcpy(void *_dst, const void *_src, size_t len)
         __asm mov c, ecx \
         __asm mov d, edx \
 }
-#elif (defined(_MSC_VER) && defined(_M_X64))
-/* Use __cpuidex instead of __cpuid because ICL does not clear ecx register */
+#elif defined(_MSC_VER) && defined(_M_X64)
 #include <intrin.h>
 #define cpuid(func, a, b, c, d) \
 { \
     int CPUInfo[4]; \
-    __cpuidex(CPUInfo, func, 0); \
+    __cpuid(CPUInfo, func); \
     a = CPUInfo[0]; \
     b = CPUInfo[1]; \
     c = CPUInfo[2]; \
