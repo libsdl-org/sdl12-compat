@@ -70,13 +70,34 @@ requirement is dropped too. Send patches. :) */
 
 #if defined(__APPLE__)
 /* lets us know what version of Mac OS X we're compiling on */
-#include "AvailabilityMacros.h"
-#include "TargetConditionals.h"
-#if defined(TARGET_OS_TV) && TARGET_OS_TV
+#include <AvailabilityMacros.h>
+#include <TargetConditionals.h>
+
+/* Fix building with older SDKs that don't define these
+   See this for more information:
+   https://stackoverflow.com/questions/12132933/preprocessor-macro-for-os-x-targets
+*/
+#ifndef TARGET_OS_MACCATALYST
+#define TARGET_OS_MACCATALYST 0
+#endif
+#ifndef TARGET_OS_IOS
+#define TARGET_OS_IOS 0
+#endif
+#ifndef TARGET_OS_IPHONE
+#define TARGET_OS_IPHONE 0
+#endif
+#ifndef TARGET_OS_TV
+#define TARGET_OS_TV 0
+#endif
+#ifndef TARGET_OS_SIMULATOR
+#define TARGET_OS_SIMULATOR 0
+#endif
+
+#if TARGET_OS_TV
 #undef __TVOS__
 #define __TVOS__ 1
 #endif
-#if defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE
+#if TARGET_OS_IPHONE
 /* if compiling for iOS */
 #undef __IPHONEOS__
 #define __IPHONEOS__ 1
