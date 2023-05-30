@@ -7303,16 +7303,16 @@ SDL_SetPalette(SDL12_Surface *surface12, int flags, const SDL_Color *colors,
     int i, retval;
 
     if (!surface12) {
-        return 1;  /* not an error, a no-op. */
+        return 0;  /* not an error, a no-op. */
     }
 
     if ((flags & (SDL12_LOGPAL | SDL12_PHYSPAL)) == 0) {
-        return 1;  /* nothing to do. */
+        return 0;  /* nothing to do. */
     }
 
     palette12 = surface12->format->palette;
     if (!palette12) {
-        return 1;  /* not an error, a no-op. */
+        return 0;  /* not an error, a no-op. */
     }
 
     palette20 = surface12->surface20->format->palette;
