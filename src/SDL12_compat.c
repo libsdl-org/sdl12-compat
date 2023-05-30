@@ -7321,7 +7321,8 @@ SDL_SetPalette(SDL12_Surface *surface12, int flags, const SDL_Color *colors,
     /* we need to force the "unused" field to 255, since it's "alpha" in SDL2. */
     opaquecolors = (SDL_Color *) SDL20_malloc(sizeof (SDL_Color) * ncolors);
     if (!opaquecolors) {
-        return SDL20_OutOfMemory();
+        SDL20_OutOfMemory();
+        return 0;
     }
 
     /* don't SDL_memcpy in case the 'a' field is uninitialized and upsets
@@ -7333,17 +7334,17 @@ SDL_SetPalette(SDL12_Surface *surface12, int flags, const SDL_Color *colors,
         opaquecolors[i].a = 255;
     }
 
-    retval = 0;
+    retval = 1;  /* "The return value is 1 if all colours could be set as requested, and 0 otherwise." */
 
     if (flags & SDL12_LOGPAL) {
         if (SDL20_SetPaletteColors(palette20, opaquecolors, firstcolor, ncolors) < 0) {
-            retval = -1;
+            retval = 0;
         }
     }
 
     if ((flags & SDL12_PHYSPAL) && (surface12 == VideoSurface12) && VideoPhysicalPalette20) {
         if (SDL20_SetPaletteColors(VideoPhysicalPalette20, opaquecolors, firstcolor, ncolors) < 0) {
-            retval = -1;
+            retval = 0;
         }
     }
 
