@@ -895,6 +895,8 @@
 #define SDL_ResetHints IGNORE_THIS_VERSION_OF_SDL_ResetHints
 #define SDL_strcasestr IGNORE_THIS_VERSION_OF_SDL_strcasestr
 #define SDL_GDKSuspendComplete IGNORE_THIS_VERSION_OF_SDL_GDKSuspendComplete
+#define SDL_HasWindowSurface IGNORE_THIS_VERSION_OF_SDL_HasWindowSurface
+#define SDL_DestroyWindowSurface IGNORE_THIS_VERSION_OF_SDL_DestroyWindowSurface
 
 /* *** HACK HACK HACK:
  * *** Avoid including SDL_thread.h: it defines SDL_CreateThread() as a macro */
@@ -4415,6 +4417,14 @@ typedef void (__cdecl *pfnSDL_CurrentEndThread) (unsigned);
 
 #ifdef SDL_GDKSuspendComplete
 #undef SDL_GDKSuspendComplete
+#endif
+
+#ifdef SDL_HasWindowSurface
+#undef SDL_HasWindowSurface
+#endif
+
+#ifdef SDL_DestroyWindowSurface
+#undef SDL_DestroyWindowSurface
 #endif
 
 /* undefine these macros too: */
