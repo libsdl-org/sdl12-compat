@@ -54,6 +54,8 @@ typedef unsigned __int64 uint64_t;
 #include <stdarg.h>
 #define HAVE_STDARG_H 1
 
+#define HAVE_STDDEF_H 1
+
 /* for now, let's try and say everything that we care about that isn't Windows
 has these C runtime functions available. We're trying to avoid a configure
 stage, though. Send patches if your platform lacks something. */
