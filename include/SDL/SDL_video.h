@@ -89,7 +89,7 @@ typedef struct SDL_Surface
     Uint16 pitch;
     void *pixels;
     int offset;
-    void *hwdata;
+    struct private_hwdata *hwdata;
     SDL_Rect clip_rect;
     Uint32 unused1;
     Uint32 locked;
