@@ -129,9 +129,13 @@ stage, though. Send patches if your platform lacks something. */
 #endif
 #endif
 
+#if defined(__GLIBC__)
+/* glibc certainly includes this, send patches if your OS does too */
+#define HAVE_MALLOC_H 1
+#endif
+
 /* things that aren't necessarily in Linux, some are MSVC C runtime, some are BSD. Send patches. */
 #if 0
-#define HAVE_MALLOC_H 1
 #define HAVE_BCOPY 1
 #define HAVE_ATOI 1
 #define HAVE_ATOF 1
