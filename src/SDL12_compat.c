@@ -4937,26 +4937,21 @@ Rect12to20(const SDL12_Rect *rect12, SDL_Rect *rect20)
     return rect20;
 }
 
-static SDL12_Surface *
-Surface20to12(SDL_Surface *surface20)
+static SDL_bool
+Surface20to12InPlace(SDL_Surface *surface20,
+                     SDL12_Surface *surface12)
 {
     SDL_BlendMode blendmode = SDL_BLENDMODE_NONE;
-    SDL12_Surface *surface12 = NULL;
     SDL12_Palette *palette12 = NULL;
     SDL12_PixelFormat *format12 = NULL;
     Uint32 flags = 0;
 
     if (!surface20) {
-        return NULL;
+        return SDL_FALSE;
     }
     if (surface20->pitch > 65535) {
         SDL20_SetError("Pitch is too large");  /* can't fit to 16-bits */
-        return NULL;
-    }
-
-    surface12 = (SDL12_Surface *) SDL20_malloc(sizeof (SDL12_Surface));
-    if (!surface12) {
-        goto failed;
+        return SDL_FALSE;
     }
 
     if (surface20->format->palette) {
@@ -5029,12 +5024,33 @@ Surface20to12(SDL_Surface *surface20)
     Rect20to12(&surface20->clip_rect, &surface12->clip_rect);
     surface12->refcount = surface20->refcount;
 
+    return SDL_TRUE;
+
+failed:
+    SDL20_free(palette12);
+    SDL20_free(format12);
+    return SDL_FALSE;
+}
+
+static SDL12_Surface *
+Surface20to12(SDL_Surface *surface20)
+{
+    SDL12_Surface *surface12 = NULL;
+
+    surface12 = (SDL12_Surface *) SDL20_malloc(sizeof (SDL12_Surface));
+    if (!surface12) {
+        goto failed;
+    }
+
+    SDL20_zerop(surface12);
+    if (!Surface20to12InPlace(surface20, surface12)) {
+        goto failed;
+    }
+
     return surface12;
 
 failed:
     SDL20_free(surface12);
-    SDL20_free(palette12);
-    SDL20_free(format12);
     return NULL;
 }
 
