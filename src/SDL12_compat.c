@@ -5131,11 +5131,10 @@ SetPalette12ForMasks(SDL12_Surface *surface12, const Uint32 Rmask, const Uint32 
     }
 }
 
-DECLSPEC12 SDL12_Surface * SDLCALL
-SDL_CreateRGBSurface(Uint32 flags12, int width, int height, int depth, Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask)
+static SDL_Surface *
+CreateRGBSurface(Uint32 flags12, int width, int height, int depth, Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask)
 {
     SDL_Surface *surface20;
-    SDL12_Surface *surface12;
 
     /* SDL 1.2 checks this. */
     if ((width >= 16384) || (height >= 65536)) {
@@ -5181,6 +5180,30 @@ SDL_CreateRGBSurface(Uint32 flags12, int width, int height, int depth, Uint32 Rm
         surface20 = SDL20_CreateRGBSurface(0, width, height, depth, Rmask, Gmask, Bmask, Amask);
     }
 
+    return surface20;
+}
+
+static void
+Surface12SetMasks(SDL12_Surface *surface12, Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask)
+{
+    SetPalette12ForMasks(surface12, Rmask, Gmask, Bmask);
+
+    if (Amask != 0) {
+        surface12->flags |= SDL12_SRCALPHA;
+        SDL20_SetSurfaceBlendMode(surface12->surface20, SDL_BLENDMODE_BLEND);
+    }
+}
+
+DECLSPEC12 SDL12_Surface * SDLCALL
+SDL_CreateRGBSurface(Uint32 flags12, int width, int height, int depth, Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask)
+{
+    SDL12_Surface *surface12;
+    SDL_Surface *surface20;
+
+    surface20 = CreateRGBSurface(flags12, width, height, depth, Rmask, Gmask, Bmask, Amask);
+    if (!surface20) {
+        return NULL;
+    }
     surface12 = Surface20to12(surface20);
     if (!surface12) {
         SDL20_FreeSurface(surface20);
@@ -5188,14 +5211,7 @@ SDL_CreateRGBSurface(Uint32 flags12, int width, int height, int depth, Uint32 Rm
     }
 
     SDL_assert((surface12->flags & ~(SDL12_SRCCOLORKEY|SDL12_SRCALPHA)) == 0);  /* shouldn't have prealloc, rleaccel, or dontfree. */
-
-    SetPalette12ForMasks(surface12, Rmask, Gmask, Bmask);
-
-    if (Amask != 0) {
-        surface12->flags |= SDL12_SRCALPHA;
-        SDL20_SetSurfaceBlendMode(surface20, SDL_BLENDMODE_BLEND);
-    }
-
+    Surface12SetMasks(surface12, Rmask, Gmask, Bmask, Amask);
     return surface12;
 }
 
@@ -5224,6 +5240,8 @@ SDL_CreateRGBSurfaceFrom(void *pixels, int width, int height, int depth, int pit
 
     SDL_assert((surface12->flags & ~(SDL12_SRCCOLORKEY|SDL12_SRCALPHA)) == SDL12_PREALLOC);  /* should _only_ have prealloc. */
 
+    /* TODO: Is it correct that this always ignored Amask, or should it be
+     * using Surface12SetMasks which takes Amask into account? */
     SetPalette12ForMasks(surface12, Rmask, Gmask, Bmask);
 
     return surface12;
