@@ -2616,6 +2616,19 @@ SDL_WasInit(Uint32 sdl12flags)
     return InitFlags20to12(SDL20_WasInit(sdl20flags)) | extraflags;
 }
 
+static void
+FreeSurfaceContents(SDL12_Surface *surface12)
+{
+    if (surface12->surface20) {
+        SDL20_FreeSurface(surface12->surface20);
+        surface12->surface20 = NULL;
+    }
+    if (surface12->format) {
+        SDL20_free(surface12->format->palette);
+        SDL20_free(surface12->format);
+        surface12->format = NULL;
+    }
+}
 
 static SDL12_Surface *EndVidModeCreate(void);
 static void
@@ -5223,11 +5236,7 @@ SDL_FreeSurface(SDL12_Surface *surface12)
         surface12->refcount--;
         if (surface12->refcount)
             return;
-        SDL20_FreeSurface(surface12->surface20);
-        if (surface12->format) {
-            SDL20_free(surface12->format->palette);
-            SDL20_free(surface12->format);
-        }
+        FreeSurfaceContents(surface12);
         SDL20_free(surface12);
     }
 }
