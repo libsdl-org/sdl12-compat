@@ -980,6 +980,7 @@ static SDL_Window *VideoWindow20 = NULL;
 static SDL_Renderer *VideoRenderer20 = NULL;
 static SDL_mutex *VideoRendererLock = NULL;
 static SDL_Texture *VideoTexture20 = NULL;
+static SDL12_Surface VideoSurface12Location;
 static SDL12_Surface *VideoSurface12 = NULL;
 static SDL_Palette *VideoPhysicalPalette20 = NULL;
 static Uint32 VideoSurfacePresentTicks = 0;
@@ -4714,7 +4715,7 @@ EventFilter20to12(void *data, SDL_Event *event20)
         }
 
         case SDL_MOUSEMOTION:
-            if (!VideoSurface12) {
+            if (!VideoSurface12 || !VideoSurface12->surface20) {
                 return 1;  /* we don't have a screen surface yet? Don't send this on to the app. */
             }
 
@@ -5569,11 +5570,9 @@ EndVidModeCreate(void)
         VideoPhysicalPalette20 = NULL;
     }
     if (VideoSurface12) {
-        SDL12_Surface *screen12 = VideoSurface12;
         SDL20_free(VideoSurface12->pixels);
         VideoSurface12->pixels = NULL;
-        VideoSurface12 = NULL;  /* SDL_FreeSurface will ignore the screen surface, so NULL the global variable out. */
-        SDL_FreeSurface(screen12);
+        FreeSurfaceContents(VideoSurface12);
     }
     if (VideoConvertSurface20) {
         SDL20_FreeSurface(VideoConvertSurface20);
@@ -5607,16 +5606,27 @@ EndVidModeCreate(void)
     return NULL;
 }
 
-
-static SDL12_Surface *
-CreateSurface12WithFormat(const int w, const int h, const Uint32 fmt)
+/* Essentially the same as SDL_CreateRGBSurface, but in-place */
+static void
+CreateVideoSurface(const Uint32 fmt)
 {
     Uint32 rmask, gmask, bmask, amask;
     int bpp;
+    SDL_Surface *surface20;
+
     if (!SDL20_PixelFormatEnumToMasks(fmt, &bpp, &rmask, &gmask, &bmask, &amask)) {
-        return NULL;
+        return;
     }
-    return SDL_CreateRGBSurface(0, w, h, bpp, rmask, gmask, bmask, amask);
+
+    SDL20_zerop(VideoSurface12);
+    surface20 = CreateRGBSurface(0, 0, 0, bpp, rmask, gmask, bmask, amask);
+
+    if (!Surface20to12InPlace(surface20, VideoSurface12)) {
+        FreeSurfaceContents(VideoSurface12);
+        return;
+    }
+
+    Surface12SetMasks(VideoSurface12, rmask, gmask, bmask, amask);
 }
 
 static SDL_Surface *
@@ -5953,6 +5963,8 @@ SetVideoModeImpl(int width, int height, int bpp, Uint32 flags12)
     int scaled_height = height;
     const char *fromwin_env = NULL;
 
+    VideoSurface12 = &VideoSurface12Location;
+
     if (flags12 & SDL12_OPENGL) {
         /* For now we default GL scaling to ENABLED. If an app breaks or is linked directly
            to glBindFramebuffer, they'll need to turn it off with this environment variable.
@@ -6042,11 +6054,11 @@ SetVideoModeImpl(int width, int height, int bpp, Uint32 flags12)
         default: SDL20_SetError("Unsupported bits-per-pixel"); return NULL;
     }
 
-    SDL_assert((VideoSurface12 != NULL) == (VideoWindow20 != NULL));
+    SDL_assert((VideoSurface12->surface20 != NULL) == (VideoWindow20 != NULL));
 
-    if (VideoSurface12 && ((VideoSurface12->flags & SDL12_OPENGL) != (flags12 & SDL12_OPENGL))) {
+    if (VideoSurface12->surface20 && ((VideoSurface12->flags & SDL12_OPENGL) != (flags12 & SDL12_OPENGL))) {
         EndVidModeCreate();  /* rebuild the window if moving to/from a GL context */
-    } else if (VideoSurface12 && (VideoSurface12->surface20->format->format != appfmt)) {
+    } else if (VideoSurface12->surface20 && (VideoSurface12->surface20->format->format != appfmt)) {
         EndVidModeCreate();  /* rebuild the window if changing pixel format */
     } else if (VideoGLContext20) {
         /* SDL 1.2 (infuriatingly!) destroys the GL context on each resize in some cases, on various platforms. Try to match that. */
@@ -6188,11 +6200,11 @@ SetVideoModeImpl(int width, int height, int bpp, Uint32 flags12)
         SDL20_SetWindowResizable(VideoWindow20, (flags12 & SDL12_RESIZABLE) ? SDL_TRUE : SDL_FALSE);
     }
 
-    if (VideoSurface12) {
+    if (VideoSurface12->surface20) {
         SDL20_free(VideoSurface12->pixels);
     } else {
-        VideoSurface12 = CreateSurface12WithFormat(0, 0, appfmt);
-        if (!VideoSurface12) {
+        CreateVideoSurface(appfmt);
+        if (!VideoSurface12->surface20) {
             return EndVidModeCreate();
         }
     }
@@ -6708,7 +6720,7 @@ DECLSPEC12 SDL12_Surface * SDLCALL
 SDL_DisplayFormat(SDL12_Surface *surface12)
 {
     const Uint32 flags = surface12->flags & (SDL12_SRCCOLORKEY|SDL12_SRCALPHA|SDL12_RLEACCELOK);
-    if (!VideoSurface12) {
+    if (!VideoSurface12 || !VideoSurface12->surface20) {
         SDL20_SetError("No video mode has been set");
         return NULL;
     }
@@ -6724,7 +6736,7 @@ SDL_DisplayFormatAlpha(SDL12_Surface *surface12)
     SDL_PixelFormat *fmt20 = NULL;
     SDL12_PixelFormat fmt12;
 
-    if (!VideoSurface12) {
+    if (!VideoSurface12 || !VideoSurface12->surface20) {
         SDL20_SetError("No video mode has been set");
         return NULL;
     }
@@ -7309,7 +7321,7 @@ static void
 HandleInputGrab(SDL12_GrabMode mode)
 {
     /* SDL 1.2 always grabbed input if the video mode was fullscreen. */
-    const SDL_bool isfullscreen = (VideoSurface12 && (VideoSurface12->flags & SDL12_FULLSCREEN)) ? SDL_TRUE : SDL_FALSE;
+    const SDL_bool isfullscreen = (VideoSurface12 && VideoSurface12->surface20 && (VideoSurface12->flags & SDL12_FULLSCREEN)) ? SDL_TRUE : SDL_FALSE;
     const SDL_bool wantgrab = (isfullscreen || (mode == SDL12_GRAB_ON)) ? SDL_TRUE : SDL_FALSE;
     if (VideoWindowGrabbed != wantgrab) {
         if (VideoWindow20) {
