@@ -10,7 +10,7 @@ jobs:
       matrix:
         platform:
         - { name: Windows, os: windows-latest }
-        - { name: Linux,   os: ubuntu-20.04, flags: -GNinja }
+        - { name: Linux,   os: ubuntu-latest, flags: -GNinja }
         - { name: MacOS,   os: macos-latest }
     steps:
     - name: Setup Linux dependencies
@@ -19,14 +19,15 @@ jobs:
         sudo apt-get update
         sudo apt-get install cmake ninja-build libgl1-mesa-dev libglu1-mesa-dev
     - name: Get sdl12-compat sources
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
     - name: Get SDL2 headers
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         repository: libsdl-org/SDL
-        ref: release-2.0.18
+        ref: SDL2
         path: SDL2
     - name: Configure CMake
       run: cmake -DSDL2_INCLUDE_DIR="${{ github.workspace }}/SDL2/include" -B build ${{ matrix.platform.flags }}
     - name: Build
       run: cmake --build build/
+
