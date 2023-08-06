@@ -8454,11 +8454,11 @@ SDL_LoadWAV_RW(SDL12_RWops *rwops12, int freerwops12,
     SDL_RWops *rwops20 = RWops12to20(rwops12);
     SDL_AudioSpec *retval = NULL;
 
+    *buf = NULL;
+
     if (!rwops20) {
         return NULL;
     }
-
-    *buf = NULL;
 
     /* SDL2's LoadWAV requires a seekable stream, but SDL 1.2 didn't,
        so if the stream appears unseekable, try to load it into a
