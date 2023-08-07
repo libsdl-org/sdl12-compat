@@ -2136,8 +2136,7 @@ AddVidModeToList(VideoModeList *vmode, SDL12_Rect *mode, const Uint16 maxw, cons
     }
     vmode->modeslist12 = (SDL12_Rect *) ptr;
 
-    vmode->modeslist12[vmode->nummodes] = *mode;
-
+    SDL20_memcpy(&vmode->modeslist12[vmode->nummodes], mode, sizeof(vmode->modeslist12[vmode->nummodes]));
     vmode->nummodes++;
 
     return 0;
