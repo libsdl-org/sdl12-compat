@@ -1281,6 +1281,10 @@ static QuirkEntryType quirks[] = {
     {"scorched3d", "SDL12COMPAT_OPENGL_SCALING", "0"},
     {"scorched3dc", "SDL12COMPAT_OPENGL_SCALING", "0"},
 
+    /* Trine (the old Humble Bundle version from 2011) doesn't render in-game with GL scaling enabled. */
+    {"trine-bin32", "SDL12COMPAT_OPENGL_SCALING", "0"},
+    {"trine-bin64", "SDL12COMPAT_OPENGL_SCALING", "0"},
+
     /* boswars has a bug where SDL_AudioCVT must not require extra buffer space. See Issue #232. */
     {"boswars", "SDL12COMPAT_COMPATIBILITY_AUDIOCVT", "1"},
 
