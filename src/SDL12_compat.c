@@ -1285,6 +1285,12 @@ static QuirkEntryType quirks[] = {
     {"trine-bin32", "SDL12COMPAT_OPENGL_SCALING", "0"},
     {"trine-bin64", "SDL12COMPAT_OPENGL_SCALING", "0"},
 
+    /* Trine (the old Humble Bundle version from 2011)'s launcher needs X11, and needs XInitThreads _before_ GTK+ gets in there. */
+    {"trine-launcher32", "SDL_VIDEODRIVER", "x11"},
+    {"trine-launcher32", "SDL12COMPAT_FORCE_XINITTHREADS", "1"},
+    {"trine-launcher64", "SDL_VIDEODRIVER", "x11"},
+    {"trine-launcher64", "SDL12COMPAT_FORCE_XINITTHREADS", "1"},
+
     /* boswars has a bug where SDL_AudioCVT must not require extra buffer space. See Issue #232. */
     {"boswars", "SDL12COMPAT_COMPATIBILITY_AUDIOCVT", "1"},
 
@@ -1487,6 +1493,22 @@ LoadSDL20(void)
                         #endif
                     }
                     SDL12Compat_ApplyQuirks(force_x11);  /* Apply and maybe print a list of any enabled quirks. */
+
+                    #ifdef __linux__
+                    {
+                        const char *viddrv = SDL20_getenv("SDL_VIDEODRIVER");
+                        if (viddrv && (SDL20_strcmp(viddrv, "x11") == 0) && SDL12Compat_GetHintBoolean("SDL12COMPAT_FORCE_XINITTHREADS", SDL_TRUE)) {
+                            void *lib = dlopen("libX11.so.6", RTLD_GLOBAL|RTLD_NOW);
+                            if (lib) {
+                                int (*pXInitThreads)(void) = (int(*)(void)) dlsym(lib, "XInitThreads");
+                                if (pXInitThreads) {
+                                    pXInitThreads();
+                                }
+                                /* leave the library open, so the XInitThreads sticks. */
+                            }
+                        }
+                    }
+                    #endif
                 }
             }
             if (!okay) {
