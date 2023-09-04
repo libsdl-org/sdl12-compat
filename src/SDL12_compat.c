@@ -1274,6 +1274,10 @@ static QuirkEntryType quirks[] = {
     {"fillets", "SDL12COMPAT_ALLOW_SYSWM", "0"},
     {"fillets", "SDL12COMPAT_COMPATIBILITY_AUDIOCVT", "1"},
 
+    /* Mark of the Ninja doesn't work with OpenGL scaling */
+    {"ninja-bin32", "SDL12COMPAT_OPENGL_SCALING", "0"},
+    {"ninja-bin64", "SDL12COMPAT_OPENGL_SCALING", "0"},
+
     /* Misuses SDL_AudioCVT */
     {"pink-pony", "SDL12COMPAT_COMPATIBILITY_AUDIOCVT", "1"},
     {"pink-pony.bin", "SDL12COMPAT_COMPATIBILITY_AUDIOCVT", "1"},
