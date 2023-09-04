@@ -1396,6 +1396,18 @@ SDL12Compat_GetHintFloat(const char *name, float default_value)
     return (float) SDL20_atof(val);
 }
 
+static int
+SDL12Compat_GetHintInt(const char *name, int default_value)
+{
+    const char *val = SDL12Compat_GetHint(name);
+
+    if (!val) {
+        return default_value;
+    }
+
+    return SDL20_atoi(val);
+}
+
 static void
 SDL12Compat_ApplyQuirks(SDL_bool force_x11)
 {
@@ -2029,6 +2041,21 @@ SDL_JoystickOpened(int device_index)
     return SDL20_AtomicGet(&JoystickList[device_index].refcount) ? 1 : 0;
 }
 
+static SDL_PixelFormatEnum
+BPPToPixelFormat(int bpp)
+{
+    #if !SDL_VERSION_ATLEAST(2,0,14)
+    #define SDL_PIXELFORMAT_XRGB8888 SDL_PIXELFORMAT_RGB888
+    #endif
+    switch (bpp) {
+        case  8: return SDL_PIXELFORMAT_INDEX8;
+        case 16: return SDL_PIXELFORMAT_RGB565;
+        case 24: return SDL_PIXELFORMAT_BGR24;
+        case 32: return SDL_PIXELFORMAT_XRGB8888;
+        default: SDL20_SetError("Unsupported bits-per-pixel"); return SDL_PIXELFORMAT_UNKNOWN;
+    }
+}
+
 static SDL_PixelFormat *
 PixelFormat12to20(SDL_PixelFormat *format20, SDL_Palette *palette20, const SDL12_PixelFormat *format12)
 {
@@ -2213,6 +2240,7 @@ Init12VidModes(void)
 {
     const int total = SDL20_GetNumDisplayModes(VideoDisplayIndex);
     const char *maxmodestr;
+    const int max_bpp = SDL12Compat_GetHintInt("SDL12COMPAT_MAX_BPP", 32);
     VideoModeList *vmode = NULL;
     void *ptr = NULL;
     int i, j;
@@ -2263,6 +2291,11 @@ Init12VidModes(void)
 
         if (mode.w > 65535 || mode.h > 65535) {
             continue;  /* can't fit to 16-bits for SDL12_Rect */
+        }
+
+        if (SDL_BITSPERPIXEL(mode.format) > max_bpp) {
+            /* If we see any mode > max_bpp, reduce its bpp. */
+            mode.format = BPPToPixelFormat(max_bpp);
         }
 
         if (!vmode || (mode.format != vmode->format)) {  /* SDL20_GetDisplayMode() sorts on bpp first. We know when to change arrays. */
@@ -2376,6 +2409,7 @@ Init12Video(void)
 {
     const char *driver = SDL20_GetCurrentVideoDriver();
     const char *scale_method_env = SDL12Compat_GetHint("SDL12COMPAT_SCALE_METHOD");
+    const int max_bpp = SDL12Compat_GetHintInt("SDL12COMPAT_MAX_BPP", 32);
     SDL_DisplayMode mode;
     int i;
 
@@ -2440,7 +2474,11 @@ Init12Video(void)
     SDL20_StopTextInput();
 
     if (SDL20_GetDesktopDisplayMode(VideoDisplayIndex, &mode) == 0) {
-        VideoInfoVfmt20 = SDL20_AllocFormat(mode.format);
+        if (SDL_BITSPERPIXEL(mode.format) > max_bpp) {
+            VideoInfoVfmt20 = SDL20_AllocFormat(BPPToPixelFormat(max_bpp));
+        } else {
+            VideoInfoVfmt20 = SDL20_AllocFormat(mode.format);
+        }
         VideoInfo12.vfmt = PixelFormat20to12(&VideoInfoVfmt12, &VideoInfoPalette12, VideoInfoVfmt20);
         VideoInfo12.current_w = mode.w;
         VideoInfo12.current_h = mode.h;
@@ -5960,6 +5998,7 @@ SetVideoModeImpl(int width, int height, int bpp, Uint32 flags12)
     Uint32 appfmt;
     const char *vsync_env = SDL12Compat_GetHint("SDL12COMPAT_SYNC_TO_VBLANK");
     float window_size_scaling = SDL12Compat_GetHintFloat("SDL12COMPAT_WINDOW_SCALING", 1.0f);
+    int max_bpp = SDL12Compat_GetHintInt("SDL12COMPAT_MAX_BPP", 32);
     SDL_bool use_gl_scaling = SDL_FALSE;
     SDL_bool use_highdpi = SDL_TRUE;
     SDL_bool fix_bordless_fs_win = SDL_TRUE;
@@ -6035,28 +6074,19 @@ SetVideoModeImpl(int width, int height, int bpp, Uint32 flags12)
            formats, give them 16-bit and we'll convert later. Nothing in SDL 1.2 will
            handle > 32 bits, so clamp there, too. AND ALSO, most apps will handle 32-bits
            but not 24, so force around that...so basically, you can have 16 or 32 bit. */
-        bpp = (bpp <= 16) ? 16 : 32;
+        bpp = (bpp <= 16) ? 16 : max_bpp;
     }
 
     if ((bpp != 8) && (bpp != 16) && (bpp != 24) && (bpp != 32)) {
         if (flags12 & SDL12_ANYFORMAT) {
-            bpp = 32;
+            bpp = max_bpp;
         } else {
             SDL20_SetError("Unsupported bits-per-pixel");
             return NULL;
         }
     }
 
-    #if !SDL_VERSION_ATLEAST(2,0,14)
-    #define SDL_PIXELFORMAT_XRGB8888 SDL_PIXELFORMAT_RGB888
-    #endif
-    switch (bpp) {
-        case  8: appfmt = SDL_PIXELFORMAT_INDEX8; break;
-        case 16: appfmt = SDL_PIXELFORMAT_RGB565; break;
-        case 24: appfmt = SDL_PIXELFORMAT_BGR24; break;
-        case 32: appfmt = SDL_PIXELFORMAT_XRGB8888; break;
-        default: SDL20_SetError("Unsupported bits-per-pixel"); return NULL;
-    }
+    appfmt = BPPToPixelFormat(bpp);
 
     SDL_assert((VideoSurface12->surface20 != NULL) == (VideoWindow20 != NULL));
 
