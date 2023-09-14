@@ -1274,6 +1274,10 @@ static QuirkEntryType quirks[] = {
     {"fillets", "SDL12COMPAT_ALLOW_SYSWM", "0"},
     {"fillets", "SDL12COMPAT_COMPATIBILITY_AUDIOCVT", "1"},
 
+    /* Hyperspace Delivery Boy relies on the exact imprecision of the format conversion in some 
+       earlier versions of SDL 1.2. It also recommends 16-bit in the README, so force it. */
+    {"hdb", "SDL12COMPAT_MAX_BPP", "16"},
+
     /* Mark of the Ninja doesn't work with OpenGL scaling */
     {"ninja-bin32", "SDL12COMPAT_OPENGL_SCALING", "0"},
     {"ninja-bin64", "SDL12COMPAT_OPENGL_SCALING", "0"},
