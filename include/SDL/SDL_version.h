@@ -33,7 +33,7 @@ real SDL-1.2 available to you. */
 /* We bumped the patchlevel to 50 for sdl12-compat */
 #define SDL_MAJOR_VERSION 1
 #define SDL_MINOR_VERSION 2
-#define SDL_PATCHLEVEL 65
+#define SDL_PATCHLEVEL 66
 
 typedef struct SDL_version
 {
