@@ -2046,7 +2046,7 @@ SDL_JoystickOpened(int device_index)
 }
 
 static SDL_PixelFormatEnum
-BPPToPixelFormat(int bpp)
+BPPToPixelFormat(unsigned bpp)
 {
     #if !SDL_VERSION_ATLEAST(2,0,14)
     #define SDL_PIXELFORMAT_XRGB8888 SDL_PIXELFORMAT_RGB888
@@ -2244,7 +2244,7 @@ Init12VidModes(void)
 {
     const int total = SDL20_GetNumDisplayModes(VideoDisplayIndex);
     const char *maxmodestr;
-    const int max_bpp = SDL12Compat_GetHintInt("SDL12COMPAT_MAX_BPP", 32);
+    const unsigned max_bpp = SDL12Compat_GetHintInt("SDL12COMPAT_MAX_BPP", 32);
     VideoModeList *vmode = NULL;
     void *ptr = NULL;
     int i, j;
@@ -2413,7 +2413,7 @@ Init12Video(void)
 {
     const char *driver = SDL20_GetCurrentVideoDriver();
     const char *scale_method_env = SDL12Compat_GetHint("SDL12COMPAT_SCALE_METHOD");
-    const int max_bpp = SDL12Compat_GetHintInt("SDL12COMPAT_MAX_BPP", 32);
+    const unsigned max_bpp = SDL12Compat_GetHintInt("SDL12COMPAT_MAX_BPP", 32);
     SDL_DisplayMode mode;
     int i;
 
