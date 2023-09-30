@@ -7696,7 +7696,7 @@ SDL_DisplayYUVOverlay(SDL12_Overlay *overlay12, SDL12_Rect *dstrect12)
 {
     QueuedOverlayItem *overlay;
     SDL12_YUVData *hwdata;
-    SDL_Renderer *renderer = NULL;
+    SDL_Renderer *renderer;
     const SDL_bool ThisIsSetVideoModeThread = (SDL20_ThreadID() == SetVideoModeThread) ? SDL_TRUE : SDL_FALSE;
 
     if (!overlay12) {
@@ -7705,7 +7705,7 @@ SDL_DisplayYUVOverlay(SDL12_Overlay *overlay12, SDL12_Rect *dstrect12)
     if (!dstrect12) {
         return SDL20_InvalidParamError("dstrect");
     }
-    if (!(renderer = LockVideoRenderer())) {
+    if ((renderer = LockVideoRenderer()) == NULL) {
         return SDL20_SetError("No software screen surface available");
     }
 
