@@ -921,6 +921,12 @@
 #error You need to compile against SDL >= 2.0.7 headers.
 #endif
 
+#if !SDL_VERSION_ATLEAST(2,0,10)
+// SDL_PixelFormatEnum was an anonymous enum before SDL 2.0.10.
+// Force it to Uint32 if compiling on older headers.
+typedef Uint32 SDL_PixelFormatEnum;
+#endif
+
 /* Missing SDL_thread.h stuff (see above) */
 #if defined(_WIN32) || defined(__OS2__)
 typedef struct SDL_Thread SDL_Thread;
