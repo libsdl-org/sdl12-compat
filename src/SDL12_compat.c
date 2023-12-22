@@ -1318,8 +1318,10 @@ static QuirkEntryType quirks[] = {
 
 #ifdef __linux__
 static void OS_GetExeName(char *buf, const unsigned maxpath) {
+    int ret;
     buf[0] = '\0';
-    readlink("/proc/self/exe", buf, maxpath);
+    ret = readlink("/proc/self/exe", buf, maxpath);
+    (void)ret;
 }
 #elif defined(_WIN32)
 static void OS_GetExeName(char *buf, const unsigned maxpath) {
