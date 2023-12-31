@@ -8858,7 +8858,7 @@ SDL_CDOpen(int drive)
             SDL20_snprintf(fullpath, alloclen, "%s%strack%c%c.mp3", CDRomPath, DIRSEP, c0, c1);
             rw = SDL20_RWFromFile(fullpath, "rb");
             /* if there isn't a track 1 specified, pretend it's a data track, which matches most games' needs. */
-            if (!rw && (c == 0)) {
+            if (!rw && (c == 1)) {
                 fake_data_track = SDL_TRUE;
             }
         }
