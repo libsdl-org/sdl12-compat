@@ -269,6 +269,11 @@ The available options are:
   backends, because SDL 1.2 didn't have wide support for its SysWM APIs
   outside of Windows and X11 anyhow.
 
+- SDL12COMPAT_NO_QUIT_VIDEO: (checked during SDL_QuitSubsystem)
+  If enabled, SDL_Quit() and SDL_QuitSubsystem() will never shut down the
+  video subsystem. This works around buggy applications which try to use
+  the video subsystem after shutting it down.
+
 
 # Compatibility issues with OpenGL scaling
 
