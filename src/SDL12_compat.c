@@ -1303,6 +1303,9 @@ static QuirkEntryType quirks[] = {
     /* boswars has a bug where SDL_AudioCVT must not require extra buffer space. See Issue #232. */
     {"boswars", "SDL12COMPAT_COMPATIBILITY_AUDIOCVT", "1"},
 
+    /* Loki HOMM3 */
+    {"heroes3.dynamic", "SDL12COMPAT_COMPATIBILITY_AUDIOCVT", "1"},
+
     /* grafx2 tries to do all sorts of stuff by talking directly to the X server, causing problems. */
     {"grafx2", "SDL12COMPAT_ALLOW_SYSWM", "0"},
 
