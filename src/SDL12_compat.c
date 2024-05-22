@@ -5637,6 +5637,9 @@ EndVidModeCreate(void)
     OpenGLLogicalScalingFBO = 0;
     OpenGLLogicalScalingColor = 0;
     OpenGLLogicalScalingDepth = 0;
+    OpenGLLogicalScalingMultisampleFBO = 0;
+    OpenGLLogicalScalingMultisampleColor = 0;
+    OpenGLLogicalScalingMultisampleDepth = 0;
 
     MouseInputIsRelative = SDL_FALSE;
     MousePosition.x = 0;
@@ -6103,10 +6106,11 @@ SetVideoModeImpl(int width, int height, int bpp, Uint32 flags12)
         EndVidModeCreate();  /* rebuild the window if moving to/from a GL context */
     } else if (VideoSurface12->surface20 && (VideoSurface12->surface20->format->format != appfmt)) {
         EndVidModeCreate();  /* rebuild the window if changing pixel format */
-    } else if (VideoGLContext20) {
-        /* SDL 1.2 (infuriatingly!) destroys the GL context on each resize in some cases, on various platforms. Try to match that. */
+    } else {
+        SDL_assert(VideoSurface12 != NULL);
+        /* SDL 1.2 (infuriatingly!) destroys the window (and GL context!) on each resize in some cases, on various platforms. Try to match that. */
         #ifdef __WINDOWS__
-            /* The windx5 driver _always_ destroyed the GL context, unconditionally, but the default (windib) did not, so match windib.
+            /* The windx5 driver _always_ destroyed the window, unconditionally, but the default (windib) did not, so match windib.
              *  windib: keep if:
              *   - window already exists
              *   - BitsPerPixel hasn't changed
@@ -6114,16 +6118,16 @@ SetVideoModeImpl(int width, int height, int bpp, Uint32 flags12)
              *   - window is already SDL_OPENGL.
              *   - window is not a fullscreen window.
              */
-            const SDL_bool destroy_gl_context = (
+            const SDL_bool recreate_window = (
                 ((VideoSurface12->flags & ~SDL12_ANYFORMAT) != (flags12 & ~SDL12_ANYFORMAT)) ||
-                (VideoSurface12->format->BitsPerPixel != bpp) ||
+                (!VideoSurface12->format || (VideoSurface12->format->BitsPerPixel != bpp)) ||
                 ((flags12 & SDL12_OPENGL) != SDL12_OPENGL) ||
                 ((flags12 & SDL12_FULLSCREEN) == SDL12_FULLSCREEN)
             ) ? SDL_TRUE : SDL_FALSE;
         #elif defined(__APPLE__)
-            const SDL_bool destroy_gl_context = SDL_TRUE; /* macOS ("quartz" backend) unconditionally destroys the GL context */
+            const SDL_bool recreate_window = SDL_TRUE; /* macOS ("quartz" backend) unconditionally destroys the GL context */
         #elif defined(__HAIKU__)
-            const SDL_bool destroy_gl_context = SDL_FALSE; /* BeOS and Haiku ("bwindow" backend) unconditionally keeps the GL context */
+            const SDL_bool recreate_window = SDL_FALSE; /* BeOS and Haiku ("bwindow" backend) unconditionally keeps the GL context */
         #elif defined(__LINUX__) || defined(unix) || defined(__unix__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(sun)
             /* The x11 backend does in _some_ cases, and since Linux software depends on that, even though Wayland and
              *   such wasn't a thing at the time, we treat everything that looks a little like Unix this way.
@@ -6134,31 +6138,18 @@ SetVideoModeImpl(int width, int height, int bpp, Uint32 flags12)
              *   - BitsPerPixel hasn't changed
              *   - SDL_NOFRAME hasn't changed
              */
-            const SDL_bool destroy_gl_context = (
+            const SDL_bool recreate_window = (
                 ((VideoSurface12->flags & SDL12_OPENGL) != (flags12 & SDL12_OPENGL)) ||
                 ((flags12 & SDL12_OPENGL) != SDL12_OPENGL) ||
-                (VideoSurface12->format->BitsPerPixel != bpp) ||
+                (!VideoSurface12->format || (VideoSurface12->format->BitsPerPixel != bpp)) ||
                 ((VideoSurface12->flags & SDL12_NOFRAME) != (flags12 & SDL12_NOFRAME))
             ) ? SDL_TRUE : SDL_FALSE;
         #else
-            const SDL_bool destroy_gl_context = SDL_TRUE;  /* everywhere else: nuke it from orbit. Oh well. */
+            const SDL_bool recreate_window = SDL_TRUE;  /* everywhere else: nuke it from orbit. Oh well. */
         #endif
 
-        if (destroy_gl_context) {
-            SDL20_GL_MakeCurrent(NULL, NULL);
-            SDL20_GL_DeleteContext(VideoGLContext20);
-            VideoGLContext20 = NULL;
-            SDL20_zero(OpenGLFuncs);
-            OpenGLBlitTexture = 0;
-            OpenGLBlitLockCount = 0;
-            OpenGLLogicalScalingWidth = 0;
-            OpenGLLogicalScalingHeight = 0;
-            OpenGLLogicalScalingFBO = 0;
-            OpenGLLogicalScalingColor = 0;
-            OpenGLLogicalScalingDepth = 0;
-            OpenGLLogicalScalingMultisampleFBO = 0;
-            OpenGLLogicalScalingMultisampleColor = 0;
-            OpenGLLogicalScalingMultisampleDepth = 0;
+        if (recreate_window) {
+            EndVidModeCreate();  /* rebuild the window if we can't resize it. */
         }
     }
 
