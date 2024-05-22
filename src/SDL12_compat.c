@@ -6107,7 +6107,6 @@ SetVideoModeImpl(int width, int height, int bpp, Uint32 flags12)
     } else if (VideoSurface12->surface20 && (VideoSurface12->surface20->format->format != appfmt)) {
         EndVidModeCreate();  /* rebuild the window if changing pixel format */
     } else {
-        SDL_assert(VideoSurface12 != NULL);
         /* SDL 1.2 (infuriatingly!) destroys the window (and GL context!) on each resize in some cases, on various platforms. Try to match that. */
         #ifdef __WINDOWS__
             /* The windx5 driver _always_ destroyed the window, unconditionally, but the default (windib) did not, so match windib.
