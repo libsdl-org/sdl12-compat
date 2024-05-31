@@ -1262,6 +1262,10 @@ static QuirkEntryType quirks[] = {
     {"dosbox_i686", "SDL12COMPAT_USE_KEYBOARD_LAYOUT", "0"},
     {"dosbox_x86_64", "SDL12COMPAT_USE_KEYBOARD_LAYOUT", "0"},
 
+    /* Cave Story's original doukutsu.bin misuses audio. */
+    /* The later doukutsu_32bits and doukutsu_64bits work fine, however. */
+    {"doukutsu.bin", "SDL12COMPAT_COMPATIBILITY_AUDIOCVT", "1"},
+
     /* Tucnak's 1.2 target wants to render and run its event loop from
        background threads, which upsets OpenGL. Force software renderer and
        x11. If you want Wayland, etc, use tuknak's existing SDL2 target. */
