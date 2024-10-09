@@ -1257,6 +1257,10 @@ static QuirkEntryType quirks[] = {
     /* Braid uses Cg, which uses glXGetProcAddress(). */
     {"braid", "SDL12COMPAT_OPENGL_SCALING", "0"},
 
+    /* Closure uses Cg, and doesn't render anything with OpenGL scaling. */
+    {"Closure.bin.x86", "SDL12COMPAT_OPENGL_SCALING", "0"},
+    {"Closure.bin.x86_64", "SDL12COMPAT_OPENGL_SCALING", "0"},
+
     /* GOG's DOSBox builds have architecture-specific filenames. */
     {"dosbox", "SDL12COMPAT_USE_KEYBOARD_LAYOUT", "0"},
     {"dosbox_i686", "SDL12COMPAT_USE_KEYBOARD_LAYOUT", "0"},
