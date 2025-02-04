@@ -1318,7 +1318,10 @@ static QuirkEntryType quirks[] = {
     {"grafx2", "SDL12COMPAT_ALLOW_SYSWM", "0"},
 
     /* The 32-bit Steam build only of Multiwinia Quits but doesn't re-Init */
-    {"multiwinia.bin.x86", "SDL12COMPAT_NO_QUIT_VIDEO", "1"}
+    {"multiwinia.bin.x86", "SDL12COMPAT_NO_QUIT_VIDEO", "1"},
+
+    /* Loki Unreal Tournament '99 runs at hyperspeed if the framerate is too high. Force it to vsync. You should use the newer OldUnreal binaries with SDL2 instead! */
+    {"ut-bin", "SDL12COMPAT_SYNC_TO_VBLANK", "1"}
 #else
     /* TODO: Add any quirks needed for this system. */
 
