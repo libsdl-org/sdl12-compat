@@ -63,6 +63,19 @@ SDL12_PRIVATE void error_dialog(const char *errorMsg)
     alert.informativeText = [NSString stringWithCString:errorMsg encoding:NSASCIIStringEncoding];
     [alert runModal];
 }
+
+SDL12_PRIVATE void SDL12COMPAT_NSLog(const char *prefix, const char *text)
+{
+    @autoreleasepool {
+        NSString *nsText = [NSString stringWithUTF8String:text];
+        if (prefix && *prefix) {
+            NSString *nsPrefix = [NSString stringWithUTF8String:prefix];
+            NSLog(@"%@%@", nsPrefix, nsText);
+        } else {
+            NSLog(@"%@", nsText);
+        }
+    }
+}
 #endif
 
 /* vi: set ts=4 sw=4 expandtab: */

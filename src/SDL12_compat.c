@@ -1069,6 +1069,45 @@ SDL20_atoi(const char *str)
     return SDL20_strtol(str, NULL, 10);
 }
 
+/* you can use SDL20_atoi once we're past startup. */
+static int
+SDL12COMPAT_atoi(const char *str)
+{
+    int retval = 0;
+    int multiplier = 1;
+    int signmult = 1;
+    const char *ptr;
+
+    while (*str == ' ') {
+        str++;
+    }
+
+    if (*str == '-') {
+        signmult = -1;
+        str++;
+        while (*str == ' ') {
+            str++;
+        }
+    }
+
+    ptr = str;
+    while (SDL_TRUE) {
+        if ((*ptr < '0') || (*ptr > '9')) {
+            break;
+        }
+        ptr++;
+    }
+    ptr--;
+
+    while (ptr != str) {
+        retval += ((int) (*ptr - '0')) * multiplier;
+        multiplier *= 10;
+        ptr--;
+    }
+
+    return (retval + (((int) (*ptr - '0')) * multiplier)) * signmult;
+}
+
 static char *
 SDL12COMPAT_stpcpy(char *dst, const char *src)
 {
@@ -1103,6 +1142,78 @@ SDL12COMPAT_itoa(char *dst, int val)
     } while (ptr > dst);
 }
 
+/* you can use SDL20_strlen once we're past startup. */
+static int SDL12COMPAT_strlen(const char *str)
+{
+    int retval = 0;
+    while (str[retval]) {
+        retval++;
+    }
+    return retval;
+}
+
+/* you can use SDL20_strcmp once we're past startup. */
+static SDL_bool SDL12COMPAT_strequal(const char *a, const char *b)
+{
+    while (SDL_TRUE) {
+        const char cha = *a;
+        if (cha != *b) {
+            return SDL_FALSE;
+        } else if (!cha) {
+            break;
+        }
+        a++;
+        b++;
+    }
+    return SDL_TRUE;
+}
+
+/* log a string using platform-specific code for before SDL2 is fully available. */
+static void SDL12COMPAT_LogAtStartup(const char *str)
+{
+    #ifdef _WIN32
+    OutputDebugStringA(str);
+    #elif defined(__APPLE__)
+    extern void SDL12COMPAT_NSLog(const char *prefix, const char *text);
+    SDL12COMPAT_NSLog(NULL, str);
+    #else
+    fputs(str, stderr);
+    fputs("\n", stderr);
+    #endif
+}
+
+/* this talks right to the OS environment table. Don't use SDL20_setenv at startup. */
+static void SDL12COMPAT_SetEnvAtStartup(const char *name, const char *value)
+{
+    #ifdef _WIN32
+    SetEnvironmentVariableA(name, value);
+    #else  /* we might need other platforms, or a simple `return;` for platforms without an environment table. */
+    if (value) {
+        setenv(name, value, 1);
+    } else {
+        unsetenv(name);
+    }
+    #endif
+}
+
+/* this talks right to the OS environment table. Don't use SDL20_getenv at startup. */
+static const char *SDL12COMPAT_GetEnvAtStartup(const char *name)
+{
+    #ifdef _WIN32
+    static char buf[256];  /* overflows will just report as environment variable being unset. But most of our environment vars don't come through here. */
+    const DWORD rc = GetEnvironmentVariableA(name, buf, (DWORD) sizeof (buf));
+    return ((rc != 0) && (rc < sizeof (buf))) ? buf : NULL;
+    #else  /* we might need other platforms, or a simple `return NULL;` for platforms without an environment table. */
+    return getenv(name);
+    #endif
+}
+
+/* this can't call into SDL20_getenv because things aren't set up yet, so try for platform-specific getenv checks. */
+static SDL_bool SDL12COMPAT_CheckDebugLogging(void)
+{
+    const char *value = SDL12COMPAT_GetEnvAtStartup("SDL12COMPAT_DEBUG_LOGGING");
+    return ((value != NULL) && SDL12COMPAT_strequal(value, "1")) ? SDL_TRUE : SDL_FALSE;
+}
 
 /* Obviously we can't use SDL_LoadObject() to load SDL2.  :)  */
 static char loaderror[256];
@@ -1428,6 +1539,7 @@ SDL12Compat_GetHintInt(const char *name, int default_value)
     return SDL20_atoi(val);
 }
 
+/* DO NOT USE SDL2 FUNCTIONS IN HERE! */
 static void
 SDL12Compat_ApplyQuirks(SDL_bool force_x11)
 {
@@ -1435,21 +1547,37 @@ SDL12Compat_ApplyQuirks(SDL_bool force_x11)
     int i;
 
     if (WantDebugLogging) {
-        SDL20_Log("This app appears to be named '%s'", exe_name);
+        const char *lead = "sdl12-compat: This app appears to be named:";
+        char msg[256];
+        if ((SDL12COMPAT_strlen(lead) + SDL12COMPAT_strlen(exe_name) + 2) <= (int) (sizeof (msg))) {
+            char *p = msg;
+            p = SDL12COMPAT_stpcpy(p, lead);
+            p = SDL12COMPAT_stpcpy(p, " ");
+            p = SDL12COMPAT_stpcpy(p, exe_name);
+            SDL12COMPAT_LogAtStartup(msg);
+        } else {
+            SDL12COMPAT_LogAtStartup(lead);
+            SDL12COMPAT_LogAtStartup(exe_name);
+        }
     }
 
     #ifdef __linux__
     if (force_x11) {
-        const char *videodriver_env = SDL20_getenv("SDL_VIDEODRIVER");
-        if (videodriver_env && (SDL20_strcmp(videodriver_env, "x11") != 0)) {
+        const char *videodriver_env = SDL12COMPAT_GetEnvAtStartup("SDL_VIDEODRIVER");
+        if (videodriver_env && !SDL12COMPAT_strequal(videodriver_env, "x11")) {
             if (WantDebugLogging) {
-                SDL20_Log("This app looks like it requires X11, but the SDL_VIDEODRIVER environment variable is set to \"%s\". If you have issues, try setting SDL_VIDEODRIVER=x11", videodriver_env);
+                SDL12COMPAT_LogAtStartup("sdl12-compat: This app looks like it requires X11, but the SDL_VIDEODRIVER environment variable is currently set to:");
+                SDL12COMPAT_LogAtStartup("");
+                SDL12COMPAT_LogAtStartup(videodriver_env);
+                SDL12COMPAT_LogAtStartup("");
+                SDL12COMPAT_LogAtStartup("If you have issues, try setting SDL_VIDEODRIVER=x11");
+
             }
         } else {
             if (WantDebugLogging) {
-                SDL20_Log("sdl12-compat: We are forcing this app to use X11, because it probably talks to an X server directly, outside of SDL. If possible, this app should be fixed, to be compatible with Wayland, etc.");
+                SDL12COMPAT_LogAtStartup("sdl12-compat: We are forcing this app to use X11, because it probably talks to an X server directly, outside of SDL. If possible, this app should be fixed, to be compatible with Wayland, etc.");
             }
-            SDL20_setenv("SDL_VIDEODRIVER", "x11", 1);
+            SDL12COMPAT_SetEnvAtStartup("SDL_VIDEODRIVER", "x11");
         }
     }
     #endif
@@ -1457,23 +1585,58 @@ SDL12Compat_ApplyQuirks(SDL_bool force_x11)
     if (*exe_name == '\0') {
         return;
     }
+
     for (i = 0; i < (int) SDL_arraysize(quirks); i++) {
-        if (!SDL20_strcmp(exe_name, quirks[i].exe_name)) {
-            if (!SDL20_getenv(quirks[i].hint_name)) {
+        if (SDL12COMPAT_strequal(exe_name, quirks[i].exe_name)) {
+            const char *var = SDL12COMPAT_GetEnvAtStartup(quirks[i].hint_name);
+            if (!var) {
                 if (WantDebugLogging) {
-                    SDL20_Log("Applying compatibility quirk %s=\"%s\" for \"%s\"", quirks[i].hint_name, quirks[i].hint_value, exe_name);
+                    char msg[256];
+                    char *p = msg;
+                    p = SDL12COMPAT_stpcpy(p, "sdl12-compat: Applying compatibility quirk ");
+                    p = SDL12COMPAT_stpcpy(p, quirks[i].hint_name);
+                    p = SDL12COMPAT_stpcpy(p, "=\"");
+                    p = SDL12COMPAT_stpcpy(p, quirks[i].hint_value);
+                    p = SDL12COMPAT_stpcpy(p, "\".");
+                    SDL12COMPAT_LogAtStartup(msg);
                 }
-                SDL20_setenv(quirks[i].hint_name, quirks[i].hint_value, 1);
+                SDL12COMPAT_SetEnvAtStartup(quirks[i].hint_name, quirks[i].hint_value);
             } else {
                 if (WantDebugLogging) {
-                    SDL20_Log("Not applying compatibility quirk %s=\"%s\" for \"%s\" due to environment variable override (\"%s\")\n",
-                            quirks[i].hint_name, quirks[i].hint_value, exe_name, SDL20_getenv(quirks[i].hint_name));
+                    char msg[256];
+                    char varbuf[32];
+                    char *p = msg;
+                    int j;
+
+                    /* copy the start of untrusted string var to a small array to prevent buffer overflows */
+                    for (j = 0; j < ((int) SDL_arraysize(varbuf)); j++) {
+                        varbuf[j] = var[j];
+                        if (var[j] == 0) {
+                            break;
+                        }
+                    }
+
+                    if (j == SDL_arraysize(varbuf)) {  /* truncate and terminate the string if necessary. */
+                        SDL12COMPAT_stpcpy(varbuf + (SDL_arraysize(varbuf) - 6), "[...]");
+                    }
+
+                    p = SDL12COMPAT_stpcpy(p, "sdl12-compat: Not applying compatibility quirk ");
+                    p = SDL12COMPAT_stpcpy(p, quirks[i].hint_name);
+                    p = SDL12COMPAT_stpcpy(p, "=\"");
+                    p = SDL12COMPAT_stpcpy(p, quirks[i].hint_value);
+                    p = SDL12COMPAT_stpcpy(p, "\" due to environment variable override (\"");
+                    p = SDL12COMPAT_stpcpy(p, varbuf);
+                    p = SDL12COMPAT_stpcpy(p, "\").");
+                    SDL12COMPAT_LogAtStartup(msg);
                 }
             }
         }
     }
 }
 
+/* DO NOT CALL THINGS THAT USE SDL ALLOCATORS HERE. It runs before main(), so app-supplied allocators are not set at this point.
+   This means no SDL_Log, no hint subsystem, nothing that might call SDL_SetError! In fact, favor code in this file, using
+   platform-specific #ifdefs, to calling into SDL2 at all, if you can help it. */
 static int
 LoadSDL20(void)
 {
@@ -1497,51 +1660,88 @@ LoadSDL20(void)
         }
         #endif
 
+        WantDebugLogging = SDL12COMPAT_CheckDebugLogging();
+
         okay = LoadSDL20Library();
         if (!okay) {
-            SDL12COMPAT_stpcpy(loaderror, "Failed loading SDL2 library.");
+            SDL12COMPAT_stpcpy(loaderror, "sdl12-compat: Failed loading SDL2 library.");
         } else {
             #define SDL20_SYM(rc,fn,params,args,ret) SDL20_##fn = (SDL20_##fn##_t) LoadSDL20Symbol("SDL_" #fn, &okay);
             #include "SDL20_syms.h"
             if (okay) {
+                char sdl2verstr[16];
+                char sdl2reqverstr[16];
+                char sdl12compatverstr[16];
                 SDL_version v;
+                SDL_version reqv;
+                char *p;
+
                 SDL20_GetVersion(&v);
+
+                reqv.major = (SDL20_REQUIRED_VER / 1000);
+                reqv.minor = ((SDL20_REQUIRED_VER % 1000) / 100);
+                reqv.patch = (SDL20_REQUIRED_VER % 100);
+
+                #define SETVERSTR(str, major, minor, micro) { \
+                    char value[16]; \
+                    p = str; \
+                    SDL12COMPAT_itoa(value, major); p = SDL12COMPAT_stpcpy(p, value); *p++ = '.'; \
+                    SDL12COMPAT_itoa(value, minor); p = SDL12COMPAT_stpcpy(p, value); *p++ = '.'; \
+                    SDL12COMPAT_itoa(value, micro); p = SDL12COMPAT_stpcpy(p, value); \
+                }
+
+                SETVERSTR(sdl2verstr, v.major, v.minor, v.patch);
+                SETVERSTR(sdl2reqverstr, reqv.major, reqv.minor, reqv.patch);
+                SETVERSTR(sdl12compatverstr, 1, 2, SDL12_COMPAT_VERSION);
+ 
+                #undef SETVERSTR
+
                 LinkedSDL2VersionInt = SDL_VERSIONNUM(v.major, v.minor, v.patch);
                 okay = (LinkedSDL2VersionInt >= SDL20_REQUIRED_VER);
                 if (!okay) {
-                    char value[12];
-                    char *p = SDL12COMPAT_stpcpy(loaderror, "SDL2 ");
-
-                    SDL12COMPAT_itoa(value, v.major);
-                    p = SDL12COMPAT_stpcpy(p, value); *p++ = '.';
-                    SDL12COMPAT_itoa(value, v.minor);
-                    p = SDL12COMPAT_stpcpy(p, value); *p++ = '.';
-                    SDL12COMPAT_itoa(value, v.patch);
-                    p = SDL12COMPAT_stpcpy(p, value);
-
-                    SDL12COMPAT_stpcpy(p, " library is too old.");
+                    p = loaderror;
+                    p = SDL12COMPAT_stpcpy(p, "sdl12-compat ");
+                    p = SDL12COMPAT_stpcpy(p, sdl12compatverstr);
+                    p = SDL12COMPAT_stpcpy(p, ": SDL2 library is too old (have ");
+                    p = SDL12COMPAT_stpcpy(p, sdl2verstr);
+                    p = SDL12COMPAT_stpcpy(p, ", but need at least ");
+                    p = SDL12COMPAT_stpcpy(p, sdl2reqverstr);
+                    p = SDL12COMPAT_stpcpy(p, ").");
                 } else {
-                    WantDebugLogging = SDL12Compat_GetHintBoolean("SDL12COMPAT_DEBUG_LOGGING", SDL_FALSE);
                     if (WantDebugLogging) {
+                        char debugmsg[128];  /* can't use SDL log or malloc, just write to a stack buffer and do a simple platform-specific logging. */
+
+                        p = debugmsg;
+                        p = SDL12COMPAT_stpcpy(p, "sdl12-compat ");
+                        p = SDL12COMPAT_stpcpy(p, sdl12compatverstr);
+                        p = SDL12COMPAT_stpcpy(p, ", ");
+
                         #if defined(__DATE__) && defined(__TIME__)
-                        SDL20_Log("sdl12-compat 1.2.%d, built on " __DATE__ " at " __TIME__ ", talking to SDL2 %d.%d.%d", SDL12_COMPAT_VERSION, v.major, v.minor, v.patch);
-                        #else
-                        SDL20_Log("sdl12-compat 1.2.%d, talking to SDL2 %d.%d.%d", SDL12_COMPAT_VERSION, v.major, v.minor, v.patch);
+                        p = SDL12COMPAT_stpcpy(p, "built on " __DATE__ " at " __TIME__ ", ");
                         #endif
+
+                        p = SDL12COMPAT_stpcpy(p, "talking to SDL2 ");
+                        p = SDL12COMPAT_stpcpy(p, sdl2verstr);
+
+                        SDL12COMPAT_LogAtStartup(debugmsg);
                     }
+
                     SDL12Compat_ApplyQuirks(force_x11);  /* Apply and maybe print a list of any enabled quirks. */
 
                     #ifdef __linux__
                     {
-                        const char *viddrv = SDL20_getenv("SDL_VIDEODRIVER");
-                        if (viddrv && (SDL20_strcmp(viddrv, "x11") == 0) && SDL12Compat_GetHintBoolean("SDL12COMPAT_FORCE_XINITTHREADS", SDL_TRUE)) {
-                            void *lib = dlopen("libX11.so.6", RTLD_GLOBAL|RTLD_NOW);
-                            if (lib) {
-                                int (*pXInitThreads)(void) = (int(*)(void)) dlsym(lib, "XInitThreads");
-                                if (pXInitThreads) {
-                                    pXInitThreads();
+                        const char *envvar = SDL12COMPAT_GetEnvAtStartup("SDL_VIDEODRIVER");
+                        if (envvar && SDL12COMPAT_strequal(envvar, "x11")) {
+                            envvar = SDL12COMPAT_GetEnvAtStartup("SDL12COMPAT_FORCE_XINITTHREADS");
+                            if (envvar && (SDL12COMPAT_atoi(envvar) != 0)) {
+                                void *lib = dlopen("libX11.so.6", RTLD_GLOBAL|RTLD_NOW);
+                                if (lib) {
+                                    int (*pXInitThreads)(void) = (int(*)(void)) dlsym(lib, "XInitThreads");
+                                    if (pXInitThreads) {
+                                        pXInitThreads();
+                                    }
+                                    /* leave the library open, so the XInitThreads sticks. */
                                 }
-                                /* leave the library open, so the XInitThreads sticks. */
                             }
                         }
                     }
