@@ -1187,6 +1187,8 @@ static void SDL12COMPAT_SetEnvAtStartup(const char *name, const char *value)
 {
     #ifdef _WIN32
     SetEnvironmentVariableA(name, value);
+    #elif defined (__WATCOMC__)
+    setenv(name, value, 1); /* OW19 has no unsetenv(). NULL newvalue passed to setenv() behaves as unsetenv(). */
     #else  /* we might need other platforms, or a simple `return;` for platforms without an environment table. */
     if (value) {
         setenv(name, value, 1);
