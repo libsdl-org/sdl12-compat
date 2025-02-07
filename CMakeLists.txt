@@ -233,7 +233,7 @@ if(SDL12TESTS)
     endif()
 
     foreach(fname "icon.bmp" "moose.dat" "picture.xbm" "sail.bmp" "sample.bmp" "sample.wav" "utf8.txt")
-        file(COPY "${CMAKE_SOURCE_DIR}/test/${fname}" DESTINATION "${CMAKE_BINARY_DIR}")
+        file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/test/${fname}" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
     endforeach(fname)
 endif()
 
@@ -282,12 +282,12 @@ if(SDL12DEVEL)
     set(ENABLE_SHARED_FALSE "#")
 
     configure_file(sdl12_compat.pc.in sdl12_compat.pc @ONLY)
-    install(FILES ${CMAKE_BINARY_DIR}/sdl12_compat.pc
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/sdl12_compat.pc
       DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
     )
 
-    configure_file("${CMAKE_SOURCE_DIR}/sdl-config.in" "${CMAKE_BINARY_DIR}/sdl-config" @ONLY)
-    install(PROGRAMS "${CMAKE_BINARY_DIR}/sdl-config" DESTINATION bin)
+    configure_file("${CMAKE_CURRENT_SOURCE_DIR}/sdl-config.in" "${CMAKE_CURRENT_BINARY_DIR}/sdl-config" @ONLY)
+    install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/sdl-config" DESTINATION bin)
   endif()
 
   set(SOEXT ${CMAKE_SHARED_LIBRARY_SUFFIX})
@@ -296,11 +296,11 @@ if(SDL12DEVEL)
     install(CODE "
       execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink
         \"lib${SONAME}${SOPOSTFIX}${SOEXT}\" \"libSDL${SOPOSTFIX}${SOEXT}\"
-        WORKING_DIRECTORY \"${CMAKE_BINARY_DIR}\")")
-    install(FILES ${CMAKE_BINARY_DIR}/libSDL${SOPOSTFIX}${SOEXT} DESTINATION "${CMAKE_INSTALL_LIBDIR}")
+        WORKING_DIRECTORY \"${CMAKE_CURRENT_BINARY_DIR}\")")
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libSDL${SOPOSTFIX}${SOEXT} DESTINATION "${CMAKE_INSTALL_LIBDIR}")
   endif()
 
-  install(FILES "${CMAKE_SOURCE_DIR}/sdl.m4" DESTINATION "${CMAKE_INSTALL_FULL_DATAROOTDIR}/aclocal")
+  install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/sdl.m4" DESTINATION "${CMAKE_INSTALL_FULL_DATAROOTDIR}/aclocal")
 endif()
 
 if(STATICDEVEL AND SDL12DEVEL)
