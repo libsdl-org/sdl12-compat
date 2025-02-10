@@ -1145,7 +1145,7 @@ SDL12COMPAT_itoa(char *dst, int val)
 /* you can use SDL20_strlen once we're past startup. */
 static int SDL12COMPAT_strlen(const char *str)
 {
-    int retval = 0;
+    volatile int retval = 0;  /* volatile prevents gcc from optimizing this into strlen() */
     while (str[retval]) {
         retval++;
     }
