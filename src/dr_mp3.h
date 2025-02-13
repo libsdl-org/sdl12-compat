@@ -1,6 +1,6 @@
 /*
 MP3 audio decoder. Choice of public domain or MIT-0. See license statements at the end of this file.
-dr_mp3 - v0.6.38 - 2023-11-02
+dr_mp3 - v0.6.40 - 2024-12-17
 
 David Reid - mackron@gmail.com
 
@@ -33,7 +33,7 @@ Support for loading a file from a `wchar_t` string has been added via the `drmp3
 */
 
 /*
-Introducation
+Introduction
 =============
 dr_mp3 is a single file library. To use it, do something like the following in one .c file.
 
@@ -101,7 +101,7 @@ extern "C" {
 
 #define DRMP3_VERSION_MAJOR     0
 #define DRMP3_VERSION_MINOR     6
-#define DRMP3_VERSION_REVISION  38
+#define DRMP3_VERSION_REVISION  40
 #define DRMP3_VERSION_STRING    DRMP3_XSTRINGIFY(DRMP3_VERSION_MAJOR) "." DRMP3_XSTRINGIFY(DRMP3_VERSION_MINOR) "." DRMP3_XSTRINGIFY(DRMP3_VERSION_REVISION)
 
 #include <stddef.h> /* For size_t. */
@@ -130,7 +130,7 @@ typedef unsigned int            drmp3_uint32;
         #pragma GCC diagnostic pop
     #endif
 #endif
-#if defined(__LP64__) || defined(_WIN64) || (defined(__x86_64__) && !defined(__ILP32__)) || defined(_M_X64) || defined(__ia64) || defined (_M_IA64) || defined(__aarch64__) || defined(_M_ARM64) || defined(__powerpc64__)
+#if defined(__LP64__) || defined(_WIN64) || (defined(__x86_64__) && !defined(__ILP32__)) || defined(_M_X64) || defined(__ia64) || defined (_M_IA64) || defined(__aarch64__) || defined(_M_ARM64) || defined(_M_ARM64EC) || defined(__powerpc64__)
     typedef drmp3_uint64        drmp3_uintptr;
 #else
     typedef drmp3_uint32        drmp3_uintptr;
@@ -621,7 +621,7 @@ DRMP3_API const char* drmp3_version_string(void)
 
 #if !defined(DR_MP3_NO_SIMD)
 
-#if !defined(DR_MP3_ONLY_SIMD) && (defined(_M_X64) || defined(__x86_64__) || defined(__aarch64__) || defined(_M_ARM64))
+#if !defined(DR_MP3_ONLY_SIMD) && (defined(_M_X64) || defined(__x86_64__) || defined(__aarch64__) || defined(_M_ARM64) || defined(_M_ARM64EC))
 /* x64 always have SSE2, arm64 always have neon, no need for generic code */
 #define DR_MP3_ONLY_SIMD
 #endif
@@ -697,7 +697,7 @@ end:
     return g_have_simd - 1;
 #endif
 }
-#elif defined(__ARM_NEON) || defined(__aarch64__) || defined(_M_ARM64)
+#elif defined(__ARM_NEON) || defined(__aarch64__) || defined(_M_ARM64) || defined(_M_ARM64EC)
 #include <arm_neon.h>
 #define DRMP3_HAVE_SSE 0
 #define DRMP3_HAVE_SIMD 1
@@ -730,7 +730,7 @@ static int drmp3_have_simd(void)
 
 #endif
 
-#if defined(__ARM_ARCH) && (__ARM_ARCH >= 6) && !defined(__aarch64__) && !defined(_M_ARM64) && !defined(__ARM_ARCH_6M__)
+#if defined(__ARM_ARCH) && (__ARM_ARCH >= 6) && !defined(__aarch64__) && !defined(_M_ARM64) && !defined(_M_ARM64EC) && !defined(__ARM_ARCH_6M__)
 #define DRMP3_HAVE_ARMV6 1
 static __inline__ __attribute__((always_inline)) drmp3_int32 drmp3_clip_int16_arm(drmp3_int32 a)
 {
@@ -2002,8 +2002,8 @@ static drmp3_int16 drmp3d_scale_pcm(float sample)
     s32 -= (s32 < 0);
     s = (drmp3_int16)drmp3_clip_int16_arm(s32);
 #else
-    if (sample >=  32766.5) return (drmp3_int16) 32767;
-    if (sample <= -32767.5) return (drmp3_int16)-32768;
+    if (sample >=  32766.5f) return (drmp3_int16) 32767;
+    if (sample <= -32767.5f) return (drmp3_int16)-32768;
     s = (drmp3_int16)(sample + .5f);
     s -= (s < 0);   /* away from zero, to be compliant */
 #endif
@@ -2422,9 +2422,9 @@ DRMP3_API void drmp3dec_f32_to_s16(const float *in, drmp3_int16 *out, size_t num
     for(; i < num_samples; i++)
     {
         float sample = in[i] * 32768.0f;
-        if (sample >=  32766.5)
+        if (sample >=  32766.5f)
             out[i] = (drmp3_int16) 32767;
-        else if (sample <= -32767.5)
+        else if (sample <= -32767.5f)
             out[i] = (drmp3_int16)-32768;
         else
         {
@@ -3582,7 +3582,7 @@ DRMP3_API void drmp3_uninit(drmp3* pMP3)
     if (pMP3 == NULL) {
         return;
     }
-    
+
 #ifndef DR_MP3_NO_STDIO
     if (pMP3->onRead == drmp3__on_read_stdio) {
         FILE* pFile = (FILE*)pMP3->pUserData;
@@ -3973,7 +3973,7 @@ DRMP3_API drmp3_bool32 drmp3_get_mp3_and_pcm_frame_count(drmp3* pMP3, drmp3_uint
 
     /* We'll need to seek back to where we were, so grab the PCM frame we're currently sitting on so we can restore later. */
     currentPCMFrame = pMP3->currentPCMFrame;
-    
+
     if (!drmp3_seek_to_start_of_stream(pMP3)) {
         return DRMP3_FALSE;
     }
@@ -4071,7 +4071,7 @@ DRMP3_API drmp3_bool32 drmp3_calculate_seek_points(drmp3* pMP3, drmp3_uint32* pS
 
     /* We'll need to seek back to the current sample after calculating the seekpoints so we need to go ahead and grab the current location at the top. */
     currentPCMFrame = pMP3->currentPCMFrame;
-    
+
     /* We never do more than the total number of MP3 frames and we limit it to 32-bits. */
     if (!drmp3_get_mp3_and_pcm_frame_count(pMP3, &totalMP3FrameCount, &totalPCMFrameCount)) {
         return DRMP3_FALSE;
@@ -4522,6 +4522,12 @@ counts rather than sample counts.
 /*
 REVISION HISTORY
 ================
+v0.6.40 - 2024-12-17
+  - Improve detection of ARM64EC
+
+v0.6.39 - 2024-02-27
+  - Fix a Wdouble-promotion warning.
+
 v0.6.38 - 2023-11-02
   - Fix build for ARMv6-M.
 
