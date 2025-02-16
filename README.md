@@ -47,7 +47,7 @@ You'll need to use CMake to build sdl12-compat. Download at
 Please refer to the [CMake documentation](https://cmake.org/documentation/)
 for complete details, as platform and build tool details vary.
 
-You'll need a copy of SDL 2.0.x to build sdl12-compat, because we need the
+You'll need a copy of SDL2 to build sdl12-compat, because we need the
 SDL2 headers. You can build this from source or install from a package
 manager. Windows and Mac users can download prebuilt binaries from
 [SDL's download page](https://libsdl.org/download-2.0.php); make sure you
