@@ -136,7 +136,7 @@ sdl12-compat has a number of configuration options which can be used to work
 around issues with individual applications, or to better fit your system or
 preferences.
 
-These options argoe all specified as environment variables, and can be set by
+These options are all specified as environment variables, and can be set by
 running your application with them set on the command-line, for example:
 ```
 SDL12COMPAT_HIGHDPI=1 SDL12COMPAT_OPENGL_SCALING=0 %command%
