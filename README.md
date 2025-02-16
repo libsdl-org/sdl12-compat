@@ -8,7 +8,7 @@ and 2D framebuffer across multiple platforms.
 
 This code is a compatibility layer; it provides a binary and source
 compatible API for programs written against SDL 1.2, but it uses SDL 2.0
-behind the scenes. If you are writing new code, please target SDL 2.0
+behind the scenes. If you are writing new code, please target SDL 3.0
 directly and do not use this layer.
 
 If you absolutely must have the real SDL 1.2 ("SDL 1.2 Classic"), please use
@@ -136,7 +136,7 @@ sdl12-compat has a number of configuration options which can be used to work
 around issues with individual applications, or to better fit your system or
 preferences.
 
-These options are all specified as environment variables, and can be set by
+These options argoe all specified as environment variables, and can be set by
 running your application with them set on the command-line, for example:
 ```
 SDL12COMPAT_HIGHDPI=1 SDL12COMPAT_OPENGL_SCALING=0 %command%
