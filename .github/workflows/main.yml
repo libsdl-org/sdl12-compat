@@ -10,9 +10,9 @@ jobs:
       matrix:
         platform:
         - { name: Windows, os: windows-latest }
-        - { name: Linux-x86_64,   os: ubuntu-22.04-x86_64, flags: -GNinja }
-        - { name: Linux-arm64,   os: ubuntu-22.04-arm64, flags: -GNinja }
-        - { name: MacOS,   os: macos-latest }
+        - { name: Linux-x86_64, os: ubuntu-22.04-x86_64, flags: -GNinja }
+        - { name: Linux-arm64, os: ubuntu-22.04-arm64, flags: -GNinja }
+        - { name: MacOS, os: macos-latest }
     steps:
     - name: Setup Linux dependencies
       if: startsWith(runner.os, 'Linux')
