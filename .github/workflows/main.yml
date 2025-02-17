@@ -10,8 +10,8 @@ jobs:
       matrix:
         platform:
         - { name: Windows, os: windows-latest }
-        - { name: Linux-x86_64, os: ubuntu-24.04-x86_64, flags: -GNinja }
-        - { name: Linux-arm64, os: ubuntu-24.04-arm64, flags: -GNinja }
+        - { name: Linux-x86_64, os: ubuntu-24.04, flags: -GNinja }
+        - { name: Linux-arm64, os: ubuntu-24.04-arm, flags: -GNinja }
         - { name: MacOS, os: macos-latest }
     steps:
     - name: Setup Linux dependencies
