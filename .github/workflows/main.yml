@@ -12,13 +12,14 @@ jobs:
         - { name: Windows, os: windows-latest }
         - { name: Linux-x86_64, os: ubuntu-24.04, flags: -GNinja }
         - { name: Linux-arm64, os: ubuntu-24.04-arm, flags: -GNinja }
-        - { name: MacOS, os: macos-latest }
+        - { name: MacOS-x64, os: macos-latest }
+        - { name: MacOS-arm64, os: macos-14 }
     steps:
     - name: Setup Linux dependencies
       if: startsWith(runner.os, 'Linux')
       run: |
-        sudo apt-get update
-        sudo apt-get install cmake ninja-build libgl1-mesa-dev libglu1-mesa-dev
+        sudo apt update -q
+        sudo apt install -y cmake ninja-build libgl1-mesa-dev libglu1-mesa-dev
     - name: Get sdl12-compat sources
       uses: actions/checkout@v3
     - name: Get SDL2 headers
