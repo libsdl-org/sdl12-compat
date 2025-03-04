@@ -2,7 +2,7 @@
 #        you can define SDL2_INCLUDE_DIR on the cmdline.  For example:
 #        cmake -DSDL2_INCLUDE_DIR=/opt/SDL2/include/SDL2 [other stuff]
 
-cmake_minimum_required(VERSION 3.0.0...3.5)
+cmake_minimum_required(VERSION 3.0.0...3.10)
 project(sdl12_compat
         VERSION 1.2.69
         LANGUAGES C)
