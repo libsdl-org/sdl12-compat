@@ -6469,6 +6469,12 @@ SetVideoModeImpl(int width, int height, int bpp, Uint32 flags12)
         VideoSurface12->flags &= ~SDL12_FULLSCREEN;
     }
 
+    if (flags12 & SDL12_RESIZABLE) {
+        VideoSurface12->flags |= SDL12_RESIZABLE;
+    } else {
+        VideoSurface12->flags &= ~SDL12_RESIZABLE;
+    }
+
     if (flags12 & SDL12_OPENGL) {
         SDL_assert(!VideoTexture20);  /* either a new window or we destroyed all this */
         SDL_assert(!VideoRenderer20);
