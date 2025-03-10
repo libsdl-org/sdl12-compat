@@ -340,7 +340,7 @@ extern DECLSPEC int SDLCALL SDL_strcasecmp(const char *str1, const char *str2);
 #ifdef HAVE_STRNCASECMP
 #define SDL_strncasecmp strncasecmp
 #elif defined(HAVE__STRNICMP)
-#define SDL_strcasecmp _strnicmp
+#define SDL_strncasecmp _strnicmp
 #else
 extern DECLSPEC int SDLCALL SDL_strncasecmp(const char *str1, const char *str2, size_t maxlen);
 #endif
