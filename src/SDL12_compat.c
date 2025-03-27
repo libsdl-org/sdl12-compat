@@ -9231,7 +9231,7 @@ StartCDAudioPlaying(SDL12_CD *cdrom, const int start_track, const int start_fram
     drmp3 *mp3 = (drmp3 *) SDL20_malloc(sizeof (drmp3));
     const SDL_bool loaded = mp3 ? LoadCDTrack(start_track, mp3) : SDL_FALSE;
     const SDL_bool seeking = (loaded && (start_frame > 0))? SDL_TRUE : SDL_FALSE;
-    const drmp3_uint64 pcm_frame = seeking ? ((drmp3_uint64) ((start_frame / 75.0) * mp3->sampleRate)) : 0;
+    const drmp3_uint32 pcm_frame = seeking ? (Uint32) ((start_frame / 75.0) * (Sint32)mp3->sampleRate) : 0;
 
     if (!mp3) {
         return SDL20_OutOfMemory();
