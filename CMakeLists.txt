@@ -2,7 +2,7 @@
 #        you can define SDL2_INCLUDE_DIR on the cmdline.  For example:
 #        cmake -DSDL2_INCLUDE_DIR=/opt/SDL2/include/SDL2 [other stuff]
 
-cmake_minimum_required(VERSION 3.0.0...3.10)
+cmake_minimum_required(VERSION 3.0...3.10)
 project(sdl12_compat
         VERSION 1.2.69
         LANGUAGES C)
@@ -40,7 +40,6 @@ if(APPLE)
     cmake_policy(SET CMP0068 NEW)  # on macOS, don't let RPATH affect install_name.
   endif()
 endif()
-
 if(WIN32)
   set(WIN32_SRCS "src/version.rc")
 endif()
@@ -281,8 +280,8 @@ if(SDL12DEVEL)
     set(ENABLE_SHARED_TRUE "")
     set(ENABLE_SHARED_FALSE "#")
 
-    configure_file(sdl12_compat.pc.in sdl12_compat.pc @ONLY)
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/sdl12_compat.pc
+    configure_file(sdl.pc.in sdl.pc @ONLY)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/sdl.pc
       DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
     )
 
