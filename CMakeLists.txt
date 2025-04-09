@@ -29,6 +29,10 @@ set(CMAKE_SKIP_RPATH TRUE)
 if(APPLE)
   set(OSX_SRCS "src/SDL12_compat_objc.m")
   set_source_files_properties(${OSX_SRCS} PROPERTIES LANGUAGE C)
+  if(NOT CMAKE_VERSION VERSION_LESS "3.16")
+      enable_language(OBJC)
+      set_source_files_properties(${OSX_SRCS} PROPERTIES LANGUAGE OBJC)
+  endif()
   # compatibility version set to match SDL-1.2 autotools build
   # Xcode project file uses 1.0.0, but it's more compatible to use the
   # higher version.
@@ -145,6 +149,9 @@ endif()
 if(APPLE)
     add_library(SDLmain STATIC src/SDLmain/macosx/SDLMain.m)
     set_source_files_properties(src/SDLmain/macosx/SDLMain.m PROPERTIES LANGUAGE C)
+    if(NOT CMAKE_VERSION VERSION_LESS "3.16")
+        set_source_files_properties("src/SDLmain/macosx/SDLMain.m" PROPERTIES LANGUAGE OBJC)
+    endif()
 elseif(WIN32)
     add_library(SDLmain STATIC src/SDLmain/win32/SDL_win32_main.c)
     set_target_properties(SDLmain PROPERTIES COMPILE_DEFINITIONS "_CRT_SECURE_NO_WARNINGS;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE")  # !!! FIXME: don't use C runtime? We fixed this in SDL2.
