@@ -8858,6 +8858,9 @@ SDL_LoadWAV_RW(SDL12_RWops *rwops12, int freerwops12,
 static SDL_INLINE Sint64 SDLCALL SDL20_RWseek(SDL_RWops *ctx, Sint64 ofs, int whence) {
     return ctx->seek(ctx, ofs, whence);
 }
+static SDL_INLINE Sint64 SDLCALL SDL20_RWtell(SDL_RWops *ctx) {
+    return ctx->seek(ctx, 0, RW_SEEK_CUR);
+}
 static SDL_INLINE size_t SDLCALL SDL20_RWread(SDL_RWops *ctx, void *ptr, size_t size, size_t n) {
     return ctx->read(ctx, ptr, size, n);
 }
@@ -8874,9 +8877,28 @@ mp3_sdlrwops_read(void *data, void *buf, size_t bytesToRead)
 static drmp3_bool32
 mp3_sdlrwops_seek(void *data, int offset, drmp3_seek_origin origin)
 {
-    const int whence = (origin == drmp3_seek_origin_start) ? RW_SEEK_SET : RW_SEEK_CUR;
-    SDL_assert((origin == drmp3_seek_origin_start) || (origin == drmp3_seek_origin_current));
+    int whence = (origin == drmp3_seek_origin_start) ? RW_SEEK_SET : RW_SEEK_CUR;
+    switch (origin) {
+    case drmp3_seek_origin_start:
+        whence = RW_SEEK_SET;
+        break;
+    case drmp3_seek_origin_current:
+        whence = RW_SEEK_CUR;
+        break;
+    case drmp3_seek_origin_end:
+        whence = RW_SEEK_END;
+        break;
+    default:
+        return DRMP3_FALSE;
+    }
     return (SDL20_RWseek((SDL_RWops *) data, offset, whence) == -1) ? DRMP3_FALSE : DRMP3_TRUE;
+}
+
+static drmp3_bool32
+mp3_sdlrwops_tell(void *data, drmp3_int64 *pos)
+{
+    *pos = SDL20_RWtell((SDL_RWops *) data);
+    return (*pos != -1) ? DRMP3_TRUE : DRMP3_FALSE;
 }
 
 
@@ -9081,7 +9103,7 @@ SDL_CDOpen(int drive)
         track = &retval->track[retval->numtracks];
         if (!fake_data_track) {
             SDL_assert(rw != NULL);
-            if (!drmp3_init(mp3, mp3_sdlrwops_read, mp3_sdlrwops_seek, rw, NULL)) {
+            if (!drmp3_init(mp3, mp3_sdlrwops_read, mp3_sdlrwops_seek, mp3_sdlrwops_tell, NULL, rw, NULL)) {
                 SDL20_RWclose(rw);
                 rw = NULL;
                 fake_data_track = SDL_TRUE; /* congratulations, bogus or unsupported MP3, you just became data! */
@@ -9212,7 +9234,7 @@ LoadCDTrack(const int tracknum, drmp3 *mp3)
         return SDL_FALSE;
     }
 
-    if (!drmp3_init(mp3, mp3_sdlrwops_read, mp3_sdlrwops_seek, rw, NULL)) {
+    if (!drmp3_init(mp3, mp3_sdlrwops_read, mp3_sdlrwops_seek, mp3_sdlrwops_tell, NULL, rw, NULL)) {
         SDL20_RWclose(rw);
         return SDL_FALSE;
     }
