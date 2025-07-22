@@ -1433,6 +1433,9 @@ static QuirkEntryType quirks[] = {
     /* The 32-bit Steam build only of Multiwinia Quits but doesn't re-Init */
     {"multiwinia.bin.x86", "SDL12COMPAT_NO_QUIT_VIDEO", "1"},
 
+    /* SimCity 3000 tries to call SDL_DestroyMutex after we have been unloaded */
+    {"sc3u.dynamic", "SDL12COMPAT_NO_UNLOAD", "1"},
+
     /* Loki Unreal Tournament '99 runs at hyperspeed if the framerate is too high. Force it to vsync. You should use the newer OldUnreal binaries with SDL2 instead! */
     {"ut-bin", "SDL12COMPAT_SYNC_TO_VBLANK", "1"}
 #else
@@ -1784,7 +1787,9 @@ static void dllinit(void)
 static void dllquit(void) __attribute__((destructor));
 static void dllquit(void)
 {
-    UnloadSDL20();
+    if (!SDL12Compat_GetHintBoolean("SDL12COMPAT_NO_UNLOAD", SDL_FALSE)) {
+        UnloadSDL20();
+    }
 }
 
 #elif defined(_WIN32) && (defined(_MSC_VER) || defined(__MINGW32__) || defined(__WATCOMC__))
