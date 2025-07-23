@@ -8882,15 +8882,15 @@ mp3_sdlrwops_read(void *data, void *buf, size_t bytesToRead)
 static drmp3_bool32
 mp3_sdlrwops_seek(void *data, int offset, drmp3_seek_origin origin)
 {
-    int whence = (origin == drmp3_seek_origin_start) ? RW_SEEK_SET : RW_SEEK_CUR;
+    int whence;
     switch (origin) {
-    case drmp3_seek_origin_start:
+    case DRMP3_SEEK_SET:
         whence = RW_SEEK_SET;
         break;
-    case drmp3_seek_origin_current:
+    case DRMP3_SEEK_CUR:
         whence = RW_SEEK_CUR;
         break;
-    case drmp3_seek_origin_end:
+    case DRMP3_SEEK_END:
         whence = RW_SEEK_END;
         break;
     default:
@@ -8905,7 +8905,6 @@ mp3_sdlrwops_tell(void *data, drmp3_int64 *pos)
     *pos = SDL20_RWtell((SDL_RWops *) data);
     return (*pos != -1) ? DRMP3_TRUE : DRMP3_FALSE;
 }
-
 
 static SDL_bool OpenSDL2AudioDevice(SDL_AudioSpec *want);
 static int CloseSDL2AudioDevice(void);
