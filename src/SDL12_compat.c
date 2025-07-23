@@ -1018,6 +1018,8 @@ static SDL12_EventFilter EventFilter12 = NULL;
 static SDL12_Cursor *CurrentCursor12 = NULL;
 static Uint8 EventStates[SDL12_NUMEVENTS];
 static int SwapInterval = 0;
+static float OpenGLBuffersSwapTickInterval = 0.f;
+static Uint32 OpenGLBuffersLastSwapTicks = 0;
 static SDL_bool JoysticksAreGameControllers = SDL_FALSE;
 static SDL12_Joystick *JoystickList = NULL;
 static int NumJoysticks = 0;
@@ -1436,8 +1438,13 @@ static QuirkEntryType quirks[] = {
     /* SimCity 3000 tries to call SDL_DestroyMutex after we have been unloaded */
     {"sc3u.dynamic", "SDL12COMPAT_NO_UNLOAD", "1"},
 
+    /* Loki Soldier of Fortune - Sliding/ice-skating when moving if framerate is too high */
+    {"sof-bin", "SDL12COMPAT_SYNC_TO_VBLANK", "1"},
+    {"sof-bin", "SDL12COMPAT_MAX_FPS", "120"},
+
     /* Loki Unreal Tournament '99 runs at hyperspeed if the framerate is too high. Force it to vsync. You should use the newer OldUnreal binaries with SDL2 instead! */
-    {"ut-bin", "SDL12COMPAT_SYNC_TO_VBLANK", "1"}
+    {"ut-bin", "SDL12COMPAT_SYNC_TO_VBLANK", "1"},
+    {"ut-bin", "SDL12COMPAT_MAX_FPS", "120"}
 #else
     /* TODO: Add any quirks needed for this system. */
 
@@ -6235,6 +6242,7 @@ SetVideoModeImpl(int width, int height, int bpp, Uint32 flags12)
     int scaled_width = width;
     int scaled_height = height;
     const char *fromwin_env = NULL;
+    int gl_max_fps;
 
     VideoSurface12 = &VideoSurface12Location;
 
@@ -6260,6 +6268,12 @@ SetVideoModeImpl(int width, int height, int bpp, Uint32 flags12)
            the resolution in some or all parts of their code.) Because OpenGL scaling
            is never used for windows, it is always false there. */
         use_highdpi = (flags12 & SDL12_FULLSCREEN) ? use_gl_scaling : SDL_FALSE;
+
+        gl_max_fps = SDL12Compat_GetHintInt("SDL12COMPAT_MAX_FPS", 0);
+        if(gl_max_fps != 0) {
+            OpenGLBuffersSwapTickInterval = 1000.f / gl_max_fps;
+            OpenGLBuffersLastSwapTicks = SDL20_GetTicks();
+        }
     }
 
     use_highdpi = SDL12Compat_GetHintBoolean("SDL12COMPAT_HIGHDPI", use_highdpi);
@@ -8162,6 +8176,12 @@ DECLSPEC12 void SDLCALL
 SDL_GL_SwapBuffers(void)
 {
     if (VideoWindow20) {
+        if(OpenGLBuffersSwapTickInterval != 0.f) {
+            const Uint32 tickDelta = SDL20_GetTicks() - OpenGLBuffersLastSwapTicks;
+            if(tickDelta < OpenGLBuffersSwapTickInterval) {
+                SDL20_Delay( ((int)OpenGLBuffersSwapTickInterval+0.5) - tickDelta );
+            }
+        }
         /* Some applications, e.g. Awesomenauts, play with glXMakeCurrent() behind our backs and break SwapBuffers() */
         if (ForceGLSwapBufferContext) {
             SDL20_GL_MakeCurrent(VideoWindow20, VideoGLContext20);
@@ -8210,6 +8230,10 @@ SDL_GL_SwapBuffers(void)
             OpenGLFuncs.glBindFramebuffer(GL_DRAW_FRAMEBUFFER, OpenGLCurrentDrawFBO);
         } else {
             SDL20_GL_SwapWindow(VideoWindow20);
+        }
+
+        if(OpenGLBuffersSwapTickInterval != 0.f) {
+            OpenGLBuffersLastSwapTicks = SDL20_GetTicks();
         }
     }
 }
