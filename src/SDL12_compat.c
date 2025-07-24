@@ -8179,7 +8179,7 @@ SDL_GL_SwapBuffers(void)
         if(OpenGLBuffersSwapTickInterval != 0.f) {
             const Uint32 tickDelta = SDL20_GetTicks() - OpenGLBuffersLastSwapTicks;
             if(tickDelta < OpenGLBuffersSwapTickInterval) {
-                SDL20_Delay( ((int)OpenGLBuffersSwapTickInterval+0.5) - tickDelta );
+                SDL20_Delay((int)(OpenGLBuffersSwapTickInterval + 0.5f) - tickDelta);
             }
         }
         /* Some applications, e.g. Awesomenauts, play with glXMakeCurrent() behind our backs and break SwapBuffers() */
