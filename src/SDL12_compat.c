@@ -5487,7 +5487,7 @@ SDL_CreateRGBSurface(Uint32 flags12, int width, int height, int depth, Uint32 Rm
         return NULL;
     }
 
-    SDL_assert((surface12->flags & ~(SDL12_SRCCOLORKEY|SDL12_SRCALPHA)) == 0);  /* shouldn't have prealloc, rleaccel, or dontfree. */
+    SDL_assert(!(width && height) || ((surface12->flags & ~(SDL12_SRCCOLORKEY|SDL12_SRCALPHA))) == 0);  /* shouldn't have prealloc, rleaccel, or dontfree. */
     Surface12SetMasks(surface12, Rmask, Gmask, Bmask, Amask);
     return surface12;
 }
