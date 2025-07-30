@@ -66,7 +66,7 @@ SDL12_PRIVATE void error_dialog(const char *errorMsg)
 
 SDL12_PRIVATE void SDL12COMPAT_NSLog(const char *prefix, const char *text)
 {
-    @autoreleasepool {
+    NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init]; {
         NSString *nsText = [NSString stringWithUTF8String:text];
         if (prefix && *prefix) {
             NSString *nsPrefix = [NSString stringWithUTF8String:prefix];
@@ -75,6 +75,7 @@ SDL12_PRIVATE void SDL12COMPAT_NSLog(const char *prefix, const char *text)
             NSLog(@"%@", nsText);
         }
     }
+    [pool drain];
 }
 #endif
 
