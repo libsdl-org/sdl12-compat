@@ -1071,6 +1071,7 @@ SDL20_atoi(const char *str)
     return SDL20_strtol(str, NULL, 10);
 }
 
+#ifdef __linux__
 /* you can use SDL20_atoi once we're past startup. */
 static int
 SDL12COMPAT_atoi(const char *str)
@@ -1109,6 +1110,7 @@ SDL12COMPAT_atoi(const char *str)
 
     return (retval + (((int) (*ptr - '0')) * multiplier)) * signmult;
 }
+#endif /* __linux__ */
 
 static char *
 SDL12COMPAT_stpcpy(char *dst, const char *src)
