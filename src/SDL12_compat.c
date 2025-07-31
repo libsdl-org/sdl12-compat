@@ -5678,7 +5678,7 @@ SDL_ListModes(const SDL12_PixelFormat *format12, Uint32 flags)
         return (SDL12_Rect **) -1;  /* 1.2's dummy driver always returns -1, and it's useful to special-case that. */
     }
 
-    if (!windowed_mode_list && !(flags & SDL12_FULLSCREEN)) {
+    if (!(flags & SDL12_FULLSCREEN) && !windowed_mode_list) {
         return (SDL12_Rect **) -1;  /* any resolution is fine. */
     }
 
