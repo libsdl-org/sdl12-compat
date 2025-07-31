@@ -5662,6 +5662,7 @@ SDL_ListModes(const SDL12_PixelFormat *format12, Uint32 flags)
     VideoModeList *best_modes = NULL;
     Uint32 bpp;
     int i;
+    SDL_bool windowed_mode_list = SDL12Compat_GetHintBoolean("SDL12COMPAT_WINDOWED_MODE_LIST", SDL_FALSE);
 
     if (!SDL20_WasInit(SDL_INIT_VIDEO)) {
         SDL20_SetError("Video subsystem not initialized");
@@ -5677,7 +5678,7 @@ SDL_ListModes(const SDL12_PixelFormat *format12, Uint32 flags)
         return (SDL12_Rect **) -1;  /* 1.2's dummy driver always returns -1, and it's useful to special-case that. */
     }
 
-    if (!(flags & SDL12_FULLSCREEN)) {
+    if (!(flags & SDL12_FULLSCREEN) && !windowed_mode_list) {
         return (SDL12_Rect **) -1;  /* any resolution is fine. */
     }
 

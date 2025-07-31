@@ -274,6 +274,15 @@ The available options are:
   video subsystem. This works around buggy applications which try to use
   the video subsystem after shutting it down.
 
+- SDL12COMPAT_WINDOWED_MODE_LIST: (checked during SDL_ListModes)
+  If enabled, returns the list of available video modes in SDL_ListModes(),
+  even if the flags provided do not include SDL_FULLSCREEN. Otherwise
+  (by default), it will return -1 to tell the application that all modes
+  are available. This may cause some applications to fall back to an internal
+  list, which may not be as exhaustive as the one sdl12-compat provides.
+  Try this if a game is not listing all of the screen resolutions it should
+  support.
+
 
 # Compatibility issues with OpenGL scaling
 
