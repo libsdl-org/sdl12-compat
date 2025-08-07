@@ -193,7 +193,7 @@
 ++'_SDL_GetVideoInfo'.'SDL.dll'.'SDL_GetVideoInfo'.'SDL_GetVideoInfo'
 ++'_SDL_ListModes'.'SDL.dll'.'SDL_ListModes'.'SDL_ListModes'
 ++'_SDL_VideoModeOK'.'SDL.dll'.'SDL_VideoModeOK'.'SDL_VideoModeOK'
-++'_SDL_SetRefreshRate'.'SDL.dll'.'SDL_SetVideoMode'.'SDL_SetRefreshRate'
+++'_SDL_SetRefreshRate'.'SDL.dll'.'SDL_SetRefreshRate'.'SDL_SetRefreshRate'
 ++'_SDL_SetVideoMode'.'SDL.dll'.'SDL_SetVideoMode'.'SDL_SetVideoMode'
 ++'_SDL_DisplayFormat'.'SDL.dll'.'SDL_DisplayFormat'.'SDL_DisplayFormat'
 ++'_SDL_DisplayFormatAlpha'.'SDL.dll'.'SDL_DisplayFormatAlpha'.'SDL_DisplayFormatAlpha'
