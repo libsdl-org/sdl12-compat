@@ -222,6 +222,8 @@ static float SDL20_truncf(float x)
 #define SDL12_LOGPAL 1
 #define SDL12_PHYSPAL 2
 
+#define SDL12_REFRESH_DEFAULT 0
+
 #ifndef SDL_SIMD_ALIGNED
 #define SDL_SIMD_ALIGNED 0x00000008
 #endif
@@ -1060,6 +1062,8 @@ static SDL_bool AllowThreadedDraws = SDL_FALSE;
 static SDL_bool AllowThreadedPumps = SDL_FALSE;
 static SDL_bool WantCompatibilityAudioCVT = SDL_FALSE;
 static SDL_bool PreserveDestinationAlpha = SDL_TRUE;
+static int DesiredRefreshRate = SDL12_REFRESH_DEFAULT;
+static int CurrentRefreshRate = SDL12_REFRESH_DEFAULT;
 
 /* This is a KEYDOWN event which is being held for a follow-up TEXTINPUT */
 static SDL12_Event PendingKeydownEvent;
@@ -5885,6 +5889,8 @@ EndVidModeCreate(void)
     VideoSurfaceUpdatedInBackgroundThread = SDL_FALSE;
     SetVideoModeThread = 0;
 
+    CurrentRefreshRate = SDL12_REFRESH_DEFAULT;
+
     return NULL;
 }
 
@@ -6230,6 +6236,14 @@ UnlockVideoRenderer(void)
 
 static void HandleInputGrab(SDL12_GrabMode mode);
 
+
+/* SDL_SetRefreshRate was never in an real SDL-1.2 release, but apparently StepMania was maintaining a fork with this API for literally years. */
+DECLSPEC12 void SDLCALL
+SDL_SetRefreshRate(int rate)
+{
+    DesiredRefreshRate = (rate >= 0) ? rate : 0;  /* takes effect on next SDL_SetVideoMode call. */
+}
+
 static SDL12_Surface *
 SetVideoModeImpl(int width, int height, int bpp, Uint32 flags12)
 {
@@ -6246,7 +6260,7 @@ SetVideoModeImpl(int width, int height, int bpp, Uint32 flags12)
     int scaled_height = height;
     const char *fromwin_env = NULL;
     int gl_max_fps;
-
+    SDL_bool force_display_mode = SDL_FALSE;
     VideoSurface12 = &VideoSurface12Location;
 
     if (flags12 & SDL12_OPENGL) {
@@ -6341,6 +6355,8 @@ SetVideoModeImpl(int width, int height, int bpp, Uint32 flags12)
         EndVidModeCreate();  /* rebuild the window if moving to/from a GL context */
     } else if (VideoSurface12->surface20 && (VideoSurface12->surface20->format->format != appfmt)) {
         EndVidModeCreate();  /* rebuild the window if changing pixel format */
+    } else if (DesiredRefreshRate != CurrentRefreshRate) {
+        EndVidModeCreate();  /* rebuild the window if changing refresh rate */
     } else {
         /* SDL 1.2 (infuriatingly!) destroys the window (and GL context!) on each resize in some cases, on various platforms. Try to match that. */
         #ifdef __WINDOWS__
@@ -6392,10 +6408,13 @@ SetVideoModeImpl(int width, int height, int bpp, Uint32 flags12)
             GPU, so use FULLSCREEN_DESKTOP and logical scaling there.
             If possible, we'll do this with OpenGL, too, but we might not be
             able to. */
-        if (use_gl_scaling || ((flags12 & SDL12_OPENGL) == 0) || ((dmode.w == width) && (dmode.h == height))) {
+        if ((use_gl_scaling || ((flags12 & SDL12_OPENGL) == 0) || ((dmode.w == width) && (dmode.h == height))) && (DesiredRefreshRate == SDL12_REFRESH_DEFAULT)) {
             fullscreen_flags20 |= SDL_WINDOW_FULLSCREEN_DESKTOP;
         } else {
             fullscreen_flags20 |= SDL_WINDOW_FULLSCREEN;
+            if (DesiredRefreshRate != SDL12_REFRESH_DEFAULT) {
+                force_display_mode = SDL_TRUE;
+            }
         }
     } else if (fix_bordless_fs_win && (flags12 & SDL12_NOFRAME) && (width == dmode.w) && (height == dmode.h)) {
         /* app appears to be trying to do a "borderless fullscreen windowed" mode, so just bump
@@ -6458,6 +6477,21 @@ SetVideoModeImpl(int width, int height, int bpp, Uint32 flags12)
         }
         if (VideoIcon20) {
             SDL20_SetWindowIcon(VideoWindow20, VideoIcon20);
+        }
+
+        if (force_display_mode) {
+            SDL_DisplayMode desired_mode, closest_mode;
+            SDL20_zero(desired_mode);
+            SDL20_zero(closest_mode);
+            desired_mode.w = scaled_width;
+            desired_mode.h = scaled_height;
+            desired_mode.refresh_rate = DesiredRefreshRate;
+            if (!SDL20_GetClosestDisplayMode(SDL20_GetWindowDisplayIndex(VideoWindow20), &desired_mode, &closest_mode)) {
+                return EndVidModeCreate();
+            } else if (SDL20_SetWindowDisplayMode(VideoWindow20, &closest_mode) < 0) {
+                return EndVidModeCreate();
+            }
+            CurrentRefreshRate = DesiredRefreshRate;
         }
     } else {  /* resize it */
         SDL20_SetWindowSize(VideoWindow20, scaled_width, scaled_height);
