@@ -898,6 +898,7 @@
 #define SDL_HasWindowSurface IGNORE_THIS_VERSION_OF_SDL_HasWindowSurface
 #define SDL_DestroyWindowSurface IGNORE_THIS_VERSION_OF_SDL_DestroyWindowSurface
 #define SDL_GDKGetDefaultUser IGNORE_THIS_VERSION_OF_SDL_GDKGetDefaultUser
+#define SDL_GameControllerGetSteamHandle IGNORE_THIS_VERSION_OF_SDL_GameControllerGetSteamHandle
 
 
 #if defined(_WIN32) || defined(__OS2__)
@@ -947,18 +948,6 @@ typedef void (__cdecl *pfnSDL_CurrentEndThread) (unsigned);
 #undef CreateMutex
 #endif /* _WIN32 */
 
-
-#ifdef SDL_BlitSurface
-#undef SDL_BlitSurface
-#endif
-
-#ifdef SDL_mutexP
-#undef SDL_mutexP
-#endif
-
-#ifdef SDL_mutexV
-#undef SDL_mutexV
-#endif
 
 #ifdef SDL_SetError
 #undef SDL_SetError
@@ -4440,8 +4429,23 @@ typedef void (__cdecl *pfnSDL_CurrentEndThread) (unsigned);
 #undef SDL_GDKGetDefaultUser
 #endif
 
-/* undefine these macros too: */
-/* redefine using SDL2_xxx, if needed. */
+#ifdef SDL_GameControllerGetSteamHandle
+#undef SDL_GameControllerGetSteamHandle
+#endif
+
+/* undefine these macros, too: redefine as SDL2_xxx, if needed.
+ */
+#ifdef SDL_BlitSurface
+#undef SDL_BlitSurface
+#endif
+
+#ifdef SDL_mutexP
+#undef SDL_mutexP
+#endif
+
+#ifdef SDL_mutexV
+#undef SDL_mutexV
+#endif
 
 #ifdef SDL_enabled_assert
 #undef SDL_enabled_assert

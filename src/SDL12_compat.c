@@ -2413,7 +2413,7 @@ AddVidModeToList(VideoModeList *vmode, SDL12_Rect *mode, const Uint16 maxw, cons
     void *ptr = NULL;
     int i;
 
-    if ( (maxw && (mode->w > maxw)) || (maxh && (mode->h > maxh)) ) {
+    if ((maxw && (mode->w > maxw)) || (maxh && (mode->h > maxh))) {
         return 0;   /* clamp this one out as too big. */
     }
 
@@ -5970,7 +5970,7 @@ LoadOpenGLFunctions(void)
 }
 
 static void
-ResolveFauxBackbufferMSAA()
+ResolveFauxBackbufferMSAA(void)
 {
     const GLboolean has_scissor = OpenGLFuncs.glIsEnabled(GL_SCISSOR_TEST);
 
@@ -6234,15 +6234,7 @@ UnlockVideoRenderer(void)
     SDL20_UnlockMutex(VideoRendererLock);
 }
 
-static void HandleInputGrab(SDL12_GrabMode mode);
-
-
-/* SDL_SetRefreshRate was never in an real SDL-1.2 release, but apparently StepMania was maintaining a fork with this API for literally years. */
-DECLSPEC12 void SDLCALL
-SDL_SetRefreshRate(int rate)
-{
-    DesiredRefreshRate = (rate >= 0) ? rate : 0;  /* takes effect on next SDL_SetVideoMode call. */
-}
+static void HandleInputGrab(SDL12_GrabMode);
 
 static SDL12_Surface *
 SetVideoModeImpl(int width, int height, int bpp, Uint32 flags12)
@@ -6287,7 +6279,7 @@ SetVideoModeImpl(int width, int height, int bpp, Uint32 flags12)
         use_highdpi = (flags12 & SDL12_FULLSCREEN) ? use_gl_scaling : SDL_FALSE;
 
         gl_max_fps = SDL12Compat_GetHintInt("SDL12COMPAT_MAX_FPS", 0);
-        if(gl_max_fps != 0) {
+        if (gl_max_fps != 0) {
             OpenGLBuffersSwapTickInterval = 1000.f / gl_max_fps;
             OpenGLBuffersLastSwapTicks = SDL20_GetTicks();
         }
@@ -6719,6 +6711,13 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags12)
     return retval;
 }
 
+/* SDL_SetRefreshRate was never in an real SDL-1.2 release, but apparently StepMania was maintaining a fork with this API for literally years. */
+DECLSPEC12 void SDLCALL
+SDL_SetRefreshRate(int rate)
+{
+    DesiredRefreshRate = (rate >= 0) ? rate : 0;  /* takes effect on next SDL_SetVideoMode call. */
+}
+
 DECLSPEC12 SDL12_Surface * SDLCALL
 SDL_GetVideoSurface(void)
 {
@@ -7132,7 +7131,7 @@ UpdateRect12to20(SDL12_Surface *surface12, const SDL12_Rect *rect12, SDL_Rect *r
 
 /* For manual throttling of screen updates. */
 static int
-GetDesiredMillisecondsPerFrame()
+GetDesiredMillisecondsPerFrame(void)
 {
     SDL_DisplayMode mode;
     if (VideoSurface12->flags & SDL12_FULLSCREEN) {
@@ -8213,9 +8212,9 @@ DECLSPEC12 void SDLCALL
 SDL_GL_SwapBuffers(void)
 {
     if (VideoWindow20) {
-        if(OpenGLBuffersSwapTickInterval != 0.f) {
+        if (OpenGLBuffersSwapTickInterval != 0.f) {
             const Uint32 tickDelta = SDL20_GetTicks() - OpenGLBuffersLastSwapTicks;
-            if(tickDelta < OpenGLBuffersSwapTickInterval) {
+            if (tickDelta < OpenGLBuffersSwapTickInterval) {
                 SDL20_Delay((int)(OpenGLBuffersSwapTickInterval + 0.5f) - tickDelta);
             }
         }
@@ -8269,7 +8268,7 @@ SDL_GL_SwapBuffers(void)
             SDL20_GL_SwapWindow(VideoWindow20);
         }
 
-        if(OpenGLBuffersSwapTickInterval != 0.f) {
+        if (OpenGLBuffersSwapTickInterval != 0.f) {
             OpenGLBuffersLastSwapTicks = SDL20_GetTicks();
         }
     }
