@@ -1598,6 +1598,8 @@ SDL12Compat_ApplyQuirks(SDL_bool force_x11)
             SDL12COMPAT_SetEnvAtStartup("SDL_VIDEODRIVER", "x11");
         }
     }
+    #else
+    (void)force_x11;
     #endif
 
     if (*exe_name == '\0') {
@@ -5419,6 +5421,8 @@ CreateRGBSurface(Uint32 flags12, int width, int height, int depth, Uint32 Rmask,
 {
     SDL_Surface *surface20;
 
+    (void)flags12;
+
     /* SDL 1.2 checks this. */
     if ((width >= 16384) || (height >= 65536)) {
         SDL20_SetError("Width or height is too large");
@@ -7372,8 +7376,8 @@ SDL_UpdateRect(SDL12_Surface *screen12, Sint32 x, Sint32 y, Uint32 w, Uint32 h)
         SDL12_Rect rect12;
         rect12.x = (Sint16) x;
         rect12.y = (Sint16) y;
-        rect12.w = (Uint16) (w ? w : screen12->w);
-        rect12.h = (Uint16) (h ? h : screen12->h);
+        rect12.w = (Uint16) (w ? w : (unsigned)screen12->w);
+        rect12.h = (Uint16) (h ? h : (unsigned)screen12->h);
         SDL_UpdateRects(screen12, 1, &rect12);
     }
 }
@@ -8054,6 +8058,7 @@ SDL_UnlockYUVOverlay(SDL12_Overlay *overlay12)
     /*if (overlay12) {
         overlay12->pixels = NULL;
     }*/
+    (void)overlay12;
 }
 
 DECLSPEC12 void SDLCALL
