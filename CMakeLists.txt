@@ -295,6 +295,13 @@ if(SDL12DEVEL)
 
     configure_file("${CMAKE_CURRENT_SOURCE_DIR}/sdl-config.in" "${CMAKE_CURRENT_BINARY_DIR}/sdl-config" @ONLY)
     install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/sdl-config" DESTINATION bin)
+
+    # uninstall
+    if(NOT TARGET uninstall)
+      configure_file(cmake/cmake_uninstall.cmake.in "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake" IMMEDIATE @ONLY)
+      add_custom_target(uninstall
+        COMMAND ${CMAKE_COMMAND} -P "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake")
+    endif()
   endif()
 
   set(SOEXT ${CMAKE_SHARED_LIBRARY_SUFFIX})
