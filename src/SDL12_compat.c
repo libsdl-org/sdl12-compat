@@ -4759,6 +4759,27 @@ static int DecodeUTF8Char(char **ptr)
     return value;
 }
 
+static int IsRepeatable(SDL12Key key)
+{
+    switch (key) {
+    case SDLK12_UNKNOWN:
+    case SDLK12_NUMLOCK:
+    case SDLK12_CAPSLOCK:
+    case SDLK12_LCTRL:
+    case SDLK12_RCTRL:
+    case SDLK12_LSHIFT:
+    case SDLK12_RSHIFT:
+    case SDLK12_LALT:
+    case SDLK12_RALT:
+    case SDLK12_LMETA:
+    case SDLK12_RMETA:
+    case SDLK12_MODE:
+        return 0;
+    default:
+        return 1;
+    }
+}
+
 /* Add the pending KEYDOWN event to the EventQueue, possibly with 'unicode' set
  * Returns 1 if there was a pending event. */
 static int FlushPendingKeydownEvent(Uint32 unicode)
@@ -4770,7 +4791,7 @@ static int FlushPendingKeydownEvent(Uint32 unicode)
     PendingKeydownEvent.key.keysym.unicode = unicode;
     PushEventIfNotFiltered(&PendingKeydownEvent);
 
-    if (KeyRepeatDelay) {
+    if (KeyRepeatDelay && IsRepeatable(PendingKeydownEvent.key.keysym.sym)) {
         SDL20_memcpy(&KeyRepeatEvent, &PendingKeydownEvent, sizeof (SDL12_Event));
         /* SDL 1.2 waits for the delay, and then a full interval past that before the first repeat is reported. */
         KeyRepeatNextTicks = SDL20_GetTicks() + KeyRepeatDelay + KeyRepeatInterval;
@@ -4909,8 +4930,9 @@ EventFilter20to12(void *data, SDL_Event *event20)
                 event12.key.keysym.sym = Scancode20toKeysym12(event20->key.keysym.scancode);
             }
 
-            if (event12.key.keysym.sym == SDLK12_CAPSLOCK) {
-                /* SDL 1.2 only sends capslock key events on keydown */
+            if (event12.key.keysym.sym == SDLK12_CAPSLOCK ||
+                event12.key.keysym.sym == SDLK12_NUMLOCK) {
+                /* SDL 1.2 only sends capslock and numlock key events on keydown */
                 return 1;
             }
 
@@ -4947,18 +4969,23 @@ EventFilter20to12(void *data, SDL_Event *event20)
                 event12.key.keysym.sym = Scancode20toKeysym12(event20->key.keysym.scancode);
             }
 
-            if (event12.key.keysym.sym == SDLK12_CAPSLOCK) {
-                /* SDL 1.2 toggles capslock on keypress */
-                if (KeyState[SDLK12_CAPSLOCK]) {
-                    KeyState[SDLK12_CAPSLOCK] = SDL_RELEASED;
+            if (event12.key.keysym.sym == SDLK12_CAPSLOCK ||
+                event12.key.keysym.sym == SDLK12_NUMLOCK) {
+                /* SDL 1.2 toggles capslock and numlock on keypress */
+                if (KeyState[event12.key.keysym.sym]) {
+                    KeyState[event12.key.keysym.sym] = SDL_RELEASED;
 
                     event12.type = SDL12_KEYUP;
                     event12.key.which = 0;
                     event12.key.state = SDL_RELEASED;
                     event12.key.keysym.scancode = Scancode20to12(event20->key.keysym.scancode);
-                    event12.key.keysym.sym = SDLK12_CAPSLOCK;
-                    event12.key.keysym.mod = event20->key.keysym.mod & ~KMOD_CAPS;
+                    event12.key.keysym.mod = event20->key.keysym.mod;
                     event12.key.keysym.unicode = 0;
+                    if (event12.key.keysym.sym == SDLK12_CAPSLOCK) {
+                        event12.key.keysym.mod &= ~KMOD12_CAPS;
+                    } else if (event12.key.keysym.sym == SDLK12_NUMLOCK) {
+                        event12.key.keysym.mod &= ~KMOD12_NUM;
+                    }
                     break;
                 }
             }
