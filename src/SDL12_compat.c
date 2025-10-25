@@ -4909,6 +4909,11 @@ EventFilter20to12(void *data, SDL_Event *event20)
                 event12.key.keysym.sym = Scancode20toKeysym12(event20->key.keysym.scancode);
             }
 
+            if (event12.key.keysym.sym == SDLK12_CAPSLOCK) {
+                /* SDL 1.2 only sends capslock key events on keydown */
+                return 1;
+            }
+
             if (KeyRepeatNextTicks) {
                 SDL_assert(KeyRepeatEvent.type == SDL12_KEYDOWN);
                 if (KeyRepeatEvent.key.keysym.sym == event12.key.keysym.sym) {
@@ -4937,18 +4942,35 @@ EventFilter20to12(void *data, SDL_Event *event20)
             }
 
             if (TranslateKeyboardLayout) {
-                PendingKeydownEvent.key.keysym.sym = Keysym20to12(event20->key.keysym.sym);
+                event12.key.keysym.sym = Keysym20to12(event20->key.keysym.sym);
             } else {
-                PendingKeydownEvent.key.keysym.sym = Scancode20toKeysym12(event20->key.keysym.scancode);
+                event12.key.keysym.sym = Scancode20toKeysym12(event20->key.keysym.scancode);
             }
 
-            KeyState[PendingKeydownEvent.key.keysym.sym] = event20->key.state;
+            if (event12.key.keysym.sym == SDLK12_CAPSLOCK) {
+                /* SDL 1.2 toggles capslock on keypress */
+                if (KeyState[SDLK12_CAPSLOCK]) {
+                    KeyState[SDLK12_CAPSLOCK] = SDL_RELEASED;
 
-            PendingKeydownEvent.type = (event20->type == SDL_KEYDOWN) ? SDL12_KEYDOWN : SDL12_KEYUP;
+                    event12.type = SDL12_KEYUP;
+                    event12.key.which = 0;
+                    event12.key.state = SDL_RELEASED;
+                    event12.key.keysym.scancode = Scancode20to12(event20->key.keysym.scancode);
+                    event12.key.keysym.sym = SDLK12_CAPSLOCK;
+                    event12.key.keysym.mod = event20->key.keysym.mod & ~KMOD_CAPS;
+                    event12.key.keysym.unicode = 0;
+                    break;
+                }
+            }
+
+            KeyState[event12.key.keysym.sym] = event20->key.state;
+
+            PendingKeydownEvent.type = SDL12_KEYDOWN;
             PendingKeydownEvent.key.which = 0;
             PendingKeydownEvent.key.state = event20->key.state;
             /* turns out that some apps actually made use of the hardware scancodes (checking for platform beforehand) */
             PendingKeydownEvent.key.keysym.scancode = Scancode20to12(event20->key.keysym.scancode);
+            PendingKeydownEvent.key.keysym.sym = event12.key.keysym.sym;
             PendingKeydownEvent.key.keysym.mod = event20->key.keysym.mod;  /* these match up between 1.2 and 2.0! */
             PendingKeydownEvent.key.keysym.unicode = 0;
 
