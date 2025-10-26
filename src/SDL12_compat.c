@@ -7706,6 +7706,31 @@ SDL_WarpMouse(Uint16 x, Uint16 y)
         MousePosition.y = (int) y;
     } else {
         if (VideoWindow20) {
+            SDL_Rect viewport;
+            float scale_x, scale_y;
+
+            if (OpenGLLogicalScalingFBO) {
+                int physical_w, physical_h;
+
+                /* we want to scale into the window size, which is dpi-scaled */
+                SDL20_GetWindowSize(VideoWindow20, &physical_w, &physical_h);
+
+                viewport = GetOpenGLLogicalScalingViewport(physical_w, physical_h);
+
+                scale_x = (float)viewport.w / OpenGLLogicalScalingWidth;
+                scale_y = (float)viewport.h / OpenGLLogicalScalingHeight;
+            } else {
+                SDL20_RenderGetViewport(VideoRenderer20, &viewport);
+                SDL20_RenderGetScale(VideoRenderer20, &scale_x, &scale_y);
+                viewport.x = (int)SDL20_lroundf(viewport.x * scale_x);
+                viewport.y = (int)SDL20_lroundf(viewport.y * scale_y);
+                viewport.w = (int)SDL20_lroundf(viewport.w * scale_x);
+                viewport.h = (int)SDL20_lroundf(viewport.h * scale_y);
+            }
+
+            x = (int)SDL20_lroundf(viewport.x + (x * scale_x));
+            y = (int)SDL20_lroundf(viewport.y + (y * scale_y));
+
             SDL20_WarpMouseInWindow(VideoWindow20, x, y);
         }
     }
