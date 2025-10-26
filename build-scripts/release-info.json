@@ -4,10 +4,10 @@
   "dependencies": {
     "SDL2": {
       "startswith": "2.",
-      "repo": "libsdl-org/SDL"
+      "repo": "libsdl-org/sdl2-compat"
     },
     "SDL3": {
-      "startswith": "3.",
+      "startswith": "3.2.",
       "repo": "libsdl-org/SDL"
     }
   },
