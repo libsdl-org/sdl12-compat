@@ -1,5 +1,7 @@
 #!/bin/sh
 
+cd `dirname $0`/..
+
 if [ -z $1 ]; then
     echo "USAGE: $0 <new_patch_version>" 1>&2
     exit 1

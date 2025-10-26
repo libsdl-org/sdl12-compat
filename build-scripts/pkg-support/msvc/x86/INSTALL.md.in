@@ -1,0 +1,7 @@
+
+# Using this package
+
+This package contains @<@PROJECT_NAME@>@ built for x86 Windows.
+
+To use this package, simply replace an existing 32-bit SDL.dll with the ones included here.
+

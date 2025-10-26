@@ -1,0 +1,7 @@
+
+# Using this package
+
+This package contains @<@PROJECT_NAME@>@ built for x64 Windows.
+
+To use this package, simply replace an existing 64-bit SDL.dll with the ones included here.
+
