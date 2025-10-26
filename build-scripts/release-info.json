@@ -20,7 +20,7 @@
   "source": {
     "checks": [
       "src/SDL12_compat.c",
-      "include/SDL/SDL_pixels.h",
+      "include/SDL/SDL.h",
       "test/testsprite.c"
     ]
   },
