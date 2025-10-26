@@ -7698,10 +7698,8 @@ UpdateRelativeMouseMode(void)
     /* in SDL 1.2, hiding+grabbing the cursor was like SDL2's relative mouse mode. */
     if (VideoWindow20) {
         const SDL_bool enable = (VideoWindowGrabbed && VideoCursorHidden) ? SDL_TRUE : SDL_FALSE;
-        if (MouseInputIsRelative != enable) {
-            MouseInputIsRelative = enable;
-            SDL20_SetRelativeMouseMode(MouseInputIsRelative);
-        }
+        MouseInputIsRelative = enable;
+        SDL20_SetRelativeMouseMode(MouseInputIsRelative);
     }
 }
 
@@ -7712,11 +7710,9 @@ SDL_ShowCursor(int toggle)
 
     if (toggle >= 0) {
         const SDL_bool wanthide = (toggle == 0) ? SDL_TRUE : SDL_FALSE;
-        if (VideoCursorHidden != wanthide) {
-            SDL20_ShowCursor(wanthide ? 0 : 1);
-            VideoCursorHidden = wanthide;
-            UpdateRelativeMouseMode();
-        }
+        SDL20_ShowCursor(wanthide ? 0 : 1);
+        VideoCursorHidden = wanthide;
+        UpdateRelativeMouseMode();
     }
     return retval;
 }
@@ -7725,9 +7721,9 @@ static void
 UpdateInputGrab(void)
 {
     /* SDL 1.2 always grabbed input if the video mode was fullscreen. */
-    const SDL_bool isfullscreen = (VideoSurface12 && VideoSurface12->surface20 && (VideoSurface12->flags & SDL12_FULLSCREEN)) ? SDL_TRUE : SDL_FALSE;
-    const SDL_bool wantgrab = (VideoWindowGrabWanted || isfullscreen);
     if (VideoWindow20) {
+        const SDL_bool isfullscreen = (VideoSurface12 && VideoSurface12->surface20 && (VideoSurface12->flags & SDL12_FULLSCREEN)) ? SDL_TRUE : SDL_FALSE;
+        const SDL_bool wantgrab = (VideoWindowGrabWanted || isfullscreen);
         SDL20_SetWindowGrab(VideoWindow20, wantgrab);
         VideoWindowGrabbed = wantgrab;
         UpdateRelativeMouseMode();
