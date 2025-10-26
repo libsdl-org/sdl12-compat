@@ -7702,6 +7702,17 @@ SDL_WarpMouse(Uint16 x, Uint16 y)
     if (MouseInputIsRelative) {  /* we have to track this ourselves, in case app calls SDL_GetMouseState(). */
         MousePosition.x = (int) x;
         MousePosition.y = (int) y;
+    } else if (x == MousePosition.x && y == MousePosition.y) {
+        /* There's no movement needed, just generate an internal event */
+        SDL12_Event event;
+        event.type = SDL12_MOUSEMOTION;
+        event.motion.which = 0;
+        event.motion.state = SDL_GetMouseState(NULL, NULL);
+        event.motion.x = x;
+        event.motion.y = y;
+        event.motion.xrel = 0;
+        event.motion.yrel = 0;
+        PushEventIfNotFiltered(&event);
     } else {
         if (VideoWindow20) {
             SDL_Rect viewport;
