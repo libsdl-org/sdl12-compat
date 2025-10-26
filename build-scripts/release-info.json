@@ -77,7 +77,9 @@
     },
     "dependencies": {
       "SDL2": {
-        "artifact": "SDL2-devel-*-VC.zip"
+        "artifact": [ "sdl2-compat-*-win32-x86.zip",
+                      "sdl2-compat-*-win32-x64.zip"
+        ]
       },
       "SDL3": {
         "artifact": "SDL3-devel-*-VC.zip"
