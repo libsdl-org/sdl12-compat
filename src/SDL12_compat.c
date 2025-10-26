@@ -5003,6 +5003,41 @@ EventFilter20to12(void *data, SDL_Event *event20)
             PendingKeydownEvent.key.keysym.mod = event20->key.keysym.mod;  /* these match up between 1.2 and 2.0! */
             PendingKeydownEvent.key.keysym.unicode = 0;
 
+            /* SDL 1.2 did not include modifiers in the keys that changed them */
+            if (PendingKeydownEvent.key.keysym.mod) {
+                switch (PendingKeydownEvent.key.keysym.sym) {
+                case SDLK12_LCTRL:
+                    PendingKeydownEvent.key.keysym.mod &= ~KMOD12_LCTRL;
+                    break;
+                case SDLK12_RCTRL:
+                    PendingKeydownEvent.key.keysym.mod &= ~KMOD12_RCTRL;
+                    break;
+                case SDLK12_LSHIFT:
+                    PendingKeydownEvent.key.keysym.mod &= ~KMOD12_LSHIFT;
+                    break;
+                case SDLK12_RSHIFT:
+                    PendingKeydownEvent.key.keysym.mod &= ~KMOD12_RSHIFT;
+                    break;
+                case SDLK12_LALT:
+                    PendingKeydownEvent.key.keysym.mod &= ~KMOD12_LALT;
+                    break;
+                case SDLK12_RALT:
+                    PendingKeydownEvent.key.keysym.mod &= ~KMOD12_RALT;
+                    break;
+                case SDLK12_LMETA:
+                    PendingKeydownEvent.key.keysym.mod &= ~KMOD12_LMETA;
+                    break;
+                case SDLK12_RMETA:
+                    PendingKeydownEvent.key.keysym.mod &= ~KMOD12_RMETA;
+                    break;
+                case SDLK12_MODE:
+                    PendingKeydownEvent.key.keysym.mod &= ~KMOD12_MODE;
+                    break;
+                default:
+                    break;
+                }
+            }
+
             /* If Unicode is not enabled, flush all KEYDOWN events immediately. */
             if (!EnabledUnicode) {
                 FlushPendingKeydownEvent(0);
@@ -5031,13 +5066,26 @@ EventFilter20to12(void *data, SDL_Event *event20)
                 default:
                     /* not a supported control character
                        when CTRL is pressed, text events aren't sent so use fallback for unicode */
-                    if (PendingKeydownEvent.key.keysym.mod & KMOD_CTRL) {
-                        const char *keyName = SDL_GetKeyName(PendingKeydownEvent.key.keysym.sym);
-                        /* use key name as unicode if it's a single character */
-                        if (keyName[0] && !keyName[1])
-                            FlushPendingKeydownEvent(keyName[0]);
-                        else
+                    if (event20->key.keysym.mod & KMOD_CTRL) {
+                        switch (PendingKeydownEvent.key.keysym.sym) {
+                        case SDLK12_UNKNOWN:
                             FlushPendingKeydownEvent(0);
+                            break;
+                        case SDLK_SPACE:
+                            FlushPendingKeydownEvent(' ');
+                            break;
+                        case SDLK_DELETE:
+                            FlushPendingKeydownEvent('\x7F');
+                            break;
+                        default:
+                            if (event20->key.keysym.sym & SDLK_SCANCODE_MASK) {
+                                /* This key has no associated unicode text */
+                                FlushPendingKeydownEvent(0);
+                            } else {
+                                FlushPendingKeydownEvent(event20->key.keysym.sym);
+                            }
+                            break;
+                        }
                     }
                     break;
             }
