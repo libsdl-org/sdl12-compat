@@ -542,6 +542,7 @@ class AndroidApiVersion:
     def __repr__(self) -> str:
         return f"<{self.name} ({'.'.join(str(v) for v in self.ints)})>"
 
+ANDROID_ABI_EXTRA_LINK_OPTIONS = {}
 
 class Releaser:
     def __init__(self, release_info: dict, commit: str, revision: str, root: Path, dist_path: Path, section_printer: SectionPrinter, executer: Executer, cmake_generator: str, deps_path: Path, overwrite: bool, github: bool, fast: bool):
@@ -1013,6 +1014,7 @@ class Releaser:
         android_devel_file_tree = ArchiveFileTree()
 
         for android_abi in android_abis:
+            extra_link_options = ANDROID_ABI_EXTRA_LINK_OPTIONS.get(android_abi, "")
             with self.section_printer.group(f"Building for Android {android_api} {android_abi}"):
                 build_dir = self.root / "build-android" / f"{android_abi}-build"
                 install_dir = self.root / "install-android" / f"{android_abi}-install"
@@ -1023,8 +1025,11 @@ class Releaser:
                     "cmake",
                     "-S", str(self.root),
                     "-B", str(build_dir),
-                    f'''-DCMAKE_C_FLAGS="-ffile-prefix-map={self.root}=/src/{self.project}"''',
-                    f'''-DCMAKE_CXX_FLAGS="-ffile-prefix-map={self.root}=/src/{self.project}"''',
+                    # NDK 21e does not support -ffile-prefix-map
+                    # f'''-DCMAKE_C_FLAGS="-ffile-prefix-map={self.root}=/src/{self.project}"''',
+                    # f'''-DCMAKE_CXX_FLAGS="-ffile-prefix-map={self.root}=/src/{self.project}"''',
+                    f"-DCMAKE_EXE_LINKER_FLAGS={extra_link_options}",
+                    f"-DCMAKE_SHARED_LINKER_FLAGS={extra_link_options}",
                     f"-DCMAKE_TOOLCHAIN_FILE={cmake_toolchain_file}",
                     f"-DCMAKE_PREFIX_PATH={str(android_deps_path)}",
                     f"-DCMAKE_FIND_ROOT_PATH_MODE_PACKAGE=BOTH",
@@ -1174,10 +1179,12 @@ class Releaser:
                 assert len(contents_msvc_zip) == 1, f"There must be exactly one root item in the root directory of {dep}"
                 dep_roots.append(contents_msvc_zip[0])
 
+            for arch in self.release_info["msvc"].get("cmake", {}).get("archs", []):
+                self._build_msvc_cmake(arch_platform=self._arch_to_vs_platform(arch=arch), dep_roots=dep_roots)
         with self.section_printer.group("Create SDL VC development zip"):
             self._build_msvc_devel()
 
-    def _build_msvc_msbuild(self, arch_platform: VsArchPlatformConfig, vs: VisualStudio):
+    def _copy_dep_files(self, arch_platform: VsArchPlatformConfig):
         platform_context = self.get_context(arch_platform.extra_context())
         for dep, depinfo in self.release_info["msvc"].get("dependencies", {}).items():
             msvc_zip = self.deps_path / glob.glob(depinfo["artifact"], root_dir=self.deps_path)[0]
@@ -1204,6 +1211,9 @@ class Releaser:
 
                             dst.parent.mkdir(exist_ok=True, parents=True)
                             dst.write_bytes(zip_data)
+
+    def _build_msvc_msbuild(self, arch_platform: VsArchPlatformConfig, vs: VisualStudio):
+        self._copy_dep_files(arch_platform)
 
         prebuilt_paths = set(self.root / full_prebuilt_path for prebuilt_path in self.release_info["msvc"]["msbuild"].get("prebuilt", []) for full_prebuilt_path in glob.glob(configure_text(prebuilt_path, context=platform_context), root_dir=self.root))
         msbuild_paths = set(self.root / configure_text(f, context=platform_context) for file_mapping in (self.release_info["msvc"]["msbuild"]["files-lib"], self.release_info["msvc"]["msbuild"]["files-devel"]) for files_list in file_mapping.values() for f in files_list)
@@ -1262,6 +1272,79 @@ class Releaser:
 
     def _arch_platform_to_install_path(self, arch_platform: VsArchPlatformConfig) -> Path:
         return self._arch_platform_to_build_path(arch_platform) / "prefix"
+
+    def _build_msvc_cmake(self, arch_platform: VsArchPlatformConfig, dep_roots: list[Path]):
+        build_path = self._arch_platform_to_build_path(arch_platform)
+        install_path = self._arch_platform_to_install_path(arch_platform)
+        platform_context = self.get_context(extra_context=arch_platform.extra_context())
+
+        build_type = "Release"
+        extra_context = {
+            "ARCH": arch_platform.arch,
+            "PLATFORM": arch_platform.platform,
+        }
+
+        self._copy_dep_files(arch_platform)
+
+        built_paths = set(install_path / configure_text(f, context=platform_context) for file_mapping in (self.release_info["msvc"]["cmake"]["files-lib"], self.release_info["msvc"]["cmake"]["files-devel"]) for files_list in file_mapping.values() for f in files_list)
+        logger.info("CMake builds these files, to be included in the package: %s", built_paths)
+        if not self.fast:
+            for b in built_paths:
+                b.unlink(missing_ok=True)
+
+        shutil.rmtree(install_path, ignore_errors=True)
+        build_path.mkdir(parents=True, exist_ok=True)
+        with self.section_printer.group(f"Configure VC CMake project for {arch_platform.arch}"):
+            self.executer.run([
+                "cmake", "-S", str(self.root), "-B", str(build_path),
+                "-A", arch_platform.platform,
+                "-DCMAKE_INSTALL_BINDIR=bin",
+                "-DCMAKE_INSTALL_DATAROOTDIR=share",
+                "-DCMAKE_INSTALL_INCLUDEDIR=include",
+                "-DCMAKE_INSTALL_LIBDIR=lib",
+                f"-DCMAKE_BUILD_TYPE={build_type}",
+                f"-DCMAKE_INSTALL_PREFIX={install_path}",
+                # MSVC debug information format flags are selected by an abstraction
+                "-DCMAKE_POLICY_DEFAULT_CMP0141=NEW",
+                # MSVC debug information format
+                "-DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=ProgramDatabase",
+                # Linker flags for executables
+                "-DCMAKE_EXE_LINKER_FLAGS=-INCREMENTAL:NO -DEBUG -OPT:REF -OPT:ICF",
+                # Linker flag for shared libraries
+                "-DCMAKE_SHARED_LINKER_FLAGS=-INCREMENTAL:NO -DEBUG -OPT:REF -OPT:ICF",
+                # MSVC runtime library flags are selected by an abstraction
+                "-DCMAKE_POLICY_DEFAULT_CMP0091=NEW",
+                # Use statically linked runtime (-MT) (ideally, should be "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+                "-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded",
+                f"-DCMAKE_PREFIX_PATH={';'.join(str(s) for s in dep_roots)}",
+            ] + self.release_info["msvc"]["cmake"]["args"] + ([] if self.fast else ["--fresh"]))
+
+        with self.section_printer.group(f"Build VC CMake project for {arch_platform.arch}"):
+            self.executer.run(["cmake", "--build", str(build_path), "--verbose", "--config", build_type])
+        with self.section_printer.group(f"Install VC CMake project for {arch_platform.arch}"):
+            self.executer.run(["cmake", "--install", str(build_path), "--config", build_type])
+
+        if self.dry:
+            for b in built_paths:
+                b.parent.mkdir(parents=True, exist_ok=True)
+                b.touch()
+
+        zip_path = self.dist_path / f"{self.project}-{self.version}-win32-{arch_platform.arch}.zip"
+        zip_path.unlink(missing_ok=True)
+
+        logger.info("Collecting files...")
+        archive_file_tree = ArchiveFileTree()
+        archive_file_tree.add_file_mapping(arc_dir="", file_mapping=self.release_info["msvc"]["cmake"]["files-lib"], file_mapping_root=install_path, context=platform_context, time=self.arc_time)
+        archive_file_tree.add_file_mapping(arc_dir="", file_mapping=self.release_info["msvc"]["files-lib"], file_mapping_root=self.root, context=self.get_context(extra_context=extra_context), time=self.arc_time)
+
+        logger.info("Creating %s", zip_path)
+        with Archiver(zip_path=zip_path) as archiver:
+            arc_root = f""
+            archive_file_tree.add_to_archiver(archive_base=arc_root, archiver=archiver)
+            archiver.add_git_hash(arcdir=arc_root, commit=self.commit, time=self.arc_time)
+
+        for p in built_paths:
+            assert p.is_file(), f"{p} should exist"
 
     def _build_msvc_devel(self) -> None:
         zip_path = self.dist_path / f"{self.project}-devel-{self.version}-VC.zip"
@@ -1439,7 +1522,7 @@ def main(argv=None) -> int:
         if args.android_home is None or not Path(args.android_home).is_dir():
             parser.error("Invalid $ANDROID_HOME or --android-home: must be a directory containing the Android SDK")
         if args.android_ndk_home is None or not Path(args.android_ndk_home).is_dir():
-            parser.error("Invalid $ANDROID_NDK_HOME or --android_ndk_home: must be a directory containing the Android NDK")
+            parser.error("Invalid $ANDROID_NDK_HOME or --android-ndk-home: must be a directory containing the Android NDK")
         if args.android_api is None:
             with section_printer.group("Detect Android APIS"):
                 args.android_api = releaser._detect_android_api(android_home=args.android_home)
@@ -1457,7 +1540,7 @@ def main(argv=None) -> int:
             parser.error("Invalid --android-api, and/or could not be detected")
         android_api_path = Path(args.android_home) / f"platforms/{args.android_api.name}"
         if not android_api_path.is_dir():
-            parser.error(f"Android API directory does not exist ({android_api_path})")
+            logger.warning(f"Android API directory does not exist ({android_api_path})")
         with section_printer.group("Android arguments"):
             print(f"android_home     = {args.android_home}")
             print(f"android_ndk_home = {args.android_ndk_home}")

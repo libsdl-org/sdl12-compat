@@ -2,13 +2,9 @@
   "name": "sdl12-compat",
   "remote": "libsdl-org/sdl12-compat",
   "dependencies": {
-    "SDL2": {
+    "sdl2-compat": {
       "startswith": "2.",
       "repo": "libsdl-org/sdl2-compat"
-    },
-    "SDL3": {
-      "startswith": "3.2.",
-      "repo": "libsdl-org/SDL"
     }
   },
   "version": {
@@ -40,19 +36,12 @@
       ],
       "files-lib": {
         "": [
-          "bin/SDL.dll",
-          "bin/SDL2.dll",
-          "bin/SDL3.dll"
+          "bin/SDL.dll"
         ]
       },
       "files-devel": {
         "lib/@<@ARCH@>@": [
           "bin/SDL.dll",
-          "bin/SDL2.dll",
-          "bin/SDL3.dll",
-          "bin/SDL.pdb",
-          "bin/SDL2.pdb",
-          "bin/SDL3.pdb",
           "lib/SDL.lib",
           "lib/SDLmain.lib"
         ]
@@ -62,7 +51,9 @@
       "": [
         "build-scripts/pkg-support/msvc/@<@ARCH@>@/INSTALL.md.in:INSTALL.md",
         "LICENSE.txt",
-        "build-scripts/pkg-support/msvc/README.md"
+        "build-scripts/pkg-support/msvc/README.md",
+        "@<@ARCH@>@/SDL2.dll",
+        "@<@ARCH@>@/SDL3.dll"
       ]
     },
     "files-devel": {
@@ -73,16 +64,25 @@
       ],
       "include": [
         "include/SDL/*"
+      ],
+      "lib/@<@ARCH@>@": [
+        "@<@ARCH@>@/SDL2.dll",
+        "@<@ARCH@>@/SDL3.dll"
       ]
     },
     "dependencies": {
-      "SDL2": {
-        "artifact": [ "sdl2-compat-*-win32-x86.zip",
-                      "sdl2-compat-*-win32-x64.zip"
+      "sdl2-compat": {
+        "artifact": "sdl2-compat-devel-2.??.??-VC.zip",
+        "copy": [
+          {
+            "src": "lib/@<@ARCH@>@/SDL3.dll",
+            "dst": "@<@ARCH@>@"
+          },
+          {
+            "src": "lib/@<@ARCH@>@/SDL2.dll",
+            "dst": "@<@ARCH@>@"
+          }
         ]
-      },
-      "SDL3": {
-        "artifact": "SDL3-devel-*-VC.zip"
       }
     }
   }
