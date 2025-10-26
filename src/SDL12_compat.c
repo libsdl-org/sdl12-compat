@@ -975,6 +975,7 @@ static SDL12_VideoInfo VideoInfo12;
 static SDL12_Palette VideoInfoPalette12;
 static SDL12_PixelFormat VideoInfoVfmt12;
 static SDL_PixelFormat *VideoInfoVfmt20 = NULL;
+static SDL_bool VideoWindowGrabWanted = SDL_FALSE;
 static SDL_bool VideoWindowGrabbed = SDL_FALSE;
 static SDL_bool VideoCursorHidden = SDL_FALSE;
 static SDL_bool SetVideoModeInProgress = SDL_FALSE;
@@ -2708,6 +2709,7 @@ Init12Video(void)
     VideoDisplayIndex = GetVideoDisplay();
     SwapInterval = 0;
 
+    VideoWindowGrabWanted = SDL_FALSE;
     VideoWindowGrabbed = SDL_FALSE;
     VideoCursorHidden = SDL_FALSE;
     SDL20_ShowCursor(1);
@@ -6290,7 +6292,7 @@ UnlockVideoRenderer(void)
     SDL20_UnlockMutex(VideoRendererLock);
 }
 
-static void HandleInputGrab(SDL12_GrabMode);
+static void UpdateInputGrab(void);
 
 static SDL12_Surface *
 SetVideoModeImpl(int width, int height, int bpp, Uint32 flags12)
@@ -6741,10 +6743,7 @@ SetVideoModeImpl(int width, int height, int bpp, Uint32 flags12)
 
     SDL20_RaiseWindow(VideoWindow20);
 
-    /* SDL 1.2 always grabbed input if the video mode was fullscreen. */
-    if (VideoSurface12->flags & SDL12_FULLSCREEN) {
-        HandleInputGrab(SDL12_GRAB_ON);
-    }
+    UpdateInputGrab();
 
     if ((flags12 & SDL12_OPENGL) == 0) {
         /* see notes above these functions about GL context resetting. Force a lock/unlock here to set that up. */
@@ -7675,15 +7674,13 @@ SDL_ShowCursor(int toggle)
 }
 
 static void
-HandleInputGrab(SDL12_GrabMode mode)
+UpdateInputGrab(void)
 {
     /* SDL 1.2 always grabbed input if the video mode was fullscreen. */
     const SDL_bool isfullscreen = (VideoSurface12 && VideoSurface12->surface20 && (VideoSurface12->flags & SDL12_FULLSCREEN)) ? SDL_TRUE : SDL_FALSE;
-    const SDL_bool wantgrab = (isfullscreen || (mode == SDL12_GRAB_ON)) ? SDL_TRUE : SDL_FALSE;
-    if (VideoWindowGrabbed != wantgrab) {
-        if (VideoWindow20) {
-            SDL20_SetWindowGrab(VideoWindow20, wantgrab);
-        }
+    const SDL_bool wantgrab = (VideoWindowGrabWanted || isfullscreen);
+    if (VideoWindow20) {
+        SDL20_SetWindowGrab(VideoWindow20, wantgrab);
         VideoWindowGrabbed = wantgrab;
         UpdateRelativeMouseMode();
     }
@@ -7693,9 +7690,10 @@ DECLSPEC12 SDL12_GrabMode SDLCALL
 SDL_WM_GrabInput(SDL12_GrabMode mode)
 {
     if (mode != SDL12_GRAB_QUERY) {
-        HandleInputGrab(mode);
+        VideoWindowGrabWanted = mode;
+        UpdateInputGrab();
     }
-    return VideoWindowGrabbed ? SDL12_GRAB_ON : SDL12_GRAB_OFF;
+    return VideoWindowGrabWanted ? SDL12_GRAB_ON : SDL12_GRAB_OFF;
 }
 
 DECLSPEC12 void SDLCALL
