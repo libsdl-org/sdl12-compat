@@ -2,7 +2,7 @@
 #        you can define SDL2_INCLUDE_DIR on the cmdline.  For example:
 #        cmake -DSDL2_INCLUDE_DIR=/opt/SDL2/include/SDL2 [other stuff]
 
-cmake_minimum_required(VERSION 3.0.0...4.0)
+cmake_minimum_required(VERSION 3.0.0...4.1)
 project(sdl12_compat VERSION 1.2.69 LANGUAGES C)
 
 option(SDL12TESTS "Enable to build SDL-1.2 test programs" ON)
@@ -54,7 +54,8 @@ add_library(SDL SHARED ${SDL12COMPAT_SRCS})
 add_library(SDL::SDL-shared ALIAS SDL)
 add_library(SDL::SDL ALIAS SDL)
 
-find_package(SDL2)
+find_package(SDL2 CONFIG)
+find_package(SDL2 MODULE)
 if(NOT SDL2_INCLUDE_DIRS)
   message(FATAL_ERROR "Could not find SDL2 headers")
 endif()
@@ -136,6 +137,7 @@ return 0; }" IS_X86)
     set_target_properties(SDL PROPERTIES COMPILE_FLAGS ${MSVC_FLAGS})
     set_target_properties(SDL PROPERTIES LINK_FLAGS "/NODEFAULTLIB")
     # Make sure /RTC1 is disabled: (from SDL2 CMake)
+    set_property(TARGET SDL PROPERTY MSVC_RUNTIME_CHECKS "")
     foreach(flag_var
       CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
       CMAKE_C_FLAGS_MINSIZEREL CMAKE_C_FLAGS_RELWITHDEBINFO)
