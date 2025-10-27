@@ -24,12 +24,12 @@ jobs:
         with:
           python-version: '3.11'
       - name: 'Fetch build-release.py'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ inputs.commit }}
           sparse-checkout: 'build-scripts/build-release.py'
       - name: 'Set up SDL sources'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ inputs.commit }}
           path: 'SDL'
@@ -96,40 +96,18 @@ jobs:
         shell: bash
         run: |
           ${{ steps.tar.outputs.path }}/build-scripts/test-versioning.sh
-      - name: 'Fetch build-release.py'
-        uses: actions/checkout@v4
+      - name: 'Fetch setup-ninja action'
+        uses: actions/checkout@v5
         with:
           ref: ${{ inputs.commit }}
           sparse-checkout: |
-            build-scripts/build-release.py
             .github/actions/setup-ninja/action.yml
-      - name: 'Download dependencies'
-        id: deps
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          python build-scripts/build-release.py \
-            --actions download \
-            --commit ${{ inputs.commit }} \
-            --root "${{ steps.tar.outputs.path }}" \
-            --github \
-            --debug
-      - name: 'Install Linux dependencies'
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y \
-            gnome-desktop-testing libasound2-dev libpulse-dev libaudio-dev libjack-dev libsndio-dev \
-            libusb-1.0-0-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev \
-            libxss-dev libwayland-dev libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev \
-            libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev fcitx-libs-dev
-      - name: 'Extract dependencies, build and install them'
-        id: deps-build
-        run: |
-          tar -C /tmp -v -x -f "${{ steps.deps.outputs.dep-path }}/SDL3-${{ steps.deps.outputs.dep-sdl-version }}.tar.gz"
-          cmake -S /tmp/SDL3-${{ steps.deps.outputs.dep-sdl-version }} -B /tmp/SDL-build -DSDL_UNIX_CONSOLE_BUILD=ON -DCMAKE_INSTALL_PREFIX=/tmp/deps-prefix
-          cmake --build /tmp/SDL-build
-          cmake --install /tmp/SDL-build
-          echo "path=/tmp/deps-prefix" >>$GITHUB_OUTPUT
+      - name: 'Setup sdl2-compat'
+        uses: libsdl-org/setup-sdl@main
+        with:
+          version: 3-latest
+          version-sdl2-compat: 2-latest
+          install-linux-dependencies: true
       - name: Set up ninja
         uses: ./.github/actions/setup-ninja
       - name: 'CMake (configure + build)'
@@ -137,8 +115,7 @@ jobs:
           cmake \
             -GNinja \
             -S ${{ steps.tar.outputs.path }} \
-            -B /tmp/build \
-            -DCMAKE_PREFIX_PATH="${{ steps.deps-build.outputs.path }}"
+            -B /tmp/build
           cmake --build /tmp/build --verbose
           # ctest --test-dir /tmp/build --no-tests=error --output-on-failure
 
@@ -153,7 +130,7 @@ jobs:
 #        with:
 #          python-version: '3.11'
 #      - name: 'Fetch build-release.py'
-#        uses: actions/checkout@v4
+#        uses: actions/checkout@v5
 #        with:
 #          ref: ${{ inputs.commit }}
 #          sparse-checkout: 'build-scripts/build-release.py'
@@ -201,7 +178,7 @@ jobs:
 #        with:
 #          python-version: '3.11'
 #      - name: 'Fetch build-release.py'
-#        uses: actions/checkout@v4
+#        uses: actions/checkout@v5
 #        with:
 #          ref: ${{ inputs.commit }}
 #          sparse-checkout: 'build-scripts/build-release.py'
@@ -343,7 +320,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: 'Fetch build-release.py'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ inputs.commit }}
           sparse-checkout: 'build-scripts/build-release.py'
@@ -384,7 +361,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: 'Fetch .github/actions/setup-ninja/action.yml'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ inputs.commit }}
           sparse-checkout: |
@@ -408,24 +385,6 @@ jobs:
           cd '${{ github.workspace }}/sources'
           unzip "${{ github.workspace }}/${{ needs.src.outputs.src-zip }}"
           echo "path=${{ github.workspace }}/sources/${{ needs.src.outputs.project }}-${{ needs.src.outputs.version }}" >>$env:GITHUB_OUTPUT
-      - name: 'Download dependencies'
-        id: deps
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          python build-scripts/build-release.py `
-            --actions download `
-            --commit ${{ inputs.commit }} `
-            --root "${{ steps.src.outputs.path }}" `
-            --github `
-            --debug
-      - name: 'Extract dependencies'
-        id: deps-extract
-        run: |
-          mkdir '${{ github.workspace }}/deps-vc'
-          cd '${{ github.workspace }}/deps-vc'
-          unzip "${{ steps.deps.outputs.dep-path }}/SDL3-devel-${{ steps.deps.outputs.dep-sdl-version }}-VC.zip"
-          echo "path=${{ github.workspace }}/deps-vc" >>$env:GITHUB_OUTPUT
       - name: 'Download MSVC binaries'
         uses: actions/download-artifact@v4
         with:
@@ -444,7 +403,7 @@ jobs:
           arch: x64_x86
       - name: 'CMake (configure + build + tests) x86'
         run: |
-          cmake -S "${{ steps.src.outputs.path }}/cmake/test"     `
+          cmake -S "${{ steps.src.outputs.path }}/test"           `
               -B build_x86                                        `
               -GNinja                                             `
               -DCMAKE_BUILD_TYPE=Debug                            `
@@ -452,7 +411,7 @@ jobs:
               -DTEST_SHARED=TRUE                                  `
               -DTEST_STATIC=FALSE                                 `
               -DCMAKE_SUPPRESS_REGENERATION=TRUE                  `
-              -DCMAKE_PREFIX_PATH="${{ steps.bin.outputs.path }};${{ steps.deps-extract.outputs.path }}"
+              -DCMAKE_PREFIX_PATH="${{ steps.bin.outputs.path }}"
           Start-Sleep -Seconds 2
           cmake --build build_x86 --config Release --verbose
       - name: 'Configure vcvars x64'
@@ -461,7 +420,7 @@ jobs:
           arch: x64
       - name: 'CMake (configure + build + tests) x64'
         run: |
-          cmake -S "${{ steps.src.outputs.path }}/cmake/test"     `
+          cmake -S "${{ steps.src.outputs.path }}/test"           `
               -B build_x64                                        `
               -GNinja                                             `
               -DCMAKE_BUILD_TYPE=Debug                            `
@@ -469,7 +428,7 @@ jobs:
               -DTEST_SHARED=TRUE                                  `
               -DTEST_STATIC=FALSE                                 `
               -DCMAKE_SUPPRESS_REGENERATION=TRUE                  `
-              -DCMAKE_PREFIX_PATH="${{ steps.bin.outputs.path }};${{ steps.deps-extract.outputs.path }}"
+              -DCMAKE_PREFIX_PATH="${{ steps.bin.outputs.path }}"
           Start-Sleep -Seconds 2
           cmake --build build_x64 --config Release --verbose
 #      - name: 'Configure vcvars arm64'
@@ -502,7 +461,7 @@ jobs:
 #        with:
 #          python-version: '3.11'
 #      - name: 'Fetch build-release.py'
-#        uses: actions/checkout@v4
+#        uses: actions/checkout@v5
 #        with:
 #          ref: ${{ inputs.commit }}
 #          sparse-checkout: 'build-scripts/build-release.py'
@@ -550,7 +509,7 @@ jobs:
 #        with:
 #          python-version: '3.11'
 #      - name: 'Fetch build-release.py'
-#        uses: actions/checkout@v4
+#        uses: actions/checkout@v5
 #        with:
 #          ref: ${{ inputs.commit }}
 #          sparse-checkout: 'build-scripts/build-release.py'
