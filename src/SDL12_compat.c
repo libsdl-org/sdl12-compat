@@ -5071,10 +5071,10 @@ EventFilter20to12(void *data, SDL_Event *event20)
                         case SDLK12_UNKNOWN:
                             FlushPendingKeydownEvent(0);
                             break;
-                        case SDLK_SPACE:
+                        case SDLK12_SPACE:
                             FlushPendingKeydownEvent(' ');
                             break;
-                        case SDLK_DELETE:
+                        case SDLK12_DELETE:
                             FlushPendingKeydownEvent('\x7F');
                             break;
                         default:
@@ -7734,7 +7734,7 @@ DECLSPEC12 SDL12_GrabMode SDLCALL
 SDL_WM_GrabInput(SDL12_GrabMode mode)
 {
     if (mode != SDL12_GRAB_QUERY) {
-        VideoWindowGrabWanted = mode;
+        VideoWindowGrabWanted = (mode == SDL12_GRAB_ON) ? SDL_TRUE : SDL_FALSE;
         UpdateInputGrab();
     }
     return VideoWindowGrabWanted ? SDL12_GRAB_ON : SDL12_GRAB_OFF;
