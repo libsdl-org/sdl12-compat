@@ -45,10 +45,14 @@ real SDL-1.2 available to you. */
 #endif
 #if defined(__MACOSX__)
 #include <OpenGL/gl.h>  /* Header File For The OpenGL Library */
+#ifdef SDL_INCLUDE_GLU_H
 #include <OpenGL/glu.h> /* Header File For The GLU Library */
+#endif
 #else
 #include <GL/gl.h>      /* Header File For The OpenGL Library */
+#ifdef SDL_INCLUDE_GLU_H
 #include <GL/glu.h>     /* Header File For The GLU Library */
+#endif
 #endif
 #ifndef NO_SDL_GLEXT
 #undef __glext_h_
