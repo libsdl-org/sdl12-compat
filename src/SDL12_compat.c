@@ -6500,7 +6500,6 @@ SetVideoModeImpl(int width, int height, int bpp, Uint32 flags12)
              */
             const SDL_bool recreate_window = (
                 ((VideoSurface12->flags & SDL12_OPENGL) != (flags12 & SDL12_OPENGL)) ||
-                ((flags12 & SDL12_OPENGL) != SDL12_OPENGL) ||
                 (!VideoSurface12->format || (VideoSurface12->format->BitsPerPixel != bpp)) ||
                 ((VideoSurface12->flags & SDL12_NOFRAME) != (flags12 & SDL12_NOFRAME))
             ) ? SDL_TRUE : SDL_FALSE;
