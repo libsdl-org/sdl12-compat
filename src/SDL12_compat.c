@@ -6342,6 +6342,18 @@ UnlockVideoRenderer(void)
 
 static void UpdateInputGrab(void);
 
+static SDL_bool ShouldUseOpenGL(void)
+{
+    /* Create an OpenGL window if the default renderer is OpenGL */
+    SDL_RendererInfo info;
+    if (SDL20_GetRenderDriverInfo(0, &info) == 0) {
+        if (SDL20_strncmp(info.name, "opengl", 6) == 0) {
+            return SDL_TRUE;
+        }
+    }
+    return SDL_FALSE;
+}
+
 static SDL12_Surface *
 SetVideoModeImpl(int width, int height, int bpp, Uint32 flags12)
 {
@@ -6558,6 +6570,10 @@ SetVideoModeImpl(int width, int height, int bpp, Uint32 flags12)
         if (flags12 & SDL12_RESIZABLE) { flags20 |= SDL_WINDOW_RESIZABLE; }
         if (flags12 & SDL12_NOFRAME) { flags20 |= SDL_WINDOW_BORDERLESS; }
         if (use_highdpi) { flags20 |= SDL_WINDOW_ALLOW_HIGHDPI; }
+
+        if (!(flags20 & SDL_WINDOW_OPENGL) && ShouldUseOpenGL()) {
+            flags20 |= SDL_WINDOW_OPENGL;
+        }
 
         /* most platforms didn't check these environment variables, but the major
            ones did (x11, windib, quartz), so we'll just offer it everywhere. */

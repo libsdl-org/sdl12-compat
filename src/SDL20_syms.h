@@ -319,6 +319,7 @@ SDL20_SYM(double,fabs,(double a),(a),return)
 SDL20_SYM(double,ceil,(double a),(a),return)
 SDL20_SYM(double,floor,(double a),(a),return)
 
+SDL20_SYM(int,GetRenderDriverInfo,(int a, SDL_RendererInfo *b),(a,b),return)
 SDL20_SYM(SDL_Renderer *,CreateRenderer,(SDL_Window *a, int b, Uint32 c),(a,b,c),return)
 SDL20_SYM(int,GetRendererInfo,(SDL_Renderer *a, SDL_RendererInfo *b),(a,b),return)
 SDL20_SYM(void,RenderGetScale,(SDL_Renderer *a, float *b, float *c),(a,b,c),return)
