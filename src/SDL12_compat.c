@@ -6466,10 +6466,10 @@ SetVideoModeImpl(int width, int height, int bpp, Uint32 flags12)
              *   - window is already SDL_OPENGL.
              *   - window is not a fullscreen window.
              */
+            const Uint32 important_flags = ~(SDL12_PREALLOC | SDL12_ANYFORMAT);
             const SDL_bool recreate_window = (
-                ((VideoSurface12->flags & ~SDL12_ANYFORMAT) != (flags12 & ~SDL12_ANYFORMAT)) ||
+                ((VideoSurface12->flags & important_flags) != (flags12 & important_flags)) ||
                 (!VideoSurface12->format || (VideoSurface12->format->BitsPerPixel != bpp)) ||
-                ((flags12 & SDL12_OPENGL) != SDL12_OPENGL) ||
                 ((flags12 & SDL12_FULLSCREEN) == SDL12_FULLSCREEN)
             ) ? SDL_TRUE : SDL_FALSE;
         #elif defined(__APPLE__)
