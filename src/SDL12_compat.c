@@ -7777,7 +7777,7 @@ UpdateInputGrab(void)
     /* SDL 1.2 always grabbed input if the video mode was fullscreen. */
     if (VideoWindow20) {
         const SDL_bool isfullscreen = (VideoSurface12 && VideoSurface12->surface20 && (VideoSurface12->flags & SDL12_FULLSCREEN)) ? SDL_TRUE : SDL_FALSE;
-        const SDL_bool wantgrab = (VideoWindowGrabWanted || isfullscreen);
+        const SDL_bool wantgrab = (VideoWindowGrabWanted || isfullscreen) ? SDL_TRUE : SDL_FALSE;
         SDL20_SetWindowGrab(VideoWindow20, wantgrab);
         VideoWindowGrabbed = wantgrab;
         UpdateRelativeMouseMode();
