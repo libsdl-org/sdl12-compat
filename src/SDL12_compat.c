@@ -1066,6 +1066,10 @@ static SDL_bool PreserveDestinationAlpha = SDL_TRUE;
 static int DesiredRefreshRate = SDL12_REFRESH_DEFAULT;
 static int CurrentRefreshRate = SDL12_REFRESH_DEFAULT;
 
+static int ProcessingModalLoop;
+static SDL_bool HasPendingResizeEvent;
+static SDL12_Event PendingResizeEvent;
+
 /* This is a KEYDOWN event which is being held for a follow-up TEXTINPUT */
 static SDL12_Event PendingKeydownEvent;
 
@@ -2687,7 +2691,11 @@ Init12Video(void)
     SDL20_memset(EventStates, SDL_ENABLE, sizeof (EventStates)); /* on by default */
 
     EventStates[SDL12_SYSWMEVENT] = SDL_IGNORE;  /* off by default. */
+#if defined(SDL_VIDEO_DRIVER_WINDOWS)
+    SDL20_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
+#else
     SDL20_EventState(SDL_SYSWMEVENT, SDL_IGNORE);
+#endif
 
 #if defined(SDL_VIDEO_DRIVER_WINDOWS)
     SupportSysWM = (SDL20_strcmp(driver, "windows") == 0) ? SDL_TRUE : SDL_FALSE;
@@ -4853,9 +4861,16 @@ EventFilter20to12(void *data, SDL_Event *event20)
                         break;
                     }
 
-                    event12.type = SDL12_VIDEORESIZE;
-                    event12.resize.w = event20->window.data1;
-                    event12.resize.h = event20->window.data2;
+                    if (ProcessingModalLoop) {
+                        PendingResizeEvent.type = SDL12_VIDEORESIZE;
+                        PendingResizeEvent.resize.w = event20->window.data1;
+                        PendingResizeEvent.resize.h = event20->window.data2;
+                        HasPendingResizeEvent = SDL_TRUE;
+                    } else {
+                        event12.type = SDL12_VIDEORESIZE;
+                        event12.resize.w = event20->window.data1;
+                        event12.resize.h = event20->window.data2;
+                    }
                     break;
                 }
 
@@ -4898,6 +4913,25 @@ EventFilter20to12(void *data, SDL_Event *event20)
             break;
 
         case SDL_SYSWMEVENT:
+            #if defined(SDL_VIDEO_DRIVER_WINDOWS)
+                switch (event20->syswm.msg->msg.win.msg) {
+                case WM_ENTERSIZEMOVE:
+                case WM_ENTERMENULOOP:
+                    ++ProcessingModalLoop;
+                    break;
+                case WM_EXITSIZEMOVE:
+                case WM_EXITMENULOOP:
+                    --ProcessingModalLoop;
+                    if (ProcessingModalLoop == 0 && HasPendingResizeEvent) {
+                        PushEventIfNotFiltered(&PendingResizeEvent);
+                        HasPendingResizeEvent = SDL_FALSE;
+                    }
+                    break;
+                default:
+                    break;
+                }
+            #endif
+
             if (!SupportSysWM) {
                 return 1;
             }
