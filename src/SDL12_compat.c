@@ -1454,7 +1454,12 @@ static QuirkEntryType quirks[] = {
 
     /* Loki Unreal Tournament '99 runs at hyperspeed if the framerate is too high. Force it to vsync. You should use the newer OldUnreal binaries with SDL2 instead! */
     {"ut-bin", "SDL12COMPAT_SYNC_TO_VBLANK", "1"},
-    {"ut-bin", "SDL12COMPAT_MAX_FPS", "120"}
+    {"ut-bin", "SDL12COMPAT_MAX_FPS", "120"},
+
+    /* Jamestown (the old Humble Bundle version from 2011) doesn't render in-game with GL scaling enabled. */
+    {"Jamestown-x86", "SDL12COMPAT_OPENGL_SCALING", "0"},
+    {"Jamestown-amd64", "SDL12COMPAT_OPENGL_SCALING", "0"},
+
 #else
     /* TODO: Add any quirks needed for this system. */
 
