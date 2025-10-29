@@ -5,7 +5,7 @@
 !endif
 
 DLLNAME = SDL
-VERSION = 1.2.69
+VERSION = 1.2.70
 
 # change SDL2INC to point to the SDL2 headers
 SDL2INC = include
