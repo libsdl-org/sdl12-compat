@@ -19,6 +19,11 @@ if(NOT TARGET SDL::SDLmain)
     endif()
 endif()
 
+option(SDL12COMPAT_INSTALL_TESTS "Install manual tests into libexecdir" OFF)
+
+set(SDL12COMPAT_TEST_EXECUTABLES)
+set(SDL12COMPAT_TEST_RESOURCE_FILES)
+
 if(NOT (WIN32 OR APPLE OR CYGWIN OR HAIKU OR BEOS))
     find_library(MATH_LIBRARY m)
 endif()
@@ -37,6 +42,7 @@ endif()
 
 macro(test_program _NAME _SRCS)
     add_executable(${_NAME} ${_SRCS})
+    list(APPEND SDL12COMPAT_TEST_EXECUTABLES ${_NAME})
     target_include_directories(${_NAME} PRIVATE "include/SDL")
     target_link_libraries(${_NAME} PRIVATE SDL::SDLmain SDL::SDL)
     # Turn off MSVC's aggressive C runtime warnings for the old test programs.
@@ -95,4 +101,16 @@ endif()
 
 foreach(fname "icon.bmp" "moose.dat" "picture.xbm" "sail.bmp" "sample.bmp" "sample.wav" "utf8.txt")
     file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/${fname}" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
+    list(APPEND SDL12COMPAT_TEST_RESOURCE_FILES "${fname}")
 endforeach(fname)
+
+if(SDL12COMPAT_INSTALL_TESTS)
+    install(
+        TARGETS ${SDL12COMPAT_TEST_EXECUTABLES}
+        DESTINATION ${CMAKE_INSTALL_LIBEXECDIR}/installed-tests/SDL12_compat
+    )
+    install(
+        FILES ${SDL12COMPAT_TEST_RESOURCE_FILES}
+        DESTINATION ${CMAKE_INSTALL_LIBEXECDIR}/installed-tests/SDL12_compat
+    )
+endif()
