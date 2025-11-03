@@ -6629,6 +6629,11 @@ SetVideoModeImpl(int width, int height, int bpp, Uint32 flags12)
         }
 
         VideoWindow20 = SDL20_CreateWindow(WindowTitle, x, y, scaled_width, scaled_height, flags20);
+        if (!VideoWindow20 && (flags20 & SDL_WINDOW_OPENGL) && !(flags12 & SDL12_OPENGL)) {
+            /* OpenGL might not be installed, try again without that flag */
+            flags20 &= ~SDL_WINDOW_OPENGL;
+            VideoWindow20 = SDL20_CreateWindow(WindowTitle, x, y, scaled_width, scaled_height, flags20);
+        }
         if (!VideoWindow20) {
             return EndVidModeCreate();
         }
