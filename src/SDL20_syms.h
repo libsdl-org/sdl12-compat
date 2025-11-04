@@ -273,7 +273,6 @@ SDL20_SYM_PASSTHROUGH(void *,malloc,(size_t a),(a),return)
 SDL20_SYM_PASSTHROUGH(void *,calloc,(size_t a, size_t b),(a,b),return)
 SDL20_SYM_PASSTHROUGH(void *,realloc,(void *a, size_t b),(a,b),return)
 SDL20_SYM_PASSTHROUGH(void,free,(void *a),(a),)
-SDL20_SYM_PASSTHROUGH(char *,getenv,(const char *a),(a),return)
 SDL20_SYM_PASSTHROUGH(void,qsort,(void *a, size_t b, size_t c, int (SDLCALL *d)(const void *, const void *)),(a,b,c,d),)
 SDL20_SYM_PASSTHROUGH(void *,memset,(void *a, int b, size_t c),(a,b,c),return)
 SDL20_SYM_PASSTHROUGH(void *,memcpy,(void *a, const void *b, size_t c),(a,b,c),return)
@@ -336,6 +335,8 @@ SDL20_SYM(int,RenderCopy,(SDL_Renderer *a, SDL_Texture *b, const SDL_Rect *c, co
 SDL20_SYM(void,DestroyTexture,(SDL_Texture *a),(a),)
 SDL20_SYM(void,DestroyRenderer,(SDL_Renderer *a),(a),)
 SDL20_SYM(void,RenderPresent,(SDL_Renderer *a),(a),)
+
+SDL20_SYM(SDL_bool,SetHintWithPriority,(const char *a, const char *b, SDL_HintPriority c),(a,b,c),return)
 
 #ifdef _WIN32
 SDL20_SYM_PASSTHROUGH(int,RegisterApp,(const char *a, Uint32 b, void *c),(a,b,c),return)
