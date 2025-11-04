@@ -1181,22 +1181,20 @@ static SDL_bool SDL12COMPAT_strequal(const char *a, const char *b)
     return SDL_TRUE;
 }
 
-/* log a string using platform-specific code for before SDL2 is fully available. */
-static void SDL12COMPAT_LogAtStartup(const char *str)
+/* SDL3 (and thus sdl2-compat) will build an SDL_Environment, which isn't useful if the SDL-1.2 app is calling getenv()/setenv() directly, so use system APIs instead. */
+/* despite the "unsafe" name (they are NOT thread-safe), these are actually _safe_ to call at startup, since it won't call into SDL2 before everything is properly initialized! */
+static char *SDL12COMPAT_getenv_unsafe(const char *name)
 {
     #ifdef _WIN32
-    OutputDebugStringA(str);
-    #elif defined(__APPLE__)
-    extern void SDL12COMPAT_NSLog(const char *prefix, const char *text);
-    SDL12COMPAT_NSLog(NULL, str);
-    #else
-    fputs(str, stderr);
-    fputs("\n", stderr);
+    static char buf[256];  /* overflows will just report as environment variable being unset. But most of our environment vars don't come through here. */
+    const DWORD rc = GetEnvironmentVariableA(name, buf, (DWORD) sizeof (buf));
+    return ((rc != 0) && (rc < sizeof (buf))) ? buf : NULL;
+    #else  /* we might need other platforms, or a simple `return NULL;` for platforms without an environment table. */
+    return getenv(name);
     #endif
 }
 
-/* this talks right to the OS environment table. Don't use SDL20_setenv at startup. */
-static void SDL12COMPAT_SetEnvAtStartup(const char *name, const char *value)
+static void SDL12COMPAT_setenv_unsafe(const char *name, const char *value)
 {
     #ifdef _WIN32
     SetEnvironmentVariableA(name, value);
@@ -1211,15 +1209,27 @@ static void SDL12COMPAT_SetEnvAtStartup(const char *name, const char *value)
     #endif
 }
 
-/* this talks right to the OS environment table. Don't use SDL20_getenv at startup. */
 static const char *SDL12COMPAT_GetEnvAtStartup(const char *name)
 {
+    return SDL12COMPAT_getenv_unsafe(name);  /* don't talk to SDL2 yet, we aren't set up. Go right to the OS interfaces. */
+}
+
+static void SDL12COMPAT_SetEnvAtStartup(const char *name, const char *value)
+{
+    SDL12COMPAT_setenv_unsafe(name, value);  /* don't talk to SDL2 yet, we aren't set up. Go right to the OS interfaces. */
+}
+
+/* log a string using platform-specific code for before SDL2 is fully available. */
+static void SDL12COMPAT_LogAtStartup(const char *str)
+{
     #ifdef _WIN32
-    static char buf[256];  /* overflows will just report as environment variable being unset. But most of our environment vars don't come through here. */
-    const DWORD rc = GetEnvironmentVariableA(name, buf, (DWORD) sizeof (buf));
-    return ((rc != 0) && (rc < sizeof (buf))) ? buf : NULL;
-    #else  /* we might need other platforms, or a simple `return NULL;` for platforms without an environment table. */
-    return getenv(name);
+    OutputDebugStringA(str);
+    #elif defined(__APPLE__)
+    extern void SDL12COMPAT_NSLog(const char *prefix, const char *text);
+    SDL12COMPAT_NSLog(NULL, str);
+    #else
+    fputs(str, stderr);
+    fputs("\n", stderr);
     #endif
 }
 
@@ -1310,7 +1320,7 @@ static char loaderror[256];
                     homedir = pwent->pw_dir;
                 }
                 if (!homedir) {
-                    homedir = getenv("HOME");
+                    homedir = SDL12COMPAT_getenv_unsafe("HOME");
                 }
                 if (homedir) {
                     char framework[512];
@@ -1531,7 +1541,7 @@ SDL12Compat_GetExeName(void)
 static const char *
 SDL12Compat_GetHint(const char *name)
 {
-    return SDL20_getenv(name);
+    return SDL12COMPAT_getenv_unsafe(name);
 }
 
 static SDL_bool
@@ -2395,9 +2405,9 @@ static int
 GetVideoDisplay(void)
 {
     const char *variable;
-    variable = SDL20_getenv("SDL_VIDEO_FULLSCREEN_DISPLAY");
+    variable = SDL12COMPAT_getenv_unsafe("SDL_VIDEO_FULLSCREEN_DISPLAY");
     if (!variable) {
-        variable = SDL20_getenv("SDL_VIDEO_FULLSCREEN_HEAD");
+        variable = SDL12COMPAT_getenv_unsafe("SDL_VIDEO_FULLSCREEN_HEAD");
     }
     if (variable) {
         int preferred_display = SDL20_atoi(variable);
@@ -2780,23 +2790,16 @@ static void QuitCDSubsystem(void);
 DECLSPEC12 int SDLCALL
 SDL_InitSubSystem(Uint32 sdl12flags)
 {
+    const char *videodriver = SDL12COMPAT_getenv_unsafe("SDL_VIDEODRIVER");
+    const char *audiodriver = SDL12COMPAT_getenv_unsafe("SDL_AUDIODRIVER");
     Uint32 sdl20flags = 0;
     int rc;
 
 #ifdef __WINDOWS__
     /* DOSBox (and probably other things), try to force the "windib" video
        backend, but it doesn't exist in SDL2. Force to "windows" instead. */
-    const char *origvidenv = NULL;
-    const char *env = SDL20_getenv("SDL_VIDEODRIVER");
-    if (env) {
-        if (SDL20_strcmp(env, "windib") == 0) {
-            origvidenv = "windib";
-            SDL20_setenv("SDL_VIDEODRIVER", "windows", 1);
-        } else
-        if (SDL20_strcmp(env, "directx") == 0) {
-            origvidenv = "directx";
-            SDL20_setenv("SDL_VIDEODRIVER", "windows", 1);
-        }
+    if (videodriver && (SDL20_strcmp(videodriver, "windib") == 0) || (SDL20_strcmp(videodriver, "directx") == 0)) {
+        videodriver = "windows";
     }
 #endif
 
@@ -2835,6 +2838,17 @@ SDL_InitSubSystem(Uint32 sdl12flags)
         InitializeCDSubsystem();
     }
 
+    /* In SDL3 (via sdl2-compat), these will ignore changes to environment variables after startup, but SDL-1.2 apps might
+       change envvars on the fly, so we need to manually force these into SDL2 hints. */
+
+    if (videodriver) {
+        SDL20_SetHintWithPriority(SDL_HINT_VIDEODRIVER, videodriver, SDL_HINT_OVERRIDE);
+    }
+
+    if (audiodriver) {
+        SDL20_SetHintWithPriority(SDL_HINT_AUDIODRIVER, audiodriver, SDL_HINT_OVERRIDE);
+    }
+
     rc = SDL20_Init(sdl20flags);
     if ((rc == 0) && (sdl20flags & SDL_INIT_VIDEO)) {
         if (Init12Video() < 0) {
@@ -2844,12 +2858,6 @@ SDL_InitSubSystem(Uint32 sdl12flags)
         /* SDL_INIT_EVENTTHREAD takes effect when SDL_INIT_VIDEO is also set */
         EventThreadEnabled = (sdl12flags & SDL12_INIT_EVENTTHREAD) ? SDL_TRUE : SDL_FALSE;
     }
-
-#ifdef __WINDOWS__
-    if (origvidenv) {  /* set this back to minimize surprise state changes. */
-        SDL20_setenv("SDL_VIDEODRIVER", origvidenv, 1);
-    }
-#endif
 
     if ((rc == 0) && (sdl20flags & SDL_INIT_AUDIO)) {
         Init12Audio();
@@ -3086,7 +3094,7 @@ DECLSPEC12 const char * SDLCALL
 SDL_VideoDriverName(char *namebuf, int maxlen)
 {
 #ifdef __WINDOWS__
-    const char *val = SDL20_getenv("SDL_VIDEODRIVER");
+    const char *val = SDL12COMPAT_getenv_unsafe("SDL_VIDEODRIVER");
     if (val) {
         /* give them back what they requested: */
         if (SDL20_strcmp(val,  "windib") == 0  ||
@@ -5949,8 +5957,8 @@ static void
 GetEnvironmentWindowPosition(int *x, int *y)
 {
     int display = VideoDisplayIndex;
-    const char *window = SDL20_getenv("SDL_VIDEO_WINDOW_POS");
-    const char *center = SDL20_getenv("SDL_VIDEO_CENTERED");
+    const char *window = SDL12COMPAT_getenv_unsafe("SDL_VIDEO_WINDOW_POS");
+    const char *center = SDL12COMPAT_getenv_unsafe("SDL_VIDEO_CENTERED");
     if (window) {
         if (SDL20_strcmp(window, "center") == 0) {
             center = window;
@@ -6576,7 +6584,7 @@ SetVideoModeImpl(int width, int height, int bpp, Uint32 flags12)
         fullscreen_flags20 |= SDL_WINDOW_FULLSCREEN_DESKTOP;
     }
 
-    fromwin_env = SDL20_getenv("SDL_WINDOWID");
+    fromwin_env = SDL12COMPAT_getenv_unsafe("SDL_WINDOWID");
 
     if (fromwin_env) {
         window_size_scaling = 1.0f;  /* don't scale for external windows */
@@ -8599,6 +8607,11 @@ SDL_Delay(Uint32 ticks)
     SDL20_Delay(ticks);
 }
 
+DECLSPEC12 char * SDLCALL
+SDL_getenv(const char *name)
+{
+    return SDL12COMPAT_getenv_unsafe(name);
+}
 
 DECLSPEC12 int SDLCALL
 SDL_putenv(const char *_var)
@@ -8616,7 +8629,7 @@ SDL_putenv(const char *_var)
     }
 
     *ptr = '\0';  /* split the string into name and value. */
-    SDL20_setenv(var, ptr + 1, 1);
+    SDL12COMPAT_setenv_unsafe(var, ptr + 1);
     SDL20_free(var);
     return 0;
 }
@@ -9999,7 +10012,7 @@ SDL_OpenAudio(SDL_AudioSpec *want, SDL_AudioSpec *obtained)
     }
 
     if (!want->format) {
-        const char *env = SDL20_getenv("SDL_AUDIO_FORMAT");  /* SDL 1.2 checks this. */
+        const char *env = SDL12COMPAT_getenv_unsafe("SDL_AUDIO_FORMAT");  /* SDL 1.2 checks this. */
         if (env != NULL) {
             if      (SDL20_strcmp(env, "U8") == 0) { want->format = AUDIO_U8; }
             else if (SDL20_strcmp(env, "S8") == 0) { want->format = AUDIO_S8; }
@@ -10018,7 +10031,7 @@ SDL_OpenAudio(SDL_AudioSpec *want, SDL_AudioSpec *obtained)
     }
 
     if (!want->freq) {
-        const char *env = SDL20_getenv("SDL_AUDIO_FREQUENCY");  /* SDL 1.2 checks this. */
+        const char *env = SDL12COMPAT_getenv_unsafe("SDL_AUDIO_FREQUENCY");  /* SDL 1.2 checks this. */
         if (env != NULL) {
             want->freq = SDL20_atoi(env);
         }
@@ -10029,7 +10042,7 @@ SDL_OpenAudio(SDL_AudioSpec *want, SDL_AudioSpec *obtained)
     }
 
     if (!want->channels) {
-        const char *env = SDL20_getenv("SDL_AUDIO_CHANNELS");  /* SDL 1.2 checks this. */
+        const char *env = SDL12COMPAT_getenv_unsafe("SDL_AUDIO_CHANNELS");  /* SDL 1.2 checks this. */
         if (env != NULL) {
             want->channels = SDL20_atoi(env);
         }
@@ -10039,7 +10052,7 @@ SDL_OpenAudio(SDL_AudioSpec *want, SDL_AudioSpec *obtained)
     }
 
     if (!want->samples) {
-        const char *env = SDL20_getenv("SDL_AUDIO_SAMPLES");  /* SDL 1.2 checks this. */
+        const char *env = SDL12COMPAT_getenv_unsafe("SDL_AUDIO_SAMPLES");  /* SDL 1.2 checks this. */
         if (env != NULL) {
             want->samples = SDL20_atoi(env);
         }
