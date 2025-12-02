@@ -110,6 +110,10 @@ jobs:
           install-linux-dependencies: true
       - name: Set up ninja
         uses: ./.github/actions/setup-ninja
+      - name: Install GLU development headers
+        run: |
+          sudo apt update -q
+          sudo apt install -y libgl1-mesa-dev libglu1-mesa-dev
       - name: 'CMake (configure + build)'
         run: |
           cmake \
