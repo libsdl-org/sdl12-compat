@@ -113,7 +113,7 @@ jobs:
       - name: Install GLU development headers
         run: |
           sudo apt update -q
-          sudo apt install -y libgl1-mesa-dev libglu1-mesa-dev
+          sudo apt install -y libglu1-mesa-dev
       - name: 'CMake (configure + build)'
         run: |
           cmake \
