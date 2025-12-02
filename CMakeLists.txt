@@ -3,7 +3,7 @@
 #        cmake -DSDL2_INCLUDE_DIR=/opt/SDL2/include/SDL2 [other stuff]
 
 cmake_minimum_required(VERSION 3.0.0...4.1)
-project(sdl12_compat VERSION 1.2.72 LANGUAGES C)
+project(sdl12_compat VERSION 1.2.73 LANGUAGES C)
 
 option(SDL12TESTS "Enable to build SDL-1.2 test programs" ON)
 option(SDL12DEVEL "Enable installing SDL-1.2 development headers" ON)
@@ -33,7 +33,7 @@ if(APPLE)
   # Xcode project file uses 1.0.0, but it's more compatible to use the
   # higher version.
   set(DYLIB_COMPAT_VERSION 12.0.0 CACHE STRING "library compatibility version")
-  set(DYLIB_CURRENT_VERSION 12.72.0 CACHE STRING "library current version")
+  set(DYLIB_CURRENT_VERSION 12.73.0 CACHE STRING "library current version")
   include_directories("/opt/X11/include")  # hack.
   if(CMAKE_VERSION VERSION_LESS 3.9)
   else()
