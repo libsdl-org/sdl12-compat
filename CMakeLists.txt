@@ -61,6 +61,10 @@ if(NOT SDL2_INCLUDE_DIRS)
 endif()
 target_include_directories(SDL PRIVATE ${SDL2_INCLUDE_DIRS})
 
+if(TARGET SDL2::SDL2)
+  get_target_property(sdl2_definitions SDL2::SDL2 INTERFACE_COMPILE_DEFINITIONS)
+endif()
+
 set(EXTRA_CFLAGS )
 if (CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
   set(EXTRA_CFLAGS "${EXTRA_CFLAGS} -Wall")
@@ -145,6 +149,8 @@ return 0; }" IS_X86)
     endforeach(flag_var)
 endif()
 
+target_compile_definitions(SDL PUBLIC "${sdl2_definitions}")
+
 # SDLmain library...
 if(APPLE)
     add_library(SDLmain STATIC src/SDLmain/macosx/SDLMain.m)
@@ -206,6 +212,9 @@ if(SDL12DEVEL)
       endif()
     endif()
 
+    string(REPLACE ";" " -D" sdl2_definition_cflags ";${sdl2_definitions}")
+    set(SDL_CFLAGS "${SDL_CFLAGS} ${sdl2_definition_cflags}")
+
     # !!! FIXME: do we _want_ static builds?
     if(STATICDEVEL)
       set(ENABLE_STATIC_TRUE "")
@@ -251,6 +260,7 @@ if(STATICDEVEL AND SDL12DEVEL)
   add_library(SDL::SDL-static ALIAS SDL-static)
   target_include_directories(SDL-static PRIVATE ${SDL2_INCLUDE_DIRS})
   set_target_properties(SDL-static PROPERTIES COMPILE_DEFINITIONS "_REENTRANT")
+  target_compile_definitions(SDL-static PUBLIC "${sdl2_definitions}")
   target_link_libraries(SDL-static PRIVATE ${CMAKE_DL_LIBS})
   set_target_properties(SDL-static PROPERTIES
           VERSION "${PROJECT_VERSION}"
