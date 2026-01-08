@@ -325,6 +325,7 @@ SDL20_SYM(void,RenderGetScale,(SDL_Renderer *a, float *b, float *c),(a,b,c),retu
 SDL20_SYM(void,RenderGetViewport,(SDL_Renderer *a, SDL_Rect *b),(a,b),return)
 SDL20_SYM(SDL_Texture *,CreateTexture,(SDL_Renderer *a, Uint32 b, int c, int d, int e),(a,b,c,d,e),return)
 SDL20_SYM(int,LockTexture,(SDL_Texture *a, const SDL_Rect *b, void **c, int *d),(a,b,c,d),return)
+SDL20_SYM(int,LockTextureToSurface,(SDL_Texture *a, const SDL_Rect *b, SDL_Surface **c),(a,b,c),return)
 SDL20_SYM(void,UnlockTexture,(SDL_Texture *a),(a),)
 SDL20_SYM(int,UpdateTexture,(SDL_Texture *a, const SDL_Rect *b, const void *c, int d),(a,b,c,d),return)
 SDL20_SYM(int,UpdateYUVTexture,(SDL_Texture *a, const SDL_Rect *b, const Uint8 *c, int d, const Uint8 *e, int f, const Uint8 *g, int h),(a,b,c,d,e,f,g,h),return)

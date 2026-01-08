@@ -6515,8 +6515,8 @@ SetVideoModeImpl(int width, int height, int bpp, Uint32 flags12)
 
     if (VideoSurface12->surface20 && ((VideoSurface12->flags & SDL12_OPENGL) != (flags12 & SDL12_OPENGL))) {
         EndVidModeCreate();  /* rebuild the window if moving to/from a GL context */
-    } else if (VideoSurface12->surface20 && (VideoSurface12->surface20->format->format != appfmt)) {
-        EndVidModeCreate();  /* rebuild the window if changing pixel format */
+    } else if ((flags12 & SDL12_OPENGL) && VideoSurface12->surface20 && (VideoSurface12->surface20->format->format != appfmt)) {
+        EndVidModeCreate();  /* rebuild the window if changing pixel format on an OpenGL surface */
     } else if (DesiredRefreshRate != CurrentRefreshRate) {
         EndVidModeCreate();  /* rebuild the window if changing refresh rate */
     } else {
@@ -6525,7 +6525,7 @@ SetVideoModeImpl(int width, int height, int bpp, Uint32 flags12)
             /* The windx5 driver _always_ destroyed the window, unconditionally, but the default (windib) did not, so match windib.
              *  windib: keep if:
              *   - window already exists
-             *   - BitsPerPixel hasn't changed
+             *   - BitsPerPixel hasn't changed (in OpenGL mode; for software we don't care about the format change).
              *   - none of the window flags (except SDL_ANYFORMAT) have changed
              *   - window is already SDL_OPENGL.
              *   - window is not a fullscreen window.
@@ -6533,7 +6533,7 @@ SetVideoModeImpl(int width, int height, int bpp, Uint32 flags12)
             const Uint32 important_flags = ~(SDL12_PREALLOC | SDL12_ANYFORMAT);
             const SDL_bool recreate_window = (
                 ((VideoSurface12->flags & important_flags) != (flags12 & important_flags)) ||
-                (!VideoSurface12->format || (VideoSurface12->format->BitsPerPixel != bpp)) ||
+                ((flags12 & SDL12_OPENGL) && (!VideoSurface12->format || (VideoSurface12->format->BitsPerPixel != bpp))) ||
                 ((flags12 & SDL12_FULLSCREEN) == SDL12_FULLSCREEN)
             ) ? SDL_TRUE : SDL_FALSE;
         #elif defined(__APPLE__)
@@ -6547,12 +6547,12 @@ SetVideoModeImpl(int width, int height, int bpp, Uint32 flags12)
              *   - window already exists
              *   - window is already SDL_OPENGL.
              *   - new flags also want SDL_OPENGL.
-             *   - BitsPerPixel hasn't changed
+             *   - BitsPerPixel hasn't changed (in OpenGL mode; for software we don't care about the format change).
              *   - SDL_NOFRAME hasn't changed
              */
             const SDL_bool recreate_window = (
                 ((VideoSurface12->flags & SDL12_OPENGL) != (flags12 & SDL12_OPENGL)) ||
-                (!VideoSurface12->format || (VideoSurface12->format->BitsPerPixel != bpp)) ||
+                ((flags12 & SDL12_OPENGL) && (!VideoSurface12->format || (VideoSurface12->format->BitsPerPixel != bpp))) ||
                 ((VideoSurface12->flags & SDL12_NOFRAME) != (flags12 & SDL12_NOFRAME))
             ) ? SDL_TRUE : SDL_FALSE;
         #else
@@ -6804,20 +6804,28 @@ SetVideoModeImpl(int width, int height, int bpp, Uint32 flags12)
             return EndVidModeCreate();
         }
 
-        if (VideoTexture20) {
-            SDL20_DestroyTexture(VideoTexture20);
+        if (!VideoTexture20) {
+            SDL20_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, WantScaleMethodNearest ? "0" : "1");
+            VideoTexture20 = SDL20_CreateTexture(VideoRenderer20, rinfo.texture_formats[0], SDL_TEXTUREACCESS_STREAMING, width, height);
+            SDL20_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, old_scale_quality);
+            if (!VideoTexture20) {
+                return EndVidModeCreate();
+            }
         }
 
-        if (VideoConvertSurface20) {
+        /* clear the texture for (re)use */
+        {
+            SDL_Surface *surface = NULL;
+            if (SDL20_LockTextureToSurface(VideoTexture20, NULL, &surface) == 0) {
+                SDL20_FillRect(surface, NULL, SDL20_MapRGB(surface->format, 0, 0, 0));
+                SDL20_UnlockTexture(VideoTexture20);
+            }
+        }
+
+        /* don't need conversion, or need to change the conversion surface's format? Nuke the existing surface (and maybe rebuild it later). */
+        if (VideoConvertSurface20 && ((rinfo.texture_formats[0] == appfmt) || (rinfo.texture_formats[0] != VideoConvertSurface20->format->format))) {
             SDL20_FreeSurface(VideoConvertSurface20);
             VideoConvertSurface20 = NULL;
-        }
-
-        SDL20_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, WantScaleMethodNearest ? "0" : "1");
-        VideoTexture20 = SDL20_CreateTexture(VideoRenderer20, rinfo.texture_formats[0], SDL_TEXTUREACCESS_STREAMING, width, height);
-        SDL20_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, old_scale_quality);
-        if (!VideoTexture20) {
-            return EndVidModeCreate();
         }
 
         if (rinfo.texture_formats[0] != appfmt) {
