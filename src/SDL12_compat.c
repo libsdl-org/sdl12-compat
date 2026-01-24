@@ -1168,11 +1168,12 @@ static int SDL12COMPAT_strlen(const char *str)
 /* you can use SDL20_strcmp once we're past startup. */
 static SDL_bool SDL12COMPAT_strequal(const char *a, const char *b)
 {
-    while (SDL_TRUE) {
+    for ( ;; ) {
         const char cha = *a;
         if (cha != *b) {
             return SDL_FALSE;
-        } else if (!cha) {
+        }
+        if (!cha) {
             break;
         }
         a++;
