@@ -3026,8 +3026,9 @@ SDL_QuitSubSystem(Uint32 sdl12flags)
 DECLSPEC12 void SDLCALL
 SDL_Quit(void)
 {
+    SDL_bool noquitvideo = SDL12Compat_GetHintBoolean("SDL12COMPAT_NO_QUIT_VIDEO", SDL_FALSE);
     SDL_QuitSubSystem(SDL_WasInit(0) | SDL12_INIT_CDROM);
-    SDL_assert((InitializedSubsystems20 == 0) || (SDL12Compat_GetHintBoolean("SDL12COMPAT_NO_QUIT_VIDEO", SDL_FALSE) && (InitializedSubsystems20 == SDL_INIT_VIDEO)));
+    SDL_assert((InitializedSubsystems20 == 0) || (noquitvideo && (InitializedSubsystems20 == SDL_INIT_VIDEO)));
 }
 
 DECLSPEC12 void SDLCALL
