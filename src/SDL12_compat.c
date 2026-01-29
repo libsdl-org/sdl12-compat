@@ -2799,7 +2799,9 @@ SDL_InitSubSystem(Uint32 sdl12flags)
 #ifdef __WINDOWS__
     /* DOSBox (and probably other things), try to force the "windib" video
        backend, but it doesn't exist in SDL2. Force to "windows" instead. */
-    if (videodriver && (SDL20_strcmp(videodriver, "windib") == 0) || (SDL20_strcmp(videodriver, "directx") == 0)) {
+    if (videodriver &&
+        (SDL20_strcmp(videodriver, "windib") == 0 ||
+         SDL20_strcmp(videodriver, "directx") == 0)) {
         videodriver = "windows";
     }
 #endif
