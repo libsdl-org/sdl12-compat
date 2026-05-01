@@ -7039,14 +7039,15 @@ SDL_UpperBlit(SDL12_Surface *src12, SDL12_Rect *srcrect12, SDL12_Surface *dst12,
     SDL_Rect srcrect20, dstrect20;
     int retval;
 
-    PrepBlitDestRect(&dstrect20, dst12, dstrect12);
-
     if ((src12 == NULL) || (dst12 == NULL)) {
         return SDL20_SetError("SDL_UpperBlit: passed a NULL surface");
     }
     if ((src12->pixels == NULL) || (dst12->pixels == NULL)) {
         return SDL20_SetError("SDL_UpperBlit: passed a surface with NULL pixels");
     }
+
+    PrepBlitDestRect(&dstrect20, dst12, dstrect12);
+
     if (SaveDestAlpha(src12, dst12, &dstrect20, &dstalpha) < 0) {
         return -1;
     }
