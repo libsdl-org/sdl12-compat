@@ -147,7 +147,6 @@ stage, though. Send patches if your platform lacks something. */
 #define HAVE_RINDEX 1
 #define HAVE_ITOA 1
 #define HAVE__LTOA 1
-#define HAVE__UITOA 1
 #define HAVE__ULTOA 1
 #define HAVE__I64TOA 1
 #define HAVE__UI64TOA 1
