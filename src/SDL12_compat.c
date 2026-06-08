@@ -1478,6 +1478,10 @@ static QuirkEntryType quirks[] = {
     /* Sacred Gold manually frees SDL surface pixels */
     {"sacred", "SDL_SURFACE_MALLOC", "1"},
 
+#elif defined(_WIN32)
+    // Penumbra: Overture doesn't like GL scaling.
+    {"Penumbra.exe", "SDL12COMPAT_OPENGL_SCALING", "0"},
+
 #else
     /* TODO: Add any quirks needed for this system. */
 
