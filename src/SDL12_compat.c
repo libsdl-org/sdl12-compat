@@ -1304,7 +1304,7 @@ static char loaderror[256];
             "@executable_path/" SDL20_LIBNAME2, /* MyApp.app/Contents/MacOS/libSDL2-2.0.dylib */
             "@executable_path/../Frameworks/" SDL20_FRAMEWORK, /* MyApp.app/Contents/Frameworks/SDL2.framework */
             NULL,  /* /Users/username/Library/Frameworks/SDL2.framework */
-            "/Library/Frameworks" SDL20_FRAMEWORK, /* /Library/Frameworks/SDL2.framework */
+            "/Library/Frameworks/" SDL20_FRAMEWORK, /* /Library/Frameworks/SDL2.framework */
             SDL20_LIBNAME, /* oh well, anywhere the system can see the .dylib (/usr/local/lib or whatever) */
             SDL20_LIBNAME2
         };
