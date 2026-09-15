@@ -1482,6 +1482,10 @@ static QuirkEntryType quirks[] = {
     /* Creatures Internet Edition calls SDL_GetWMInfo() and exit if it fails */
     {"lc2e", "SDL_VIDEODRIVER", "x11"},
 
+    /* Majesty: The Fantasy Kingdom Sim */
+    {"majesty", "SDL_VIDEODRIVER", "x11"},
+    {"majx", "SDL_VIDEODRIVER", "x11"},
+
 #elif defined(_WIN32)
     // Penumbra: Overture doesn't like GL scaling.
     {"Penumbra.exe", "SDL12COMPAT_OPENGL_SCALING", "0"},
