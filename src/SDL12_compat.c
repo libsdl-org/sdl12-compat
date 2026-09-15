@@ -8212,7 +8212,7 @@ SDL_DisplayYUVOverlay(SDL12_Overlay *overlay12, SDL12_Rect *dstrect12)
     for (overlay = QueuedDisplayOverlays.next; overlay != NULL; overlay = overlay->next) {
         if (overlay->overlay12 == overlay12) {   /* trying to draw the same overlay twice in one frame? Dump the current surface and overlays to the screen now. */
             /* Force an update of the screen. */
-            if (ThisIsSetVideoModeThread) {
+            if (ThisIsSetVideoModeThread || AllowThreadedDraws) {
                 if (VideoSurfaceUpdatedInBackgroundThread) {
                     SDL_Flip(VideoSurface12);  /* this will update the texture and present. */
                 } else if (VideoSurfacePresentTicks) {
