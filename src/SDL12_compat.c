@@ -7273,6 +7273,12 @@ PresentScreen(void)
         return;
     }
 
+    /* We're going to present this frame.
+     *
+     * Clear this before SDL_PumpEvents(), otherwise PumpEvents can recursively call PresentScreen().
+     */
+    VideoSurfacePresentTicks = 0;
+
     /* We don't actually implement an event thread in sdl12-compat, but some
      * games will only call SDL_PeepEvents(), which doesn't otherwise pump
      * events, and get stuck when they've consumed all the events.
@@ -7307,7 +7313,6 @@ PresentScreen(void)
     SDL20_RenderPresent(renderer);
     VideoSurfaceUpdatedInBackgroundThread = SDL_FALSE;
     VideoSurfaceLastPresentTicks = SDL20_GetTicks();
-    VideoSurfacePresentTicks = 0;
 
     UnlockVideoRenderer();
 }
