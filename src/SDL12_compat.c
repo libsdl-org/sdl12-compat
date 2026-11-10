@@ -46,9 +46,9 @@
 #include <windows.h>
 #else
 #include <stdio.h> /* fprintf(), etc. */
-#include <stdlib.h>    /* for abort() */
 #include <string.h>
 #endif
+#include <stdlib.h>    /* for abort() */
 
 /* mingw headers may define these ... */
 #undef strtod
