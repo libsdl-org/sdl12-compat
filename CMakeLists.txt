@@ -179,6 +179,48 @@ install(TARGETS SDL SDLmain
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
+if(STATICDEVEL AND SDL12DEVEL)
+  add_library(SDL-static STATIC ${SDL12COMPAT_SRCS})
+  add_library(SDL::SDL-static ALIAS SDL-static)
+  target_include_directories(SDL-static PRIVATE ${SDL2_INCLUDE_DIRS})
+  set_target_properties(SDL-static PROPERTIES COMPILE_DEFINITIONS "_REENTRANT;SDL12COMPAT_STATIC")
+  target_link_libraries(SDL-static PRIVATE ${CMAKE_DL_LIBS})
+  if(MINGW)
+    find_package(SDL2 REQUIRED CONFIG COMPONENTS SDL2-static)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(SDL2_DEPS REQUIRED sdl2)
+    set(SDL2_PRIVATE_FLAGS ${SDL2_DEPS_STATIC_LDFLAGS})
+    list(REMOVE_ITEM SDL2_PRIVATE_FLAGS -lmingw32 -lSDL2main -lSDL2)
+    string(JOIN " " SDL2_PRIVATE_FLAGS ${SDL2_PRIVATE_FLAGS})
+    target_compile_definitions(SDL-static PRIVATE SDL12COMPAT_STATIC_SDL2)
+    get_target_property(SDL2_STATIC_DEPS SDL2::SDL2-static INTERFACE_LINK_LIBRARIES)
+    target_link_libraries(SDL-static PRIVATE ${SDL2_STATIC_DEPS})
+    find_library(SDL2_ARCHIVE NAMES libSDL2.a HINTS ${SDL2_DEPS_STATIC_LIBRARY_DIRS} REQUIRED)
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${SDL2_ARCHIVE}")
+    execute_process(COMMAND "${CMAKE_AR}" t "${SDL2_ARCHIVE}"
+      OUTPUT_VARIABLE SDL2_OBJECTS OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY)
+    string(REPLACE "\n" ";" SDL2_OBJECTS "${SDL2_OBJECTS}")
+    set(SDL2_MEMBERS ${SDL2_OBJECTS})
+    set(SDL2_OBJECT_DIR "${CMAKE_CURRENT_BINARY_DIR}/SDL2-sdl12compat")
+    list(TRANSFORM SDL2_OBJECTS PREPEND "${SDL2_OBJECT_DIR}/SDL2-")
+    configure_file(cmake/SDL12CompatStaticSDL2.cmake.in SDL12CompatStaticSDL2.cmake @ONLY)
+    add_custom_command(OUTPUT ${SDL2_OBJECTS}
+      COMMAND "${CMAKE_COMMAND}" "-DINPUT=${SDL2_ARCHIVE}"
+        -P "${CMAKE_CURRENT_BINARY_DIR}/SDL12CompatStaticSDL2.cmake"
+      DEPENDS "${SDL2_ARCHIVE}" "${CMAKE_CURRENT_BINARY_DIR}/SDL12CompatStaticSDL2.cmake"
+      VERBATIM)
+    set_source_files_properties(${SDL2_OBJECTS} PROPERTIES EXTERNAL_OBJECT TRUE)
+    target_sources(SDL-static PRIVATE ${SDL2_OBJECTS})
+  endif()
+  set_target_properties(SDL-static PROPERTIES
+          VERSION "${PROJECT_VERSION}"
+        OUTPUT_NAME "SDL")
+
+  install(TARGETS SDL-static
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  )
+endif()
+
 if(SDL12DEVEL)
   install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
@@ -187,7 +229,7 @@ if(SDL12DEVEL)
       set(SDL_CFLAGS "")
       set(SDL_RLD_FLAGS "")
       set(SDL_LIBS "-lmingw32 -lSDLmain -lSDL -mwindows")
-      set(SDL_STATIC_LIBS "")
+      set(SDL_STATIC_LIBS "${SDL2_PRIVATE_FLAGS}")
     elseif(APPLE)
       set(SDL_CFLAGS "-D_THREAD_SAFE")
       set(SDL_LIBS "-lSDLmain -lSDL -Wl,-framework,Cocoa")
@@ -246,17 +288,3 @@ if(SDL12DEVEL)
   install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/sdl.m4" DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/aclocal")
 endif()
 
-if(STATICDEVEL AND SDL12DEVEL)
-  add_library(SDL-static STATIC ${SDL12COMPAT_SRCS})
-  add_library(SDL::SDL-static ALIAS SDL-static)
-  target_include_directories(SDL-static PRIVATE ${SDL2_INCLUDE_DIRS})
-  set_target_properties(SDL-static PROPERTIES COMPILE_DEFINITIONS "_REENTRANT;SDL12COMPAT_STATIC")
-  target_link_libraries(SDL-static PRIVATE ${CMAKE_DL_LIBS})
-  set_target_properties(SDL-static PROPERTIES
-          VERSION "${PROJECT_VERSION}"
-        OUTPUT_NAME "SDL")
-
-  install(TARGETS SDL-static
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  )
-endif()

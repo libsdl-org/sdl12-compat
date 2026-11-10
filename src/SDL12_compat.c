@@ -100,7 +100,10 @@ extern "C" {
 /** Enable this to have warnings about wrong prototypes in SDL20_syms.h.
  *  It won't compile but it helps to make sure it's sync'ed with SDL2 headers.
  */
-#if 0
+#if defined(SDL12COMPAT_STATIC_SDL2)
+#define SDL20_SYM(rc,fn,params,args,ret) \
+    extern rc SDLCALL SDL20_##fn params;
+#elif 0
 #define SDL20_SYM(rc,fn,params,args,ret) \
     typedef rc (SDLCALL *SDL20_##fn##_t) params; \
     static SDL20_##fn##_t SDL20_##fn = IGNORE_THIS_VERSION_OF_SDL_##fn;
@@ -1246,7 +1249,15 @@ static SDL_bool SDL12COMPAT_CheckDebugLogging(void)
 
 /* Obviously we can't use SDL_LoadObject() to load SDL2.  :)  */
 static char loaderror[256];
-#if defined(_WIN32)
+#if defined(SDL12COMPAT_STATIC_SDL2)
+    #if defined(_WIN32) || defined(__OS2__)
+        #define DIRSEP "\\"
+    #endif
+    #define SDL20_REQUIRED_VER SDL_VERSIONNUM(2,0,12)
+    static SDL_bool Loaded_SDL20 = SDL_FALSE;
+    #define LoadSDL20Library() (Loaded_SDL20 = SDL_TRUE)
+    #define CloseSDL20Library() (Loaded_SDL20 = SDL_FALSE)
+#elif defined(_WIN32)
     #define DIRSEP "\\"
     #define SDL20_LIBNAME "SDL2.dll"
     /* require SDL2 >= 2.0.12 for SDL_CreateThread binary compatibility */
@@ -1355,6 +1366,7 @@ static char loaderror[256];
 #define DIRSEP "/"
 #endif
 
+#if !defined(SDL12COMPAT_STATIC_SDL2)
 static void *
 LoadSDL20Symbol(const char *fn, int *okay)
 {
@@ -1369,12 +1381,15 @@ LoadSDL20Symbol(const char *fn, int *okay)
     }
     return retval;
 }
+#endif
 
 static void
 UnloadSDL20(void)
 {
+    #if !defined(SDL12COMPAT_STATIC_SDL2)
     #define SDL20_SYM(rc,fn,params,args,ret) SDL20_##fn = NULL;
     #include "SDL20_syms.h"
+    #endif
     CloseSDL20Library();
 }
 
@@ -1725,8 +1740,10 @@ LoadSDL20(void)
         if (!okay) {
             SDL12COMPAT_stpcpy(loaderror, "sdl12-compat: Failed loading SDL2 library.");
         } else {
+#if !defined(SDL12COMPAT_STATIC_SDL2)
             #define SDL20_SYM(rc,fn,params,args,ret) SDL20_##fn = (SDL20_##fn##_t) LoadSDL20Symbol("SDL_" #fn, &okay);
             #include "SDL20_syms.h"
+#endif
             if (okay) {
                 char sdl2verstr[16];
                 char sdl2reqverstr[16];
@@ -3085,10 +3102,12 @@ SDL_SetError(const char *fmt, ...)
 DECLSPEC12 const char * SDLCALL
 SDL_GetError(void)
 {
+#if !defined(SDL12COMPAT_STATIC_SDL2)
     if (SDL20_GetError == NULL) {
         static const char noload_errstr[] = "SDL2 library isn't loaded.";
         return noload_errstr;
     }
+#endif
     return SDL20_GetError();
 }
 
