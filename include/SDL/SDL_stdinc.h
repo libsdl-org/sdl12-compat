@@ -108,7 +108,7 @@ SDL_COMPILE_TIME_ASSERT(enum, sizeof(SDL_DUMMY_ENUM) == sizeof(int));
 #ifdef HAVE_CTYPE_H
 #include <ctype.h>
 #endif
-#ifdef HAVE_ICONV_H
+#if defined(HAVE_ICONV) && defined(HAVE_ICONV_H)
 #include <iconv.h>
 #endif
 #ifdef HAVE_ALLOCA_H
@@ -121,7 +121,7 @@ SDL_COMPILE_TIME_ASSERT(enum, sizeof(SDL_DUMMY_ENUM) == sizeof(int));
 not, so we try to #define them to be the C runtime equivalents as possible,
 so things built with these headers will still run against the real SDL 1.2. */
 
-#ifdef HAVE_ICONV
+#if defined(HAVE_ICONV) && defined(HAVE_ICONV_H)
 #define SDL_iconv_t iconv_t
 #define SDL_iconv_open iconv_open
 #define SDL_iconv_close iconv_close
