@@ -9,8 +9,8 @@ option(SDL12TESTS "Enable to build SDL-1.2 test programs" ON)
 option(SDL12DEVEL "Enable installing SDL-1.2 development headers" ON)
 option(STATICDEVEL "Enable installing static link library" OFF)
 
-if(STATICDEVEL AND NOT (CMAKE_SYSTEM_NAME MATCHES "Linux"))
-  message(FATAL_ERROR "Static builds are only supported on Linux.")
+if(STATICDEVEL AND NOT (CMAKE_SYSTEM_NAME MATCHES "Linux|Windows"))
+  message(FATAL_ERROR "Static builds are only supported on Linux or Windows.")
 endif()
 
 list(APPEND CMAKE_MODULE_PATH
@@ -250,7 +250,7 @@ if(STATICDEVEL AND SDL12DEVEL)
   add_library(SDL-static STATIC ${SDL12COMPAT_SRCS})
   add_library(SDL::SDL-static ALIAS SDL-static)
   target_include_directories(SDL-static PRIVATE ${SDL2_INCLUDE_DIRS})
-  set_target_properties(SDL-static PROPERTIES COMPILE_DEFINITIONS "_REENTRANT")
+  set_target_properties(SDL-static PROPERTIES COMPILE_DEFINITIONS "_REENTRANT;SDL12COMPAT_STATIC")
   target_link_libraries(SDL-static PRIVATE ${CMAKE_DL_LIBS})
   set_target_properties(SDL-static PROPERTIES
           VERSION "${PROJECT_VERSION}"

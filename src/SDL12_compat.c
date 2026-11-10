@@ -1829,7 +1829,7 @@ static void error_dialog(const char *errorMsg)
 }
 #endif
 
-#if defined(__GNUC__) && !defined(_WIN32)
+#if defined(__GNUC__) && (!defined(_WIN32) || defined(SDL12COMPAT_STATIC))
 static void dllinit(void) __attribute__((constructor));
 static void dllinit(void)
 {
